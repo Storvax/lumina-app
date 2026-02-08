@@ -52,8 +52,7 @@
             <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
                 Pessoas Aqui <span id="mobile-drawer-counter" class="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-md font-bold text-[10px]">0</span>
             </h3>
-            <div id="users-list-mobile" class="space-y-3 max-h-40 overflow-y-auto pr-1">
-                </div>
+            <div id="users-list-mobile" class="space-y-3 max-h-40 overflow-y-auto pr-1"></div>
         </div>
 
         <div class="bg-indigo-900 rounded-3xl p-5 text-white relative overflow-hidden shadow-xl mb-6 ring-1 ring-white/20">
@@ -119,8 +118,16 @@
         </header>
 
         <main id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth pb-20 md:pb-8">
+            
+            <div class="flex justify-center py-6">
+                <div class="bg-indigo-50/80 border border-indigo-100 rounded-2xl px-6 py-4 max-w-sm text-center shadow-sm">
+                    <div class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-2"><i class="ri-shield-star-line"></i></div>
+                    <p class="text-xs text-indigo-900/80 font-medium leading-relaxed">Bem-vindo a este espaço seguro. Aqui, todas as emoções são válidas. O respeito é a nossa única regra. As conversas antigas dissipam-se como fumo a cada 24h.</p>
+                </div>
+            </div>
+
             @if($messages->isEmpty())
-            <div id="empty-state" class="flex flex-col items-center justify-center h-full opacity-60 mt-10">
+            <div id="empty-state" class="flex flex-col items-center justify-center h-full opacity-60 mt-4">
                 <div class="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-300"><i class="ri-cup-line text-4xl"></i></div>
                 <p class="text-slate-500 font-medium">A fogueira está calma.</p>
                 <p class="text-xs text-slate-400">Sê o primeiro a partilhar algo hoje.</p>
@@ -206,15 +213,8 @@
         let isSensitive = false;
         let typingTimer;
 
-        function addWelcomeMessage() {
-            const container = document.getElementById('chat-container');
-            if(!container) return;
-            const div = document.createElement('div');
-            div.className = "flex justify-center py-6 animate-fade-up";
-            div.innerHTML = `<div class="bg-indigo-50/80 border border-indigo-100 rounded-2xl px-6 py-4 max-w-sm text-center shadow-sm"><div class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-2"><i class="ri-shield-star-line"></i></div><p class="text-xs text-indigo-900/80 font-medium leading-relaxed">Bem-vindo a este espaço seguro. Aqui, todas as emoções são válidas. O respeito é a nossa única regra. As conversas antigas dissipam-se como fumo a cada 24h.</p></div>`;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        }
+        // NÃO PRECISAMOS DE addWelcomeMessage() POR JAVASCRIPT
+        // O aviso agora está fixo no HTML (primeiro elemento do scroll)
 
         function toggleSound(type) {
             const allAudios = document.querySelectorAll('audio');
@@ -262,14 +262,12 @@
             const mobileCounter = document.getElementById('mobile-counter');
             const desktopCounter = document.getElementById('desktop-counter');
             const mobileDrawerCounter = document.getElementById('mobile-drawer-counter');
-            // SELETORES SEPARADOS
             const usersListDesktop = document.getElementById('users-list-desktop');
             const usersListMobile = document.getElementById('users-list-mobile');
             const typingIndicator = document.getElementById('typing-indicator');
             const cwBtn = document.getElementById('cw-btn');
             
             if(chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
-            addWelcomeMessage();
 
             if(cwBtn) {
                 cwBtn.addEventListener('click', () => {
@@ -291,8 +289,15 @@
             function initChatSystem() {
                 window.Echo.join(`chat.${roomId}`)
                     .here((users) => { updateCounter(users.length); updateUserList(users); })
-                    .joining((user) => { updateCounter(1, true); addUserToList(user); })
-                    .leaving((user) => { updateCounter(-1, true); removeUserFromList(user); })
+                    .joining((user) => { 
+                        // Atualiza IMEDIATAMENTE (sem esperar por callback lento)
+                        updateCounter(1, true); 
+                        addUserToList(user); 
+                    })
+                    .leaving((user) => { 
+                        updateCounter(-1, true); 
+                        removeUserFromList(user); 
+                    })
                     .listen('MessageSent', (e) => {
                         const emptyState = document.getElementById('empty-state');
                         if(emptyState) emptyState.remove();
@@ -314,9 +319,10 @@
             }
 
             function updateCounter(val, incremental = false) {
+                // Lógica de delay reduzida
                 let current = parseInt(desktopCounter ? desktopCounter.textContent : 0) || 0;
                 let final = incremental ? current + val : val;
-                final = Math.max(1, final);
+                final = Math.max(1, final); // Nunca menos que 1
                 if(mobileCounter) mobileCounter.textContent = final;
                 if(desktopCounter) desktopCounter.textContent = final;
                 if(mobileDrawerCounter) mobileDrawerCounter.textContent = final;
@@ -329,20 +335,22 @@
             }
 
             function addUserToList(user) {
-                // Cria para Desktop
+                const html = `<div class="relative"><div class="w-8 h-8 rounded-full bg-{{ $room->color }}-100 flex items-center justify-center text-{{ $room->color }}-600 font-bold text-xs shadow-sm">${user.name.charAt(0)}</div><div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div></div><span class="text-sm font-medium text-slate-600 truncate">${user.name}</span>`;
+                
+                // Adicionar a Desktop
                 if(usersListDesktop && !document.getElementById(`user-desktop-${user.id}`)) {
                     const div = document.createElement('div');
                     div.id = `user-desktop-${user.id}`;
                     div.className = "flex items-center gap-3 animate-fade-up";
-                    div.innerHTML = `<div class="relative"><div class="w-8 h-8 rounded-full bg-{{ $room->color }}-100 flex items-center justify-center text-{{ $room->color }}-600 font-bold text-xs shadow-sm">${user.name.charAt(0)}</div><div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div></div><span class="text-sm font-medium text-slate-600 truncate">${user.name}</span>`;
+                    div.innerHTML = html;
                     usersListDesktop.appendChild(div);
                 }
-                // Cria para Mobile
+                // Adicionar a Mobile
                 if(usersListMobile && !document.getElementById(`user-mobile-${user.id}`)) {
                     const div = document.createElement('div');
                     div.id = `user-mobile-${user.id}`;
                     div.className = "flex items-center gap-3 animate-fade-up";
-                    div.innerHTML = `<div class="relative"><div class="w-8 h-8 rounded-full bg-{{ $room->color }}-100 flex items-center justify-center text-{{ $room->color }}-600 font-bold text-xs shadow-sm">${user.name.charAt(0)}</div><div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div></div><span class="text-sm font-medium text-slate-600 truncate">${user.name}</span>`;
+                    div.innerHTML = html;
                     usersListMobile.appendChild(div);
                 }
             }
@@ -354,11 +362,22 @@
                 if(elM) elM.remove();
             }
 
+            // Lógica do ENTER para enviar
             if(messageInput) {
+                // Auto-resize
                 messageInput.addEventListener('input', function() {
                     this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';
                     if(this.value === '') this.style.height = '44px';
                     if(window.Echo) window.Echo.join(`chat.${roomId}`).whisper('typing', { name: 'Alguém' });
+                });
+
+                // Keydown para Enter
+                messageInput.addEventListener('keydown', function(e) {
+                    // Se for Enter e NÃO for Shift (Shift+Enter faz nova linha)
+                    if(e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault(); // Previne a quebra de linha padrão
+                        document.getElementById('chat-form').dispatchEvent(new Event('submit')); // Dispara o envio
+                    }
                 });
             }
 
@@ -379,7 +398,7 @@
             }
         });
 
-        // (Resto das funções window.react, updateReactionUI, etc. mantêm-se iguais às anteriores...)
+        // (Restante código igual: window.react, updateReactionUI, triggerSupportEffect, createFloatingParticle, showToast, appendMessage, escapeHtml)
         window.react = async function(messageId, type, btnElement) {
             const countSpan = btnElement.querySelector('.count');
             let currentCount = parseInt(countSpan.textContent) || 0;

@@ -4,6 +4,27 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\ForumController;
+use App\Http\Controllers\DailyLogController;
+
+Route::middleware(['auth'])->group(function () {
+    
+    // Ver o Mural
+    Route::get('/mural', [ForumController::class, 'index'])->name('forum.index');
+    
+    // Criar Post (API interna)
+    Route::post('/mural/criar', [ForumController::class, 'store'])->name('forum.store');
+
+    
+    Route::get('/mural/{post}', [ForumController::class, 'show'])->name('forum.show');
+    Route::post('/mural/{post}/reagir', [ForumController::class, 'react'])->name('forum.react');
+    Route::post('/mural/{post}/comentar', [ForumController::class, 'comment'])->name('forum.comment');
+
+    Route::get('/diario', [DailyLogController::class, 'index'])->name('diary.index');
+    Route::post('/diario', [DailyLogController::class, 'store'])->name('diary.store');
+    
+
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/sala/{room:slug}', [ChatController::class, 'show'])->name('chat.show');
