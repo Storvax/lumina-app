@@ -1,0 +1,69 @@
+# fly.toml app configuration file generated for lumina-restless-sea-2853 on 2026-02-08T23:00:08Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'lumina-restless-sea-2853'
+primary_region = 'cdg'
+console_command = 'php /var/www/html/artisan tinker'
+
+[processes]
+  app = "" # O comando padrão do Dockerfile (servidor web)
+  reverb = "php artisan reverb:start --host=0.0.0.0 --port=8080"
+
+[[services]]
+  processes = ["app"]
+  internal_port = 8080 # Porta interna do servidor web (confirma se o teu Docker usa 80 ou 8080)
+  protocol = "tcp"
+
+  [[services.ports]]
+    force_https = true
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+[[services]]
+  processes = ["reverb"]
+  internal_port = 8080
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["tls", "http"] # Para WebSockets usamos o handler http (que suporta upgrade para WS)
+    port = 8080         # Esta é a porta que vais usar no teu .env (REVERB_PORT=8080)
+
+[build]
+  [build.args]
+    NODE_VERSION = '18'
+    PHP_VERSION = '8.2'
+
+[env]
+  APP_ENV = 'production'
+  APP_DEBUG = false
+  DB_CONNECTION = "sqlite"
+  DB_DATABASE = "/var/www/html/storage/database/database.sqlite"
+  LOG_CHANNEL = 'stderr'
+  LOG_LEVEL = 'info'
+  LOG_STDERR_FORMATTER = 'Monolog\Formatter\JsonFormatter'
+  SESSION_DRIVER = 'cookie'
+  SESSION_SECURE_COOKIE = 'true'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 1024
+
+[mounts]
+  source = "lumina_data"
+  destination = "/var/www/html/storage/database"

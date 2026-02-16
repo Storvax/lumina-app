@@ -142,22 +142,22 @@
                         <span class="text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Como te sentes hoje?</span>
                         <div class="flex gap-2 sm:gap-3 justify-center flex-wrap sm:flex-nowrap">
                             
-                            <a href="#comunidade" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-amber-200 transition-all duration-300">
+                            <a href="{{ route('rooms.index') }}" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-amber-200 transition-all duration-300">
                                 <i class="ri-thunderstorms-line text-2xl text-slate-400 group-hover:text-amber-500 transition-colors mb-1 sm:mb-0"></i>
                                 <span class="text-[10px] font-bold text-amber-500 lg:absolute lg:-bottom-6 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">Ansioso</span>
                             </a>
                             
-                            <a href="#comunidade" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-slate-400 transition-all duration-300">
+                            <a href="{{ route('rooms.index') }}" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-slate-400 transition-all duration-300">
                                 <i class="ri-cloud-off-line text-2xl text-slate-400 group-hover:text-slate-600 transition-colors mb-1 sm:mb-0"></i>
                                 <span class="text-[10px] font-bold text-slate-600 lg:absolute lg:-bottom-6 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">Triste</span>
                             </a>
 
-                            <a href="#comunidade" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-rose-300 transition-all duration-300">
+                            <a href="{{ route('rooms.index') }}" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-rose-300 transition-all duration-300">
                                 <i class="ri-fire-line text-2xl text-slate-400 group-hover:text-rose-500 transition-colors mb-1 sm:mb-0"></i>
                                 <span class="text-[10px] font-bold text-rose-500 lg:absolute lg:-bottom-6 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">Irritado</span>
                             </a>
                             
-                            <a href="#comunidade" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-teal-300 transition-all duration-300">
+                            <a href="{{ route('rooms.index') }}" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-teal-300 transition-all duration-300">
                                 <i class="ri-sun-line text-2xl text-slate-400 group-hover:text-teal-500 transition-colors mb-1 sm:mb-0"></i>
                                 <span class="text-[10px] font-bold text-teal-500 lg:absolute lg:-bottom-6 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">Bem</span>
                             </a>
@@ -166,7 +166,7 @@
                 </div>
 
                 <div class="flex items-center gap-4 pt-2">
-                    <a href="#comunidade" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-500 to-indigo-500 text-white font-semibold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:-translate-y-0.5 transition-all">
+                    <a href="{{ route('rooms.index') }}" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-500 to-indigo-500 text-white font-semibold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:-translate-y-0.5 transition-all">
                         Entrar na Comunidade
                     </a>
                     <a href="#calma" class="px-6 py-4 rounded-2xl text-slate-600 font-medium hover:bg-white/50 transition-colors">
@@ -267,18 +267,103 @@
             </div>
 
             <div class="grid md:grid-cols-2 gap-12 items-center">
-                <div class="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-sm text-center border border-white">
-                    <h3 class="font-bold text-slate-800 mb-8"><i class="ri-lungs-line text-teal-500 mr-2"></i> Respiração Guiada</h3>
+                                <div class="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 text-white text-center shadow-xl shadow-indigo-200 relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
                     
-                    <div class="relative w-48 h-48 mx-auto flex items-center justify-center">
-                        <div class="absolute inset-0 bg-teal-200/50 rounded-full animate-breathe blur-xl"></div>
-                        <div class="absolute inset-4 bg-teal-300/50 rounded-full animate-breathe blur-md"></div>
-                        <div class="relative z-10 w-32 h-32 bg-teal-500 rounded-full flex items-center justify-center shadow-lg animate-breathe text-white font-bold tracking-widest text-sm">
-                            RESPIRA
+                    <div class="relative z-10" id="breathe-widget">
+                        <div class="flex justify-between items-start mb-4">
+                            <i class="ri-lungs-line text-2xl opacity-80"></i>
+                            <span class="text-[10px] bg-white/20 px-2 py-1 rounded-full uppercase tracking-wider font-bold">Calma</span>
                         </div>
+
+                        <div class="relative w-32 h-32 mx-auto mb-6 flex items-center justify-center">
+                            <div id="breathe-ring-1" class="absolute inset-0 border-4 border-white/10 rounded-full transition-all duration-[4000ms]"></div>
+                            <div id="breathe-ring-2" class="absolute inset-4 border-4 border-white/20 rounded-full transition-all duration-[4000ms]"></div>
+                            
+                            <div id="breathe-circle" class="relative z-10 w-16 h-16 bg-white text-indigo-600 rounded-full flex items-center justify-center font-bold text-lg shadow-2xl transition-all duration-[4000ms] cursor-pointer hover:scale-105" onclick="toggleBreathing()">
+                                <i class="ri-play-fill text-2xl" id="breathe-icon"></i>
+                                <span id="breathe-text" class="hidden text-xs">4s</span>
+                            </div>
+                        </div>
+                        
+                        <h4 id="breathe-instruction" class="font-bold text-lg mb-1">Precisas de uma pausa?</h4>
+                        <p id="breathe-sub" class="text-xs text-indigo-200">Clica no círculo para começar.</p>
                     </div>
-                    <p class="text-sm text-slate-400 mt-8">Segue o ritmo da bola. Inspira quando cresce, expira quando diminui.</p>
+
+                    <script>
+                        let breatheInterval;
+                        let isBreathing = false;
+                        
+                        function toggleBreathing() {
+                            const circle = document.getElementById('breathe-circle');
+                            const ring1 = document.getElementById('breathe-ring-1');
+                            const ring2 = document.getElementById('breathe-ring-2');
+                            const icon = document.getElementById('breathe-icon');
+                            const textSpan = document.getElementById('breathe-text');
+                            const title = document.getElementById('breathe-instruction');
+                            const sub = document.getElementById('breathe-sub');
+
+                            if (isBreathing) {
+                                // PARAR
+                                clearInterval(breatheInterval);
+                                isBreathing = false;
+                                
+                                // Reset Visuals
+                                icon.classList.remove('hidden');
+                                textSpan.classList.add('hidden');
+                                circle.style.transform = 'scale(1)';
+                                ring1.style.transform = 'scale(1)';
+                                title.innerText = "Pausa terminada";
+                                sub.innerText = "Clica para recomeçar";
+                                
+                                setTimeout(() => { title.innerText = "Precisas de uma pausa?"; }, 2000);
+                                
+                            } else {
+                                // COMEÇAR
+                                isBreathing = true;
+                                icon.classList.add('hidden');
+                                textSpan.classList.remove('hidden');
+                                
+                                let phase = 0; // 0: Inhale, 1: Hold, 2: Exhale
+                                
+                                function runPhase() {
+                                    if(!isBreathing) return;
+
+                                    if (phase === 0) {
+                                        // INSPIRA (4s)
+                                        title.innerText = "Inspira...";
+                                        sub.innerText = "Enche os pulmões devagar";
+                                        textSpan.innerText = "Inspira";
+                                        circle.style.transform = 'scale(1.5)';
+                                        ring1.style.transform = 'scale(1.8)';
+                                        ring1.style.borderColor = 'rgba(255,255,255,0.5)';
+                                        phase = 1;
+                                    } else if (phase === 1) {
+                                        // SEGURA (4s)
+                                        title.innerText = "Segura...";
+                                        sub.innerText = "Mantém o ar";
+                                        textSpan.innerText = "Segura";
+                                        // Mantém tamanho
+                                        phase = 2;
+                                    } else {
+                                        // EXPIRA (4s)
+                                        title.innerText = "Expira...";
+                                        sub.innerText = "Deita tudo cá para fora";
+                                        textSpan.innerText = "Expira";
+                                        circle.style.transform = 'scale(1)';
+                                        ring1.style.transform = 'scale(1)';
+                                        ring1.style.borderColor = 'rgba(255,255,255,0.1)';
+                                        phase = 0;
+                                    }
+                                }
+
+                                runPhase(); // Executa imediato
+                                breatheInterval = setInterval(runPhase, 4000); // Repete a cada 4s
+                            }
+                        }
+                    </script>
                 </div>
+
 
                 <div class="space-y-6">
                     <h3 class="font-bold text-slate-800"><i class="ri-headphone-line text-primary-500 mr-2"></i> Sons de Portugal</h3>
@@ -337,7 +422,7 @@
                         </div>
                         <h3 class="text-xl font-bold text-slate-900 mb-2">A Fogueira</h3>
                         <p class="text-sm text-slate-500 leading-relaxed mb-6">Salas de áudio e texto temáticas. Entra na sala "Luto" ou "Ansiedade" e percebe que não estás só.</p>
-                        <a href="#" class="inline-flex items-center text-sm font-bold text-primary-600 hover:text-primary-700">
+                        <a href="{{ route('rooms.index') }}" class="inline-flex items-center text-sm font-bold text-primary-600 hover:text-primary-700">
                             Ver salas ativas <i class="ri-arrow-right-line ml-1 transition-transform group-hover:translate-x-1"></i>
                         </a>
                     </div>
@@ -351,7 +436,7 @@
                         </div>
                         <h3 class="text-xl font-bold text-slate-900 mb-2">O Ouvinte</h3>
                         <p class="text-sm text-slate-500 leading-relaxed mb-6">Às vezes só precisamos de ser ouvidos. Pede um "Buddy" treinado para um chat 1-para-1.</p>
-                        <a href="#" class="inline-flex items-center text-sm font-bold text-teal-600 hover:text-teal-700">
+                        <a href="{{ route('rooms.index') }}" class="inline-flex items-center text-sm font-bold text-teal-600 hover:text-teal-700">
                             Pedir conversa <i class="ri-arrow-right-line ml-1 transition-transform group-hover:translate-x-1"></i>
                         </a>
                     </div>
@@ -365,7 +450,7 @@
                         </div>
                         <h3 class="text-xl font-bold text-slate-900 mb-2">Diário IA</h3>
                         <p class="text-sm text-slate-500 leading-relaxed mb-6">Regista o teu dia. A nossa IA deteta padrões de humor e alerta-te se precisares de ajuda extra.</p>
-                        <a href="#" class="inline-flex items-center text-sm font-bold text-indigo-600 hover:text-indigo-700">
+                        <a href="{{ route('dashboard') }}" class="inline-flex items-center text-sm font-bold text-indigo-600 hover:text-indigo-700">
                             Abrir meu espaço <i class="ri-arrow-right-line ml-1 transition-transform group-hover:translate-x-1"></i>
                         </a>
                     </div>
@@ -381,7 +466,7 @@
                     <h2 class="text-3xl font-bold text-slate-900 mb-2">Mural da Esperança</h2>
                     <p class="text-slate-500 max-w-xl">Discussões assíncronas. Deixa o teu pensamento, volta mais tarde para ver o apoio que recebeste.</p>
                 </div>
-                <a href="#" class="px-6 py-3 rounded-xl bg-primary-50 text-primary-600 font-bold hover:bg-primary-100 transition-colors">
+                <a href="{{ route('forum.index') }}" class="px-6 py-3 rounded-xl bg-primary-50 text-primary-600 font-bold hover:bg-primary-100 transition-colors">
                     <i class="ri-add-line mr-1"></i> Criar Tópico
                 </a>
             </div>
@@ -427,16 +512,16 @@
                             </div>
                         </div>
                     </div>
-                    <button class="w-full py-3 text-center text-sm font-bold text-slate-500 hover:text-primary-600 hover:bg-slate-50 rounded-xl transition-all">Ver todos os tópicos</button>
+                    <a href="{{ route('forum.index') }}" class="block w-full py-3 text-center text-sm font-bold text-slate-500 hover:text-primary-600 hover:bg-slate-50 rounded-xl transition-all">Ver todos os tópicos</a>
                 </div>
 
                 <div class="bg-slate-50 rounded-3xl p-6 h-fit">
                     <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="ri-hashtag"></i> O que se fala agora</h4>
                     <div class="flex flex-wrap gap-2">
-                        <a href="#" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-600 transition-all">Depressão</a>
-                        <a href="#" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-600 transition-all">Ansiedade Social</a>
-                        <a href="#" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-600 transition-all">Work-Life Balance</a>
-                        <a href="#" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-600 transition-all">Luto</a>
+                        <a href="{{ route('forum.index') }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-600 transition-all">Depressão</a>
+                        <a href="{{ route('forum.index') }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-600 transition-all">Ansiedade Social</a>
+                        <a href="{{ route('forum.index') }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-600 transition-all">Work-Life Balance</a>
+                        <a href="{{ route('forum.index') }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-600 transition-all">Luto</a>
                     </div>
                 </div>
             </div>
@@ -453,7 +538,7 @@
             </div>
 
             <div class="grid md:grid-cols-4 gap-6">
-                <div class="group bg-white p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-slate-100">
+                <a href="{{ route('library.index') }}" class="group bg-white p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-slate-100">
                     <div class="relative aspect-[2/3] bg-slate-200 rounded-xl mb-4 overflow-hidden">
                         <img src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=400&auto=format&fit=crop" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" alt="Livro">
                         <div class="absolute top-2 right-2 bg-white/90 backdrop-blur rounded-lg p-1.5 shadow-sm">
@@ -469,9 +554,9 @@
                         </div>
                         <span class="text-[10px] text-slate-400">+12 recomendam</span>
                     </div>
-                </div>
+                </a>
 
-                <div class="group bg-white p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-slate-100">
+                <a href="{{ route('library.index') }}" class="group bg-white p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-slate-100">
                     <div class="relative aspect-square bg-slate-200 rounded-xl mb-4 overflow-hidden">
                         <img src="https://images.unsplash.com/photo-1478737270239-2f02b77ac6d5?q=80&w=400&auto=format&fit=crop" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" alt="Podcast">
                         <div class="absolute top-2 right-2 bg-white/90 backdrop-blur rounded-lg p-1.5 shadow-sm">
@@ -484,7 +569,7 @@
                         <div class="bg-rose-400 h-full w-2/3"></div>
                     </div>
                     <span class="text-[10px] text-slate-400">Recomendado por Maria88</span>
-                </div>
+                </a>
 
                  <div class="group bg-white p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-slate-100">
                     <div class="relative aspect-square bg-slate-200 rounded-xl mb-4 overflow-hidden">
@@ -495,16 +580,16 @@
                     </div>
                     <h4 class="font-bold text-slate-800 text-sm leading-tight mb-1">Lo-Fi para Acalmar</h4>
                     <p class="text-xs text-slate-500 mb-3">Playlist Youtube</p>
-                    <button class="w-full py-1.5 rounded-lg bg-teal-50 text-teal-600 text-xs font-bold hover:bg-teal-100 transition-colors">Ouvir Agora</button>
+                    <a href="{{ route('library.index') }}" class="block w-full py-1.5 rounded-lg bg-teal-50 text-teal-600 text-xs font-bold hover:bg-teal-100 transition-colors text-center">Ouvir Agora</a>
                 </div>
 
-                <div class="group bg-white border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-6 text-center hover:border-primary-300 hover:bg-primary-50/50 transition-all cursor-pointer">
+                <a href="{{ route('library.index') }}" class="group bg-white border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-6 text-center hover:border-primary-300 hover:bg-primary-50/50 transition-all cursor-pointer">
                     <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3 group-hover:bg-white text-slate-400 group-hover:text-primary-500 transition-colors">
                         <i class="ri-add-line text-2xl"></i>
                     </div>
                     <h4 class="font-bold text-slate-700 text-sm">Adicionar Recurso</h4>
                     <p class="text-xs text-slate-400 mt-1">O que te ajudou a ti?</p>
-                </div>
+                </a>
             </div>
         </div>
     </section>
@@ -516,11 +601,11 @@
                     <h2 class="text-3xl font-bold text-slate-900 mb-2">Artigos Profissionais</h2>
                     <p class="text-slate-500">Conteúdo verificado por psicólogos.</p>
                 </div>
-                <a href="#" class="hidden md:block text-primary-600 font-semibold hover:underline">Ver todos os artigos</a>
+                <a href="{{ route('library.index') }}" class="hidden md:block text-primary-600 font-semibold hover:underline">Ver todos os artigos</a>
             </div>
 
             <div class="grid md:grid-cols-4 gap-6">
-                <a href="#" class="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                <a href="{{ route('library.index') }}" class="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
                     <div class="aspect-video bg-indigo-100 relative">
                          <img src="https://images.unsplash.com/photo-1499209974431-9dddcece7f88?q=80&w=600&auto=format&fit=crop" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 opacity-90" alt="Calma">
                     </div>
@@ -530,7 +615,7 @@
                     </div>
                 </a>
 
-                <a href="#" class="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                <a href="{{ route('library.index') }}" class="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
                     <div class="aspect-video bg-teal-100 relative">
                         <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=600&auto=format&fit=crop" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 opacity-90" alt="Amigos">
                     </div>
@@ -540,7 +625,7 @@
                     </div>
                 </a>
 
-                <a href="#" class="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                <a href="{{ route('library.index') }}" class="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
                     <div class="aspect-video bg-rose-100 relative">
                         <img src="https://images.unsplash.com/photo-1515023115689-589c33041697?q=80&w=600&auto=format&fit=crop" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 opacity-90" alt="Stress">
                     </div>
@@ -606,8 +691,8 @@
                 <div>
                     <h4 class="font-bold text-slate-900 mb-6">Plataforma</h4>
                     <ul class="space-y-3 text-sm text-slate-500">
-                        <li><a href="#" class="hover:text-primary-600 transition-colors">A Fogueira (Salas)</a></li>
-                        <li><a href="#" class="hover:text-primary-600 transition-colors">Ouvintes</a></li>
+                        <li><a href="{{ route('rooms.index') }}" class="hover:text-primary-600 transition-colors">A Fogueira (Salas)</a></li>
+                        <li><a href="{{ route('rooms.index') }}" class="hover:text-primary-600 transition-colors">Ouvintes</a></li>
                         <li><a href="#" class="hover:text-primary-600 transition-colors">Para Psicólogos</a></li>
                         <li><a href="#" class="hover:text-primary-600 transition-colors">Planos para Empresas</a></li>
                     </ul>
@@ -642,23 +727,23 @@
         </div>
     </footer>
 
-    <div id="floatingPlayer" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white/90 backdrop-blur-md rounded-full shadow-2xl border border-slate-100 px-6 py-3 flex items-center gap-6 animate-fade-up min-w-[300px]">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center animate-pulse">
+    <div id="floatingPlayer" class="hidden fixed bottom-24 md:bottom-6 left-0 right-0 mx-auto w-[92%] md:w-fit z-40 bg-white/60 md:bg-white/95 backdrop-blur-md rounded-2xl md:rounded-full shadow-2xl border border-slate-200/50 px-4 py-3 flex items-center gap-4 animate-fade-up transition-all duration-300">
+        <div class="flex items-center gap-3 overflow-hidden">
+            <div class="w-10 h-10 shrink-0 rounded-full bg-primary-100/80 text-primary-600 flex items-center justify-center animate-pulse">
                 <i class="ri-music-fill"></i>
             </div>
-            <div class="flex flex-col">
-                <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">A tocar</span>
-                <span id="playerTitle" class="text-sm font-bold text-slate-800">Som de Portugal</span>
+            <div class="flex flex-col min-w-0">
+                <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate">A tocar</span>
+                <span id="playerTitle" class="text-sm font-bold text-slate-900 truncate max-w-[150px] md:max-w-[200px]">Som de Portugal</span>
             </div>
         </div>
 
-        <div class="flex items-center gap-2 ml-auto">
-            <button id="playerControlBtn" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors">
+        <div class="flex items-center gap-2 ml-auto shrink-0">
+            <button id="playerControlBtn" class="w-10 h-10 rounded-full bg-white/50 hover:bg-white/80 flex items-center justify-center text-slate-700 transition-colors backdrop-blur-sm">
                 <i class="ri-pause-fill text-lg"></i>
             </button>
-            <button id="playerCloseBtn" class="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-500 transition-colors">
-                <i class="ri-stop-fill"></i>
+            <button id="playerCloseBtn" class="w-10 h-10 rounded-full bg-rose-50/50 hover:bg-rose-100/80 flex items-center justify-center text-rose-500 transition-colors backdrop-blur-sm">
+                <i class="ri-close-line text-lg"></i>
             </button>
         </div>
     </div>
