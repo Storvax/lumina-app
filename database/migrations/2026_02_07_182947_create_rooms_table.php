@@ -6,25 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('rooms', function (Blueprint $table) {
             $table->id();
-            $table->string('name');          // Ex: Ansiedade Social
-            $table->string('slug')->unique(); // Ex: ansiedade-social (para o link)
-            $table->string('description');    // Ex: Espaço para partilhar medos...
-            $table->string('color');          // Ex: indigo (para o CSS)
-            $table->string('icon');           // Ex: ri-user-voice-line
+            $table->string('name');
+            $table->string('slug')->unique(); // Identificador único (ex: ansiedade-social)
+            $table->string('description')->nullable();
+            $table->string('color')->default('#6366f1'); // Cor default (Indigo)
+            $table->string('icon')->default('heroicon-o-chat-bubble-left-right'); // Ícone default
+            $table->boolean('is_private')->default(false); // <--- ADICIONADO PARA EVITAR ERRO
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('rooms');

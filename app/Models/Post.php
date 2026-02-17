@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Post extends Model
 {
@@ -15,27 +17,24 @@ class Post extends Model
         'content',
         'tag',
         'is_sensitive',
-        'support_count'
+        'support_count',
     ];
 
-    // Relação: Um post pertence a um utilizador
-    public function user()
+    // Relação com o Autor
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function comments() { return $this->hasMany(Comment::class); }
-
-    public function reactions()
+    // Relação com Comentários
+    public function comments(): HasMany
     {
-        return $this->hasMany(PostReaction::class);
+        return $this->hasMany(Comment::class);
     }
 
-    // Helpers para saber se o utilizador atual já reagiu
-    public function reactedByType($type)
+    // Relação com Reações (Faltava isto!)
+    public function reactions(): HasMany
     {
-        // Verifica se na coleção de reações existe alguma deste user com este tipo
-        // (Nota: Em produção real usarias queries mais otimizadas, mas para aqui serve)
-        return $this->reactions->where('user_id', auth()->id())->where('type', $type)->count() > 0;
+        return $this->hasMany(PostReaction::class);
     }
 }
