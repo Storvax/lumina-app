@@ -11,7 +11,9 @@ class ForumController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Post::with('user')->latest();
+        // CORREÇÃO: Adicionei 'reactions' e 'comments' ao with()
+        // Isto carrega tudo de uma vez e garante que ->reactions nunca é null
+        $query = Post::with(['user', 'reactions', 'comments'])->latest();
 
         if ($request->has('tag') && $request->tag != 'all') {
             $query->where('tag', $request->tag);
@@ -19,7 +21,6 @@ class ForumController extends Controller
 
         $posts = $query->paginate(20);
 
-        // SE for um pedido AJAX (Javascript), devolve só o HTML dos cartões
         if ($request->ajax()) {
             return view('forum.partials.posts', compact('posts'))->render();
         }

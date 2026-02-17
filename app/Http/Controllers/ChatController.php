@@ -91,4 +91,20 @@ class ChatController extends Controller
 
         return response()->json($payload);
     }
+
+    public function destroy(Room $room, Message $message)
+    {
+        // Só deixa apagar se for MODERADOR/ADMIN ou se for o DONO da mensagem
+        if (!Auth::user()->isModerator() && Auth::id() !== $message->user_id) {
+            abort(403, 'Não tens permissão para apagar esta mensagem.');
+        }
+
+        $id = $message->id; // Guarda o ID antes de apagar
+        $message->delete();
+
+        // Avisa toda a gente na sala que a mensagem sumiu
+        broadcast(new MessageDeleted($room->id, $id))->toOthers();
+
+        return response()->json(['status' => 'Deleted']);
+    }
 }
