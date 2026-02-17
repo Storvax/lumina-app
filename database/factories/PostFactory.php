@@ -12,12 +12,12 @@ class PostFactory extends Factory
         return [
             'user_id' => User::factory(),
             'title' => fake()->sentence(6),
-            // CORREÇÃO: Usamos 'content' porque é o que está na migração
-            'content' => fake()->paragraphs(3, true), 
-            // CORREÇÃO: Adicionada a 'tag' obrigatória
-            'tag' => fake()->randomElement(['Geral', 'Ansiedade', 'Depressão', 'Dúvidas', 'Conquistas']),
-            'is_sensitive' => fake()->boolean(10), // 10% de hipótese
+            'content' => fake()->paragraphs(3, true),
+            // CORREÇÃO: Usar as tags (chaves) que o sistema espera
+            'tag' => fake()->randomElement(['hope', 'vent', 'anxiety']), 
+            'is_sensitive' => fake()->boolean(10),
             'support_count' => fake()->numberBetween(0, 50),
+            'created_at' => fake()->dateTimeBetween('-1 month', 'now'),
         ];
     }
 }

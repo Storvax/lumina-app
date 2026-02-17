@@ -66,4 +66,13 @@ class User extends Authenticatable
     {
         return $this->banned_at !== null;
     }
+    public function savedPosts()
+    {
+        return $this->belongsToMany(Post::class, 'saved_posts')->withTimestamps();
+    }
+
+    public function isShadowbanned()
+    {
+        return $this->shadowbanned_until && $this->shadowbanned_until->isFuture();
+    }
 }

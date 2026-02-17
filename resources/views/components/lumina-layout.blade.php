@@ -10,19 +10,47 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        
-        /* O TEU CSS ORIGINAL */
         .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.5); }
         .mesh-gradient { background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.1) 0%, rgba(255, 255, 255, 0) 50%), radial-gradient(circle at 100% 0%, rgba(20, 184, 166, 0.1) 0%, rgba(255, 255, 255, 0) 50%); }
         .animate-fade-up { animation: fadeUp 0.6s ease-out forwards; opacity: 0; }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Estilos extra que possas injetar */
+        /* --- MODO ALTO CONTRASTE --- */
+        body.high-contrast {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+        }
+        body.high-contrast .glass-card, 
+        body.high-contrast .glass,
+        body.high-contrast nav .glass {
+            background: #ffffff !important;
+            backdrop-filter: none !important;
+            border: 2px solid #000000 !important;
+            box-shadow: none !important;
+        }
+        body.high-contrast .text-slate-400, 
+        body.high-contrast .text-slate-500, 
+        body.high-contrast .text-slate-600 {
+            color: #000000 !important;
+        }
+        body.high-contrast button, 
+        body.high-contrast a {
+            text-decoration: underline;
+            font-weight: 700 !important;
+        }
+        /* Focus Ring muito visível para navegação por teclado */
+        :focus-visible {
+            outline: 3px solid #000000 !important;
+            outline-offset: 2px;
+        }
+
         {{ $css ?? '' }}
     </style>
 </head>
@@ -43,20 +71,14 @@
                     <a href="tel:112" class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 hover:bg-rose-50 hover:border-rose-200 transition-colors group">
                         <div class="flex items-center gap-4">
                             <span class="text-2xl font-black text-slate-800 group-hover:text-rose-600">112</span>
-                            <div class="text-left">
-                                <p class="font-bold text-slate-800">Emergência Nacional</p>
-                                <p class="text-xs text-slate-500">Risco de vida iminente</p>
-                            </div>
+                            <div class="text-left"><p class="font-bold text-slate-800">Emergência Nacional</p><p class="text-xs text-slate-500">Risco de vida iminente</p></div>
                         </div>
                         <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 group-hover:text-rose-500 shadow-sm"><i class="ri-phone-fill"></i></div>
                     </a>
                     <a href="tel:808242424" class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 hover:bg-blue-50 hover:border-blue-200 transition-colors group">
                         <div class="flex items-center gap-4">
                             <span class="text-xl font-bold text-slate-800 group-hover:text-blue-600">SNS 24</span>
-                            <div class="text-left">
-                                <p class="font-bold text-slate-800">Apoio Psicológico</p>
-                                <p class="text-xs text-slate-500">Disponível 24h por dia</p>
-                            </div>
+                            <div class="text-left"><p class="font-bold text-slate-800">Apoio Psicológico</p><p class="text-xs text-slate-500">Disponível 24h por dia</p></div>
                         </div>
                         <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 group-hover:text-blue-500 shadow-sm"><i class="ri-phone-fill"></i></div>
                     </a>
@@ -66,6 +88,27 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div id="globalAlertModal" class="fixed inset-0 z-[150] hidden" role="dialog" aria-modal="true" aria-labelledby="globalAlertTitle">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onclick="closeAlert()"></div>
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none p-4">
+            <div id="globalAlertPanel" class="bg-white rounded-2xl shadow-2xl w-full max-w-sm pointer-events-auto p-6 text-center border-2 border-transparent high-contrast:border-black transform transition-all scale-100">
+                <div id="globalAlertIcon" class="mb-4 text-4xl"></div>
+                <h3 id="globalAlertTitle" class="text-xl font-bold text-slate-900 mb-2"></h3>
+                <p id="globalAlertMessage" class="text-slate-600 mb-6 text-sm"></p>
+                <button id="globalAlertBtn" onclick="closeAlert()" class="close-modal-btn w-full py-3 rounded-xl font-bold text-white shadow-lg transition-all active:scale-95">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed bottom-6 right-6 z-[90]">
+        <button onclick="toggleHighContrast()" 
+                class="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform focus:ring-4 ring-offset-2 ring-slate-900 high-contrast:border-2 high-contrast:border-white"
+                aria-label="Alternar modo de alto contraste"
+                title="Alto Contraste">
+            <i class="ri-contrast-drop-2-line text-xl"></i>
+        </button>
     </div>
 
     @if(isset($header))
@@ -81,22 +124,56 @@
                 <div class="hidden md:flex items-center gap-6 text-sm font-medium">
                     <a href="{{ url('/#inicio') }}" class="text-slate-600 hover:text-indigo-600 transition-colors">Início</a>
                     <a href="{{ url('/#calma') }}" class="text-slate-600 hover:text-indigo-600 transition-colors">Zona Calma</a>
-                    <a href="{{ url('/#comunidade') }}" class="text-slate-600 hover:text-indigo-600 transition-colors">Comunidade</a>
-                    <a href="{{ route('forum.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors">Fórum</a>
-                    <a href="{{ url('/#biblioteca') }}" class="text-slate-600 hover:text-indigo-600 transition-colors">Biblioteca</a>
+                    <a href="{{ route('forum.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('forum.*') ? 'text-indigo-600 font-bold' : '' }}">Mural</a>
+                    <a href="{{ route('rooms.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('rooms.*') ? 'text-indigo-600 font-bold' : '' }}">Fogueira</a>
                 </div>
 
                 <div class="flex items-center gap-3">
                     @auth
-                        <a href="{{ url('/dashboard') }}" class="hidden md:flex text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-full transition-colors">Minha Conta</a>
+                        <div class="relative" x-data="{ open: false, count: {{ Auth::user()->unreadNotifications->count() }} }" x-on:new-notification.window="count++">
+                            <button @click="open = !open; if(open) { axios.post('{{ route('notifications.read') }}'); count = 0; }" 
+                                    class="relative w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm">
+                                <i class="ri-notification-3-line"></i>
+                                <span x-show="count > 0" x-text="count" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white animate-pulse"></span>
+                            </button>
+
+                            <div x-show="open" @click.outside="open = false" 
+                                 x-transition:enter="transition ease-out duration-200 opacity-0 translate-y-2"
+                                 x-transition:enter-end="opacity-100 translate-y-0"
+                                 class="absolute right-0 top-full mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden py-2" style="display: none;">
+                                <div class="px-4 py-2 border-b border-slate-50 flex justify-between items-center">
+                                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Notificações</h3>
+                                    <button @click="open = false" class="text-slate-300 hover:text-slate-500"><i class="ri-close-line"></i></button>
+                                </div>
+                                <div class="max-h-64 overflow-y-auto">
+                                    @forelse(Auth::user()->notifications()->latest()->take(8)->get() as $notification)
+                                        @php $data = $notification->data; @endphp
+                                        <a href="{{ isset($data['post_id']) ? route('forum.show', $data['post_id']) : '#' }}" class="block px-4 py-3 hover:bg-slate-50 transition-colors {{ $notification->read_at ? 'opacity-60' : 'bg-indigo-50/20' }}">
+                                            <div class="flex items-start gap-3">
+                                                <div class="w-8 h-8 rounded-full {{ ($data['type'] ?? '') == 'reaction' ? 'bg-rose-100 text-rose-500' : 'bg-indigo-100 text-indigo-500' }} flex items-center justify-center text-sm shrink-0">
+                                                    <i class="{{ ($data['type'] ?? '') == 'reaction' ? 'ri-heart-fill' : 'ri-chat-1-fill' }}"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="text-xs font-bold text-slate-700">{{ $data['message'] ?? 'Nova interação' }}</p>
+                                                    <p class="text-[10px] text-slate-400 mt-0.5">{{ $notification->created_at->diffForHumans() }}</p>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    @empty
+                                        <div class="px-4 py-8 text-center text-slate-400 text-xs">Sem notificações. O silêncio também é bom. 🍃</div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+
+                        <a href="{{ url('/dashboard') }}" class="hidden md:flex text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-full transition-colors border border-transparent hover:border-indigo-100">Minha Conta</a>
                     @else
                         <a href="{{ route('login') }}" class="hidden md:flex text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-full transition-colors">Entrar</a>
                     @endauth
-                    @if(isset($actionButton))
-                        {{ $actionButton }}
-                    @endif
 
-                    <button id="sosBtnTrigger" class="bg-white border border-rose-100 text-rose-500 hover:bg-rose-50 hover:border-rose-200 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all shadow-sm">
+                    @if(isset($actionButton)) {{ $actionButton }} @endif
+
+                    <button id="sosBtnTrigger" class="bg-white border border-rose-100 text-rose-500 hover:bg-rose-50 hover:border-rose-200 px-3 md:px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all shadow-sm">
                         <span class="relative flex h-2 w-2">
                           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                           <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
@@ -110,8 +187,19 @@
             
             <div id="mobileMenu" class="hidden absolute top-20 left-4 right-4 bg-white rounded-3xl shadow-xl border border-slate-100 p-6 flex flex-col gap-4 animate-fade-up md:hidden">
                 <a href="{{ url('/') }}" class="text-lg font-medium text-slate-600">Início</a>
-                <a href="{{ route('forum.index') }}" class="text-lg font-medium text-slate-600">Fórum</a>
-                @auth <a href="{{ url('/dashboard') }}" class="text-center w-full py-3 rounded-xl bg-indigo-50 text-indigo-600 font-bold">Minha Conta</a> @endauth
+                <a href="{{ route('forum.index') }}" class="text-lg font-medium text-slate-600">Mural da Esperança</a>
+                <a href="{{ route('rooms.index') }}" class="text-lg font-medium text-slate-600">A Fogueira (Chat)</a>
+                @auth 
+                    <hr class="border-slate-100">
+                    <a href="{{ url('/dashboard') }}" class="flex items-center gap-2 text-lg font-medium text-indigo-600">
+                        <i class="ri-user-line"></i> Minha Conta
+                    </a>
+                    <form method="POST" action="{{ route('logout') }}"> @csrf
+                        <button type="submit" class="text-slate-400 font-medium">Sair</button>
+                    </form>
+                @else
+                    <a href="{{ route('login') }}" class="text-center w-full py-3 rounded-xl bg-indigo-50 text-indigo-600 font-bold">Entrar</a>
+                @endauth
             </div>
         </nav>
     @endif
@@ -122,13 +210,13 @@
         {{ $slot }}
     </main>
 
-    <footer class="bg-white border-t border-slate-100 pt-20 pb-10 mt-20">
-        <div class="max-w-6xl mx-auto px-6">
+    <footer class="bg-white border-t border-slate-100 pt-20 pb-10">
+        <div class="max-w-7xl mx-auto px-6">
             <div class="grid md:grid-cols-4 gap-12 mb-16">
                 <div class="col-span-1 md:col-span-1 space-y-4">
-                    <a href="{{ url('/') }}" class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-violet-400 flex items-center justify-center text-white font-bold text-lg">L</div>
-                        <span class="text-xl font-bold text-slate-900">Lumina<span class="text-indigo-500">.</span></span>
+                    <a href="#" class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-lg">L</div>
+                        <span class="text-xl font-bold text-slate-900">Lumina.</span>
                     </a>
                     <p class="text-sm text-slate-500 leading-relaxed">
                         Democratizar o acesso ao bem-estar mental em Portugal, criando pontes entre pessoas e profissionais.
@@ -142,10 +230,8 @@
                 <div>
                     <h4 class="font-bold text-slate-900 mb-6">Plataforma</h4>
                     <ul class="space-y-3 text-sm text-slate-500">
-                        <li><a href="{{ url('/#inicio') }}" class="hover:text-indigo-600 transition-colors">Início</a></li>
-                        <li><a href="{{ url('/#calma') }}" class="hover:text-indigo-600 transition-colors">Zona Calma</a></li>
-                        <li><a href="{{ route('forum.index') }}" class="hover:text-indigo-600 transition-colors">Fórum</a></li>
-                        <li><a href="{{ route('rooms.index') }}" class="hover:text-indigo-600 transition-colors">Salas de Chat</a></li>
+                        <li><a href="{{ route('rooms.index') }}" class="hover:text-indigo-600 transition-colors">A Fogueira</a></li>
+                        <li><a href="{{ route('forum.index') }}" class="hover:text-indigo-600 transition-colors">Mural</a></li>
                     </ul>
                 </div>
 
@@ -179,30 +265,118 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // SOS MODAL LOGIC
+            // --- GESTOR DE ACESSIBILIDADE LUMINA ---
+            
+            // 1. ANUNCIADOR DE VOZ (ARIA LIVE)
+            const announcer = document.createElement('div');
+            announcer.setAttribute('aria-live', 'polite');
+            announcer.setAttribute('class', 'sr-only');
+            document.body.appendChild(announcer);
+
+            window.announce = function(message) {
+                announcer.textContent = ''; 
+                setTimeout(() => { announcer.textContent = message; }, 100); 
+            };
+
+            // 2. FOCUS TRAP (Para Modais)
+            window.trapFocus = function(modalElement) {
+                const focusableElements = modalElement.querySelectorAll('a[href], button, textarea, input[type="text"], input[type="radio"], input[type="checkbox"], select');
+                if (focusableElements.length === 0) return;
+
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+
+                modalElement.addEventListener('keydown', function(e) {
+                    if (e.key === 'Tab') {
+                        if (e.shiftKey) { // Shift + Tab
+                            if (document.activeElement === firstElement) {
+                                e.preventDefault();
+                                lastElement.focus();
+                            }
+                        } else { // Tab
+                            if (document.activeElement === lastElement) {
+                                e.preventDefault();
+                                firstElement.focus();
+                            }
+                        }
+                    }
+                });
+                setTimeout(() => firstElement.focus(), 100);
+            };
+
+            // 3. MODO ALTO CONTRASTE
+            window.toggleHighContrast = function() {
+                document.body.classList.toggle('high-contrast');
+                const isActive = document.body.classList.contains('high-contrast');
+                localStorage.setItem('highContrast', isActive);
+                announce(isActive ? "Modo de alto contraste ativado" : "Modo de alto contraste desativado");
+            };
+            if(localStorage.getItem('highContrast') === 'true') {
+                document.body.classList.add('high-contrast');
+            }
+
+            // 4. SISTEMA DE ALERTA GLOBAL (Substitui o alert nativo)
+            window.showAlert = function(title, message, type = 'info') {
+                const modal = document.getElementById('globalAlertModal');
+                const panel = document.getElementById('globalAlertPanel');
+                const titleEl = document.getElementById('globalAlertTitle');
+                const msgEl = document.getElementById('globalAlertMessage');
+                const iconEl = document.getElementById('globalAlertIcon');
+                const btn = document.getElementById('globalAlertBtn');
+
+                if(!modal) return alert(message);
+
+                titleEl.textContent = title;
+                msgEl.textContent = message;
+                
+                if(type === 'error') {
+                    iconEl.innerHTML = '<i class="ri-error-warning-fill text-rose-500"></i>';
+                    btn.className = "close-modal-btn w-full py-3 rounded-xl font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-lg transition-all";
+                } else {
+                    iconEl.innerHTML = '<i class="ri-information-fill text-indigo-500"></i>';
+                    btn.className = "close-modal-btn w-full py-3 rounded-xl font-bold text-white bg-indigo-500 hover:bg-indigo-600 shadow-lg transition-all";
+                }
+
+                modal.classList.remove('hidden');
+                trapFocus(panel);
+                announce(`Alerta: ${title}. ${message}`);
+            };
+
+            window.closeAlert = function() {
+                const modal = document.getElementById('globalAlertModal');
+                modal.classList.add('hidden');
+                if(window.lastFocusedElement) window.lastFocusedElement.focus();
+            };
+
+            // --- FIM ACESSIBILIDADE ---
+
+            // LOGICA ANTIGA (SOS, MENU, ETC)
             const sosBtns = document.querySelectorAll('#sosBtnTrigger, .sos-trigger'); 
             const modal = document.getElementById('sosModal');
             const overlay = document.getElementById('modalOverlay');
             const closeBtn = document.getElementById('modalClose');
 
-            function toggleModal() {
-                modal.classList.toggle('hidden');
-            }
-
+            function toggleModal() { modal.classList.toggle('hidden'); }
             if(modal) {
                 sosBtns.forEach(btn => btn.addEventListener('click', toggleModal));
                 if(overlay) overlay.addEventListener('click', toggleModal);
                 if(closeBtn) closeBtn.addEventListener('click', toggleModal);
             }
 
-            // MOBILE MENU LOGIC
             const mobileBtn = document.getElementById('mobileMenuBtn');
             const mobileMenu = document.getElementById('mobileMenu');
             if(mobileBtn && mobileMenu) {
-                mobileBtn.addEventListener('click', () => {
-                    mobileMenu.classList.toggle('hidden');
-                });
+                mobileBtn.addEventListener('click', () => { mobileMenu.classList.toggle('hidden'); });
             }
+
+            @auth
+                if (window.Echo) {
+                    window.Echo.private('App.Models.User.{{ Auth::id() }}')
+                        .notification((notification) => {
+                            window.dispatchEvent(new CustomEvent('new-notification'));
+                        });
+                }
+            @endauth
         });
     </script>
     

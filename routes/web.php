@@ -34,8 +34,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/mural', [ForumController::class, 'index'])->name('forum.index');
     Route::post('/mural/criar', [ForumController::class, 'store'])->name('forum.store');
     Route::get('/mural/{post}', [ForumController::class, 'show'])->name('forum.show');
+    Route::delete('/mural/{post}', [ForumController::class, 'destroy'])->name('forum.destroy'); // <--- AQUI
     Route::post('/mural/{post}/reagir', [ForumController::class, 'react'])->name('forum.react');
     Route::post('/mural/{post}/comentar', [ForumController::class, 'comment'])->name('forum.comment');
+    Route::patch('/mural/{post}/pin', [ForumController::class, 'togglePin'])->name('forum.pin');
+    Route::patch('/mural/{post}/lock', [ForumController::class, 'toggleLock'])->name('forum.lock');
+    Route::patch('/mural/{post}', [ForumController::class, 'update'])->name('forum.update');
+    Route::post('/mural/{post}/report', [ForumController::class, 'report'])->name('forum.report');
+    Route::post('/mural/{post}/save', [ForumController::class, 'toggleSave'])->name('forum.save');
+    Route::post('/users/{user}/shadowban', [ForumController::class, 'shadowbanUser'])->name('users.shadowban');
 
     // 2. DIÁRIO DE BORDO
     Route::get('/diario', [DailyLogController::class, 'index'])->name('diary.index');
@@ -63,6 +70,11 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->name('forum.destroy')->middleware('auth');
 
     Route::delete('/chat/message/{message}', [ChatController::class, 'destroyMessage'])->name('chat.message.destroy')->middleware('auth');
+
+    Route::post('/notifications/mark-read', function () {
+        Auth::user()->unreadNotifications->markAsRead();
+        return response()->json(['status' => 'success']);
+    })->middleware('auth')->name('notifications.read');
 });
 
 require __DIR__.'/auth.php';

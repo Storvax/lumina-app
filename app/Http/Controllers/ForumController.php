@@ -3,24 +3,55 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\User;
+use App\Models\PostReaction;
 use App\Models\Comment;
+use App\Models\Report;
+use App\Models\ModerationLog; // Log de Moderação
+use App\Notifications\ForumInteraction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class ForumController extends Controller
 {
+    // --- FUNÇÃO AUXILIAR: AUTO-TAGGING DE CONTEÚDO SENSÍVEL ---
+    private function detectSensitiveContent($text)
+    {
+        // Palavras-chave que ativam o blur automático
+        $triggers = ['suicidio', 'suicídio', 'morte', 'sangue', 'cortar', 'abuso', 'violencia', 'matar', 'morrer'];
+        foreach ($triggers as $word) {
+            if (Str::contains(Str::lower($text), $word)) return true;
+        }
+        return false;
+    }
+
+    // --- LISTAGEM (MURAL) ---
     public function index(Request $request)
     {
-        // CORREÇÃO: Adicionei 'reactions' e 'comments' ao with()
-        // Isto carrega tudo de uma vez e garante que ->reactions nunca é null
-        $query = Post::with(['user', 'reactions', 'comments'])->latest();
+        // Query Inicial com Eager Loading (Performance) e Shadowban Scope (Automático)
+        $query = Post::with(['user', 'reactions', 'comments'])
+            ->orderBy('is_pinned', 'desc') // Fixados no topo
+            ->latest(); // Mais recentes depois
 
+        // 1. Filtro de Pesquisa
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('content', 'like', "%{$search}%");
+            });
+        }
+
+        // 2. Filtro de Tags (Emoções)
         if ($request->has('tag') && $request->tag != 'all') {
             $query->where('tag', $request->tag);
         }
 
-        $posts = $query->paginate(20);
+        // Paginação mantendo os filtros na URL
+        $posts = $query->paginate(20)->appends($request->query());
 
+        // Resposta AJAX para filtros sem refresh
         if ($request->ajax()) {
             return view('forum.partials.posts', compact('posts'))->render();
         }
@@ -28,12 +59,17 @@ class ForumController extends Controller
         return view('forum.index', compact('posts'));
     }
 
+    // --- VER POST INDIVIDUAL ---
     public function show(Post $post)
     {
-        // Carregar autor e comentários
+        // Verifica se o user está shadowbanned (extra segurança se acederem direto pelo link)
+        if ($post->user->isShadowbanned() && Auth::id() !== $post->user_id && !Auth::user()->isModerator()) {
+            abort(404);
+        }
+
         $post->load(['user', 'comments.user']);
 
-        // Posts Relacionados: Mesma tag, exceto o próprio post
+        // Posts Relacionados
         $relatedPosts = Post::where('tag', $post->tag)
                             ->where('id', '!=', $post->id)
                             ->latest()
@@ -43,9 +79,9 @@ class ForumController extends Controller
         return view('forum.show', compact('post', 'relatedPosts'));
     }
 
+    // --- CRIAR POST ---
     public function store(Request $request)
     {
-        // (O teu código de store mantém-se igual)
         $validated = $request->validate([
             'title' => 'required|max:100',
             'content' => 'required|max:1000',
@@ -53,50 +89,102 @@ class ForumController extends Controller
             'is_sensitive' => 'sometimes|accepted'
         ]);
 
+        // Auto-tagging: Se o sistema detetar perigo, força is_sensitive = true
+        $autoSensitive = $this->detectSensitiveContent($validated['title'] . ' ' . $validated['content']);
+
         Post::create([
             'user_id' => Auth::id(),
             'title' => $validated['title'],
             'content' => $validated['content'],
             'tag' => $validated['tag'],
-            'is_sensitive' => $request->has('is_sensitive'),
+            'is_sensitive' => $request->has('is_sensitive') || $autoSensitive,
         ]);
 
         return response()->json(['message' => 'Post criado!']);
     }
 
+    // --- ATUALIZAR POST ---
+    public function update(Request $request, Post $post)
+    {
+        if (Auth::id() !== $post->user_id) abort(403);
+
+        $validated = $request->validate([
+            'title' => 'required|max:100',
+            'content' => 'required|max:1000',
+            'tag' => 'required|in:hope,vent,anxiety',
+            'is_sensitive' => 'sometimes|accepted'
+        ]);
+
+        // Auto-tagging na edição também
+        $autoSensitive = $this->detectSensitiveContent($validated['title'] . ' ' . $validated['content']);
+
+        $post->update([
+            'title' => $validated['title'],
+            'content' => $validated['content'],
+            'tag' => $validated['tag'],
+            'is_sensitive' => $request->has('is_sensitive') || $autoSensitive,
+        ]);
+
+        return response()->json(['message' => 'Post atualizado!']);
+    }
+
+    // --- APAGAR POST ---
+    public function destroy(Post $post)
+    {
+        if (!Auth::user()->isModerator() && Auth::id() !== $post->user_id) {
+            abort(403, 'Sem permissão.');
+        }
+
+        // Se foi um moderador a apagar post de outra pessoa, cria log
+        if (Auth::user()->isModerator() && Auth::id() !== $post->user_id) {
+            ModerationLog::create([
+                'moderator_id' => Auth::id(),
+                'target_user_id' => $post->user_id,
+                'target_type' => Post::class,
+                'target_id' => $post->id,
+                'action' => 'delete',
+                'reason' => 'Violação das regras (Apagado pelo Admin)'
+            ]);
+        }
+
+        $post->delete();
+        return response()->json(['message' => 'Post apagado com sucesso.']);
+    }
+
+    // --- REAGIR A POST ---
     public function react(Request $request, Post $post)
     {
-        // Valida se o tipo é válido
+        if ($post->is_locked) return response()->json(['error' => 'Locked'], 403);
+
         $request->validate(['type' => 'required|in:hug,candle,ear']);
         $user = Auth::user();
 
-        // Verifica se este user já reagiu a este post
         $existingReaction = PostReaction::where('user_id', $user->id)
                                         ->where('post_id', $post->id)
                                         ->first();
 
         if ($existingReaction) {
-            // Se já reagiu...
             if ($existingReaction->type == $request->type) {
-                // ...com o mesmo ícone: remove (toggle off)
-                $existingReaction->delete();
+                $existingReaction->delete(); // Remove se clicar no mesmo
                 $action = 'removed';
             } else {
-                // ...com ícone diferente: atualiza (troca de Abraço para Vela, por exemplo)
-                $existingReaction->update(['type' => $request->type]);
+                $existingReaction->update(['type' => $request->type]); // Muda se clicar noutro
                 $action = 'updated';
             }
         } else {
-            // Se ainda não reagiu, cria nova reação
             PostReaction::create([
                 'user_id' => $user->id,
                 'post_id' => $post->id,
                 'type' => $request->type
             ]);
             $action = 'added';
+
+            // NOTIFICAÇÃO (Só se não for o próprio dono)
+            if ($post->user_id !== $user->id) {
+                $post->user->notify(new ForumInteraction($post, $user, 'reaction'));
+            }
         }
 
-        // Retorna as contagens atualizadas para o Frontend
         return response()->json([
             'action' => $action,
             'counts' => [
@@ -106,9 +194,12 @@ class ForumController extends Controller
             ]
         ]);
     }
-    // Novo: Guardar Comentário
+
+    // --- COMENTAR POST ---
     public function comment(Request $request, Post $post)
     {
+        if ($post->is_locked) return back()->with('error', 'Comentários fechados.');
+
         $request->validate(['body' => 'required|max:300']);
         
         $post->comments()->create([
@@ -116,18 +207,94 @@ class ForumController extends Controller
             'body' => $request->body
         ]);
 
-        return back(); // Volta para a página do post
-    }
-
-    public function destroy(Post $post)
-    {
-        // Verifica se é moderador OU se é o dono do post
-        if (!auth()->user()->isModerator() && auth()->id() !== $post->user_id) {
-            abort(403);
+        // NOTIFICAÇÃO
+        if ($post->user_id !== Auth::id()) {
+            $post->user->notify(new ForumInteraction($post, Auth::user(), 'comment'));
         }
 
-        $post->delete();
+        return back();
+    }
 
-        return back()->with('status', 'Post removido com sucesso.');
+    // --- MODERAÇÃO: FIXAR (PIN) ---
+    public function togglePin(Post $post)
+    {
+        if (!Auth::user()->isModerator()) abort(403);
+        
+        $post->update(['is_pinned' => !$post->is_pinned]);
+        
+        // Log Opcional
+        // ModerationLog::create([...]);
+
+        return back();
+    }
+
+    // --- MODERAÇÃO: TRANCAR (LOCK) ---
+    public function toggleLock(Post $post)
+    {
+        if (!Auth::user()->isModerator()) abort(403);
+        
+        $post->update(['is_locked' => !$post->is_locked]);
+        return back();
+    }
+
+    // --- MODERAÇÃO: SHADOWBAN ---
+    public function shadowbanUser(Request $request, User $user)
+    {
+        if (!Auth::user()->isModerator()) abort(403);
+        
+        // Bane por 7 dias (ou define null para remover ban)
+        // Aqui assumimos banir. Para desbanir terias de criar outro método ou toggle.
+        $user->update(['shadowbanned_until' => now()->addDays(7)]);
+
+        // Log Obrigatório
+        ModerationLog::create([
+            'moderator_id' => Auth::id(),
+            'target_user_id' => $user->id,
+            'target_type' => 'user',
+            'target_id' => $user->id,
+            'action' => 'shadowban',
+            'reason' => 'Comportamento tóxico (Automático ou Manual via Mural)'
+        ]);
+
+        return response()->json(['message' => 'Utilizador em modo fantasma.']);
+    }
+
+    // --- SEGURANÇA: REPORTAR ---
+    public function report(Request $request, Post $post)
+    {
+        $request->validate(['reason' => 'required|string|max:50']);
+
+        // Evitar spam de reports do mesmo user no mesmo post
+        $exists = Report::where('user_id', Auth::id())
+                        ->where('post_id', $post->id)
+                        ->exists();
+
+        if (!$exists) {
+            Report::create([
+                'user_id' => Auth::id(),
+                'post_id' => $post->id,
+                'reason' => $request->reason,
+            ]);
+        }
+
+        return response()->json(['message' => 'Denúncia recebida.']);
+    }
+
+    // --- UTILIDADE: GUARDAR POST ---
+    public function toggleSave(Post $post)
+    {
+        $user = Auth::user();
+        
+        if ($user->savedPosts()->where('post_id', $post->id)->exists()) {
+            $user->savedPosts()->detach($post->id);
+            $message = 'Post removido dos guardados.';
+            $saved = false;
+        } else {
+            $user->savedPosts()->attach($post->id);
+            $message = 'Post guardado no teu perfil.';
+            $saved = true;
+        }
+
+        return response()->json(['message' => $message, 'saved' => $saved]);
     }
 }
