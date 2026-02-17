@@ -117,4 +117,16 @@ class ForumController extends Controller
 
         return back(); // Volta para a página do post
     }
+
+    public function destroy(Post $post)
+    {
+        // Verifica se é moderador OU se é o dono do post
+        if (!auth()->user()->isModerator() && auth()->id() !== $post->user_id) {
+            abort(403);
+        }
+
+        $post->delete();
+
+        return back()->with('status', 'Post removido com sucesso.');
+    }
 }

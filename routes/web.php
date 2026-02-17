@@ -59,6 +59,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->name('forum.destroy')->middleware('auth');
+
+    Route::delete('/chat/message/{message}', [ChatController::class, 'destroyMessage'])->name('chat.message.destroy')->middleware('auth');
 });
 
 require __DIR__.'/auth.php';

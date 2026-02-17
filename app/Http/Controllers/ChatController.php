@@ -91,4 +91,18 @@ class ChatController extends Controller
 
         return response()->json($payload);
     }
+
+    public function destroyMessage(Message $message)
+    {
+        if (!auth()->user()->isModerator()) {
+            abort(403, 'Não tens permissão.');
+        }
+
+        $message->delete();
+        
+        // Opcional: Se usares broadcasting (Reverb), aqui dispararias um evento MessageDeleted
+        // para a mensagem desaparecer em tempo real para os outros.
+        
+        return back()->with('status', 'Mensagem apagada.');
+    }
 }
