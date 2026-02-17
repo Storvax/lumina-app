@@ -62,19 +62,21 @@ class ForumController extends Controller
     // --- VER POST INDIVIDUAL ---
     public function show(Post $post)
     {
-        // Verifica se o user está shadowbanned (extra segurança se acederem direto pelo link)
-        if ($post->user->isShadowbanned() && Auth::id() !== $post->user_id && !Auth::user()->isModerator()) {
-            abort(404);
-        }
+        // Carrega o post e APENAS os comentários principais (parent_id = null)
+        // Mas traz agarradas as respostas (replies) de cada um.
+        $post->load(['user', 'comments' => function($q) {
+            $q->whereNull('parent_id')
+              ->with(['user', 'replies.user', 'reactions', 'replies.reactions'])
+              ->latest();
+        }]);
+        
+        // Carrega contagem TOTAL real (pais + filhos) para mostrar no topo
+        $post->loadCount('comments');
 
-        $post->load(['user', 'comments.user']);
-
-        // Posts Relacionados
+        // Posts Relacionados (Mantém o que tinhas)
         $relatedPosts = Post::where('tag', $post->tag)
                             ->where('id', '!=', $post->id)
-                            ->latest()
-                            ->take(3)
-                            ->get();
+                            ->latest()->take(3)->get();
 
         return view('forum.show', compact('post', 'relatedPosts'));
     }
@@ -198,17 +200,27 @@ class ForumController extends Controller
     // --- COMENTAR POST ---
     public function comment(Request $request, Post $post)
     {
-        if ($post->is_locked) return back()->with('error', 'Comentários fechados.');
+        if ($post->is_locked) return back()->with('error', 'Trancado.');
 
-        $request->validate(['body' => 'required|max:300']);
-        
-        $post->comments()->create([
-            'user_id' => Auth::id(),
-            'body' => $request->body
+        $request->validate([
+            'body' => 'required|max:500',
+            'parent_id' => 'nullable|exists:comments,id' // Valida se é resposta
         ]);
 
-        // NOTIFICAÇÃO
-        if ($post->user_id !== Auth::id()) {
+        // Criar o comentário
+        $comment = $post->comments()->create([
+            'user_id' => Auth::id(),
+            'body' => $request->body,
+            'parent_id' => $request->parent_id // Se for null é principal, se tiver ID é resposta
+        ]);
+
+        // Notificar o dono do post ou do comentário original
+        if ($request->parent_id) {
+            $parent = Comment::find($request->parent_id);
+            if ($parent->user_id !== Auth::id()) {
+                // $parent->user->notify(...); // Podes ativar notificações aqui
+            }
+        } elseif ($post->user_id !== Auth::id()) {
             $post->user->notify(new ForumInteraction($post, Auth::user(), 'comment'));
         }
 
@@ -296,5 +308,36 @@ class ForumController extends Controller
         }
 
         return response()->json(['message' => $message, 'saved' => $saved]);
+    }
+
+    public function reactToComment(Request $request, Comment $comment)
+    {
+        $request->validate(['type' => 'required|in:hug,heart,muscle']);
+        
+        $existing = \App\Models\CommentReaction::where('user_id', Auth::id())
+            ->where('comment_id', $comment->id)
+            ->first();
+
+        if ($existing && $existing->type == $request->type) {
+            $existing->delete();
+            $action = 'removed';
+        } else {
+            \App\Models\CommentReaction::updateOrCreate(
+                ['user_id' => Auth::id(), 'comment_id' => $comment->id],
+                ['type' => $request->type]
+            );
+            $action = 'added';
+        }
+        return response()->json(['action' => $action]);
+    }
+
+    // --- NOVA: MARCAR COMO ÚTIL ---
+    public function markHelpful(Comment $comment)
+    {
+        // Só o dono do post pode marcar
+        if (Auth::id() !== $comment->post->user_id) abort(403);
+
+        $comment->update(['is_helpful' => !$comment->is_helpful]);
+        return back();
     }
 }

@@ -44,6 +44,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/mural/{post}/save', [ForumController::class, 'toggleSave'])->name('forum.save');
     Route::post('/users/{user}/shadowban', [ForumController::class, 'shadowbanUser'])->name('users.shadowban');
 
+    Route::post('/comentarios/{comment}/reagir', [ForumController::class, 'reactToComment'])->name('comments.react');
+    Route::post('/comentarios/{comment}/util', [ForumController::class, 'markHelpful'])->name('comments.helpful');
     // 2. DIÁRIO DE BORDO
     Route::get('/diario', [DailyLogController::class, 'index'])->name('diary.index');
     Route::post('/diario', [DailyLogController::class, 'store'])->name('diary.store');
