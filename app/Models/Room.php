@@ -10,25 +10,26 @@ class Room extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name',
-        'slug',
-        'description',
-        'color',
-        'icon',
-        'is_private',
-        'pinned_message',
-        'is_crisis_mode',
+        'name', 
+        'slug', 
+        'description', 
+        'icon', 
+        'color', 
+        'is_active',
+        'pinned_message', // <--- NOVO
+        'is_crisis_mode'  // <--- NOVO
     ];
+
     protected $casts = [
-        'is_private' => 'boolean',
+        'is_active' => 'boolean',
         'is_crisis_mode' => 'boolean',
     ];
-    // Relação com mensagens (caso precises)
+
     public function messages()
     {
         return $this->hasMany(Message::class);
     }
-
+    
     public function visits()
     {
         return $this->belongsToMany(User::class, 'room_visits');

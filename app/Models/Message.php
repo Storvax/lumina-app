@@ -16,8 +16,8 @@ class Message extends Model
         'content', 
         'is_sensitive', 
         'is_anonymous',
-        'reply_to_id',
-        'edited_at',
+        'reply_to_id', // <--- FALTAVA ISTO
+        'edited_at'    // <--- FALTAVA ISTO
     ];
 
     protected $casts = [
@@ -41,21 +41,13 @@ class Message extends Model
         return $this->hasMany(MessageReaction::class);
     }
 
-    // Relação: Mensagem Pai (a que está a ser respondida)
     public function replyTo()
     {
         return $this->belongsTo(Message::class, 'reply_to_id');
     }
 
-    // Relação: Quem leu esta mensagem?
     public function reads()
     {
         return $this->hasMany(MessageRead::class);
-    }
-    
-    // Helper: Foi lida por alguém? (Simples verificação para UI)
-    public function isRead()
-    {
-        return $this->reads()->exists();
     }
 }
