@@ -7,16 +7,20 @@ use App\Http\Controllers\RoomController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\DailyLogController;
-
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LibraryController;
 /*
 |--------------------------------------------------------------------------
 | Rotas Web da Aplicação
 |--------------------------------------------------------------------------
-| Organização modular para facilitar a manutenção e escalabilidade.
 */
 
 // --- Rotas Públicas ---
-Route::view('/', 'welcome');
+
+// Homepage com "Smart Welcome" e "Pulso"
+Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// Lista de Salas
 Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
 
 // --- Rotas Autenticadas ---
@@ -45,8 +49,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
     });
 
+    // Ações de Utilizador no Fórum
     Route::post('/users/{user}/shadowban', [ForumController::class, 'shadowbanUser'])->name('users.shadowban');
     
+    // Comentários
     Route::controller(ForumController::class)->prefix('comentarios/{comment}')->name('comments.')->group(function () {
         Route::post('/reagir', 'reactToComment')->name('react');
         Route::post('/util', 'markHelpful')->name('helpful');
@@ -58,13 +64,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::controller(ChatController::class)->group(function () {
         Route::get('/sala/{room:slug}', 'show')->name('chat.show');
         
-        // API Chat
         Route::prefix('chat')->name('chat.')->group(function () {
             Route::post('/{room}/message', 'send')->name('send');
-            Route::patch('/{room}/message/{message}', 'updateMessage')->name('update'); // <--- Nova Rota de Edição
-            Route::post('/{room}/read', 'markAsRead')->name('read'); // <--- Nova Rota de Leitura
+            Route::patch('/{room}/message/{message}', 'updateMessage')->name('update');
+            Route::post('/{room}/read', 'markAsRead')->name('read');
+            Route::post('/preferences/mode', 'toggleViewMode')->name('mode'); // Preferência UI
             
-            Route::post('/{room}/message/{message}/react', 'react')->name('react'); // Mantido legacy path se necessário
+            Route::post('/{room}/message/{message}/react', 'react')->name('react');
             Route::delete('/messages/{message}', 'destroyMessage')->name('delete');
             Route::post('/messages/{message}/report', 'reportMessage')->name('report');
             
@@ -72,11 +78,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/{room}/mute/{targetUser}', 'muteUser')->name('mute');
             Route::post('/{room}/pin', 'pinMessage')->name('pin');
             Route::post('/{room}/follow/{targetUser}', 'togglePresenceAlert')->name('follow');
-
-            // Rota para Modo Crise
-            Route::post('/chat/{room}/crisis', [ChatController::class, 'toggleCrisisMode'])->name('chat.crisis');
-            Route::post('/preferences/mode', 'toggleViewMode')->name('mode');
+            Route::post('/chat/{room}/crisis', 'toggleCrisisMode')->name('crisis');
         });
+    });
+
+    /**
+     * Módulo: Biblioteca (Recursos)
+     * CORREÇÃO: Usar LibraryController::class
+     */
+    Route::controller(LibraryController::class)->prefix('biblioteca')->name('library.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/sugerir', 'store')->name('store');
+        Route::post('/{resource}/votar', 'toggleVote')->name('vote');
     });
 
     /**
