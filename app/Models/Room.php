@@ -10,14 +10,9 @@ class Room extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 
-        'slug', 
-        'description', 
-        'icon', 
-        'color', 
-        'is_active',
-        'pinned_message', // <--- NOVO
-        'is_crisis_mode'  // <--- NOVO
+        'name', 'slug', 'description', 'icon', 'color', 'is_active',
+        'pinned_message', // Essencial para Mensagem Fixada
+        'is_crisis_mode'  // Essencial para Modo Crise
     ];
 
     protected $casts = [
@@ -25,13 +20,11 @@ class Room extends Model
         'is_crisis_mode' => 'boolean',
     ];
 
-    public function messages()
-    {
+    public function messages() {
         return $this->hasMany(Message::class);
     }
     
-    public function visits()
-    {
+    public function visits() {
         return $this->belongsToMany(User::class, 'room_visits');
     }
 }

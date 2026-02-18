@@ -16,8 +16,8 @@ class Message extends Model
         'content', 
         'is_sensitive', 
         'is_anonymous',
-        'reply_to_id', // <--- FALTAVA ISTO
-        'edited_at'    // <--- FALTAVA ISTO
+        'reply_to_id', // Essencial para respostas
+        'edited_at'    // Essencial para edição
     ];
 
     protected $casts = [
@@ -26,28 +26,23 @@ class Message extends Model
         'edited_at' => 'datetime',
     ];
 
-    public function user()
-    {
+    public function user() {
         return $this->belongsTo(User::class);
     }
 
-    public function room()
-    {
+    public function room() {
         return $this->belongsTo(Room::class);
     }
 
-    public function reactions()
-    {
+    public function reactions() {
         return $this->hasMany(MessageReaction::class);
     }
 
-    public function replyTo()
-    {
+    public function replyTo() {
         return $this->belongsTo(Message::class, 'reply_to_id');
     }
 
-    public function reads()
-    {
+    public function reads() {
         return $this->hasMany(MessageRead::class);
     }
 }

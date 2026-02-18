@@ -7,7 +7,7 @@ use App\Events\MessageReacted;
 use App\Events\MessageDeleted;
 use App\Events\MessageUpdated;
 use App\Events\MessageRead;
-use App\Events\RoomStatusUpdated; // Evento de estado da sala (Crise)
+use App\Events\RoomStatusUpdated;
 use App\Models\Message;
 use App\Models\MessageReaction;
 use App\Models\Room;
@@ -26,27 +26,43 @@ class ChatController extends Controller
     public function show(Room $room)
     {
         // 1. Registo de Visita (Boas-vindas)
-        $isFirstVisit = !DB::table('room_visits')->where('room_id', $room->id)->where('user_id', Auth::id())->exists();
+        $isFirstVisit = !DB::table('room_visits')
+            ->where('room_id', $room->id)
+            ->where('user_id', Auth::id())
+            ->exists();
+
         if ($isFirstVisit) {
-            DB::table('room_visits')->insert(['room_id' => $room->id, 'user_id' => Auth::id(), 'created_at' => now(), 'updated_at' => now()]);
+            DB::table('room_visits')->insert([
+                'room_id' => $room->id,
+                'user_id' => Auth::id(),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
             session()->flash('first_visit', true);
         }
 
         // 2. Lista de Seguidores (Alertas de Presença)
         $followingIds = DB::table('chat_presence_subscriptions')
-            ->where('user_id', Auth::id())->where('room_id', $room->id)->pluck('target_user_id')->toArray();
+            ->where('user_id', Auth::id())
+            ->where('room_id', $room->id)
+            ->pluck('target_user_id')
+            ->toArray();
 
         // 3. Carregar Mensagens (Com relações necessárias para UI)
         $messages = Message::with(['user', 'reactions', 'replyTo.user', 'reads'])
-            ->where('room_id', $room->id)->where('created_at', '>=', now()->subHours(24))
-            ->latest()->take(50)->get()->reverse()->values();
+            ->where('room_id', $room->id)
+            ->where('created_at', '>=', now()->subHours(24))
+            ->latest()
+            ->take(50)
+            ->get()
+            ->reverse()
+            ->values();
 
-        // 4. DADOS PARA O PAINEL DE MODERAÇÃO (Apenas Mods/Admins)
+        // 4. Dados para Painel de Moderação
         $modStats = [];
         $modLogs = [];
         
         if (Auth::user()->isModerator()) {
-            // Estatísticas Rápidas
             $modStats = [
                 'messages_24h' => Message::where('room_id', $room->id)->where('created_at', '>=', now()->subHours(24))->count(),
                 'pending_reports' => DB::table('message_reports')
@@ -55,7 +71,6 @@ class ChatController extends Controller
                     ->count(),
             ];
 
-            // Logs Recentes da Sala
             $modLogs = DB::table('moderation_logs')
                 ->join('users', 'moderation_logs.user_id', '=', 'users.id')
                 ->leftJoin('users as targets', 'moderation_logs.target_user_id', '=', 'targets.id')
@@ -72,20 +87,23 @@ class ChatController extends Controller
     }
 
     /**
-     * Processa o envio de mensagens (com Slow Mode dinâmico e Deteção de Crise).
+     * Processa o envio de mensagens (com Slow Mode e Deteção de Crise).
      */
     public function send(Request $request, Room $room)
     {
         $user = Auth::user();
 
-        // 1. Mute Check
+        // 1. Validação de Mute
         if (Cache::has("mute:room:{$room->id}:user:{$user->id}")) {
             return response()->json(['error' => 'Encontra-se silenciado temporariamente nesta sala.'], 403);
         }
 
         // 2. Slow Mode
         $delay = $room->is_crisis_mode ? 15 : 3;
-        $lastMessage = Message::where('user_id', $user->id)->where('room_id', $room->id)->latest()->first();
+        $lastMessage = Message::where('user_id', $user->id)
+            ->where('room_id', $room->id)
+            ->latest()
+            ->first();
         
         if ($lastMessage && $lastMessage->created_at->diffInSeconds(now()) < $delay) {
             $msg = $room->is_crisis_mode 
@@ -114,18 +132,19 @@ class ChatController extends Controller
             'reply_to_id' => $request->input('reply_to_id'),
         ]);
 
-        // --- CORREÇÃO AQUI ---
-        // Carregamos 'user' (o remetente) E 'replyTo.user' (quem recebeu resposta)
-        $message->load(['user', 'replyTo.user']);
+        // IMPORTANTE: Carregar TODAS as relações que o frontend espera (user, replyTo, reactions, reads)
+        // Isto previne erros de JavaScript "undefined" na função appendMessage
+        $message->load(['user', 'replyTo.user', 'reactions', 'reads']);
 
         broadcast(new MessageSent($message))->toOthers();
 
         return response()->json([
-            'status' => 'Message Sent!', 
-            'message' => $message, 
+            'status' => 'Message Sent!',
+            'message' => $message,
             'crisis_detected' => $hasCrisisKeywords
         ]);
     }
+
     /**
      * Atualiza uma mensagem existente (Edição).
      */
@@ -133,7 +152,6 @@ class ChatController extends Controller
     {
         if (Auth::id() !== $message->user_id) abort(403);
 
-        // Validação temporal (5 minutos)
         if ($message->created_at->diffInMinutes(now()) > 5) {
             return response()->json(['error' => 'O tempo limite para edição expirou.'], 422);
         }
@@ -165,7 +183,13 @@ class ChatController extends Controller
 
         if ($ids->isEmpty()) return response()->json(['status' => 'uptodate']);
 
-        DB::table('message_reads')->insert($ids->map(fn($id) => ['message_id' => $id, 'user_id' => $user->id, 'read_at' => now()])->toArray());
+        DB::table('message_reads')->insert(
+            $ids->map(fn($id) => [
+                'message_id' => $id, 
+                'user_id' => $user->id, 
+                'read_at' => now()
+            ])->toArray()
+        );
         
         broadcast(new MessageRead($room->id, $ids->toArray(), $user->id))->toOthers();
 
@@ -174,9 +198,6 @@ class ChatController extends Controller
 
     // --- FERRAMENTAS DE MODERAÇÃO ---
 
-    /**
-     * Ativa ou Desativa o Modo Crise na Sala.
-     */
     public function toggleCrisisMode(Request $request, Room $room)
     {
         if (!Auth::user()->isModerator()) abort(403);
@@ -184,10 +205,7 @@ class ChatController extends Controller
         $newState = !$room->is_crisis_mode;
         $room->update(['is_crisis_mode' => $newState]);
 
-        // Registo no Log
         $this->logAction($room->id, $newState ? 'crisis_on' : 'crisis_off', null, 'Alterou estado de crise.');
-
-        // Avisar clientes em tempo real
         broadcast(new RoomStatusUpdated($room));
 
         return response()->json(['status' => $newState ? 'active' : 'inactive']);
@@ -198,7 +216,6 @@ class ChatController extends Controller
         if (!Auth::user()->isModerator()) abort(403);
         
         Cache::put("mute:room:{$room->id}:user:{$targetUser->id}", true, now()->addMinutes(10));
-        
         $this->logAction($room->id, 'mute', $targetUser->id, 'Silenciado por 10m.');
         
         return response()->json(['message' => "Utilizador silenciado."]);
@@ -208,7 +225,6 @@ class ChatController extends Controller
     {
         if (!Auth::user()->isModerator() && Auth::id() !== $message->user_id) abort(403);
         
-        // Log se for moderador a apagar mensagem de outro
         if (Auth::user()->isModerator() && Auth::id() !== $message->user_id) {
             $this->logAction($message->room_id, 'delete_msg', $message->user_id, 'Apagou msg.');
         }
@@ -235,8 +251,16 @@ class ChatController extends Controller
     public function reportMessage(Request $request, Message $message)
     {
         $request->validate(['reason' => 'required']);
+        
+        // Verifica duplicados antes de inserir
         if (!DB::table('message_reports')->where('message_id', $message->id)->where('reporter_id', Auth::id())->exists()) {
-            DB::table('message_reports')->insert(['message_id' => $message->id, 'reporter_id' => Auth::id(), 'reason' => $request->reason, 'created_at' => now(), 'updated_at' => now()]);
+            DB::table('message_reports')->insert([
+                'message_id' => $message->id, 
+                'reporter_id' => Auth::id(), 
+                'reason' => $request->reason, 
+                'created_at' => now(), 
+                'updated_at' => now()
+            ]);
         }
         return response()->json(['message' => 'Reportado.']);
     }
@@ -246,13 +270,32 @@ class ChatController extends Controller
     public function react(Request $request, Room $room, Message $message)
     {
         $request->validate(['type' => 'required']);
-        $existing = MessageReaction::where('message_id', $message->id)->where('user_id', Auth::id())->where('type', $request->type)->first();
+        $existing = MessageReaction::where('message_id', $message->id)
+            ->where('user_id', Auth::id())
+            ->where('type', $request->type)
+            ->first();
         
-        if ($existing) { $existing->delete(); $action = 'removed'; } 
-        else { MessageReaction::create(['message_id' => $message->id, 'user_id' => Auth::id(), 'type' => $request->type]); $action = 'added'; }
+        if ($existing) { 
+            $existing->delete(); 
+            $action = 'removed'; 
+        } else { 
+            MessageReaction::create([
+                'message_id' => $message->id, 
+                'user_id' => Auth::id(), 
+                'type' => $request->type
+            ]); 
+            $action = 'added'; 
+        }
 
         $count = MessageReaction::where('message_id', $message->id)->where('type', $request->type)->count();
-        $payload = ['message_id' => $message->id, 'message_owner_id' => $message->user_id, 'type' => $request->type, 'count' => $count, 'action' => $action];
+        
+        $payload = [
+            'message_id' => $message->id, 
+            'message_owner_id' => $message->user_id, 
+            'type' => $request->type, 
+            'count' => $count, 
+            'action' => $action
+        ];
         
         broadcast(new MessageReacted($room->id, $payload))->toOthers();
         return response()->json($payload);
@@ -261,13 +304,27 @@ class ChatController extends Controller
     public function togglePresenceAlert(Request $request, Room $room, User $targetUser)
     {
         $userId = Auth::id();
-        $exists = DB::table('chat_presence_subscriptions')->where('user_id', $userId)->where('target_user_id', $targetUser->id)->where('room_id', $room->id)->exists();
+        $exists = DB::table('chat_presence_subscriptions')
+            ->where('user_id', $userId)
+            ->where('target_user_id', $targetUser->id)
+            ->where('room_id', $room->id)
+            ->exists();
         
         if ($exists) {
-            DB::table('chat_presence_subscriptions')->where('user_id', $userId)->where('target_user_id', $targetUser->id)->where('room_id', $room->id)->delete();
+            DB::table('chat_presence_subscriptions')
+                ->where('user_id', $userId)
+                ->where('target_user_id', $targetUser->id)
+                ->where('room_id', $room->id)
+                ->delete();
             $status = 'removed';
         } else {
-            DB::table('chat_presence_subscriptions')->insert(['user_id' => $userId, 'target_user_id' => $targetUser->id, 'room_id' => $room->id, 'created_at' => now(), 'updated_at' => now()]);
+            DB::table('chat_presence_subscriptions')->insert([
+                'user_id' => $userId, 
+                'target_user_id' => $targetUser->id, 
+                'room_id' => $room->id, 
+                'created_at' => now(), 
+                'updated_at' => now()
+            ]);
             $status = 'added';
         }
         return response()->json(['status' => $status]);
@@ -287,5 +344,20 @@ class ChatController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    // --- PREFERÊNCIAS DE UI ---
+
+    /**
+     * Alterna entre modo Compacto e Confortável.
+     */
+    public function toggleViewMode(Request $request)
+    {
+        $user = Auth::user();
+        $newMode = $user->chat_view_mode === 'comfortable' ? 'compact' : 'comfortable';
+        
+        $user->update(['chat_view_mode' => $newMode]);
+
+        return response()->json(['mode' => $newMode]);
     }
 }

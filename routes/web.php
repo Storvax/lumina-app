@@ -75,6 +75,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // Rota para Modo Crise
             Route::post('/chat/{room}/crisis', [ChatController::class, 'toggleCrisisMode'])->name('chat.crisis');
+            Route::post('/preferences/mode', 'toggleViewMode')->name('mode');
         });
     });
 
