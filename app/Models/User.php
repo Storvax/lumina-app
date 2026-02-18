@@ -3,11 +3,13 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Filament\Models\Contracts\FilamentUser; // <--- NOVO
+use Filament\Panel; // <--- NOVO
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser // <--- NOVO: implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
@@ -25,6 +27,7 @@ class User extends Authenticatable
         'bio',
         'shadowbanned_until',
         'role',
+        'read_receipts_enabled',
     ];
 
     /**
@@ -48,7 +51,15 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'banned_at' => 'datetime',
+            'shadowbanned_until' => 'datetime', // Adicionei este cast para garantir que o isFuture() funciona
         ];
+    }
+
+    // --- LÓGICA DE ACESSO AO FILAMENT (ADMIN) ---
+    public function canAccessPanel(Panel $panel): bool
+    {
+        // Permite acesso se for Admin ou Moderador
+        return $this->isAdmin() || $this->isModerator();
     }
 
     public function posts()
@@ -70,6 +81,7 @@ class User extends Authenticatable
     {
         return $this->banned_at !== null;
     }
+
     public function savedPosts()
     {
         return $this->belongsToMany(Post::class, 'saved_posts')->withTimestamps();
@@ -83,5 +95,10 @@ class User extends Authenticatable
     public function subscribedPosts()
     {
         return $this->belongsToMany(Post::class, 'post_subscriptions');
+    }
+
+    public function presenceSubscriptions()
+    {
+        return $this->hasMany(PresenceSubscription::class);
     }
 }
