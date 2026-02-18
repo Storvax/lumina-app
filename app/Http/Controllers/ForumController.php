@@ -197,31 +197,57 @@ class ForumController extends Controller
         ]);
     }
 
-    // --- COMENTAR POST ---
+    // --- COMENTAR E RESPONDER (ATUALIZADO COM NOTIFICAÇÕES) ---
     public function comment(Request $request, Post $post)
     {
         if ($post->is_locked) return back()->with('error', 'Trancado.');
 
         $request->validate([
             'body' => 'required|max:500',
-            'parent_id' => 'nullable|exists:comments,id' // Valida se é resposta
+            'parent_id' => 'nullable|exists:comments,id'
         ]);
 
         // Criar o comentário
         $comment = $post->comments()->create([
             'user_id' => Auth::id(),
             'body' => $request->body,
-            'parent_id' => $request->parent_id // Se for null é principal, se tiver ID é resposta
+            'parent_id' => $request->parent_id
         ]);
 
-        // Notificar o dono do post ou do comentário original
+        // --- LÓGICA DE NOTIFICAÇÃO (ATUALIZADA) ---
+        // Quem vamos notificar?
+        // 1. O autor do post
+        // 2. Todos os subscritores
+        // 3. O autor do comentário pai (se for uma resposta)
+        // EXCLUINDO sempre o próprio utilizador que está a comentar agora
+        
+        $recipients = collect(); // Coleção vazia para começar
+
+        // 1. Adicionar Autor do Post
+        if ($post->user_id !== Auth::id()) {
+            $recipients->push($post->user);
+        }
+
+        // 2. Adicionar Subscritores (que não sejam o próprio a comentar)
+        $subscribers = $post->subscribers()->where('user_id', '!=', Auth::id())->get();
+        $recipients = $recipients->merge($subscribers);
+
+        // 3. Adicionar Autor do Comentário Pai (se for resposta)
         if ($request->parent_id) {
-            $parent = Comment::find($request->parent_id);
-            if ($parent->user_id !== Auth::id()) {
-                // $parent->user->notify(...); // Podes ativar notificações aqui
+            $parent = \App\Models\Comment::find($request->parent_id);
+            if ($parent && $parent->user_id !== Auth::id()) {
+                $recipients->push($parent->user);
             }
-        } elseif ($post->user_id !== Auth::id()) {
-            $post->user->notify(new ForumInteraction($post, Auth::user(), 'comment'));
+        }
+
+        // Remove duplicados (ex: se o autor também subscreveu, só recebe 1 vez) e envia
+        $uniqueRecipients = $recipients->unique('id');
+        
+        if ($uniqueRecipients->count() > 0) {
+            \Illuminate\Support\Facades\Notification::send(
+                $uniqueRecipients, 
+                new \App\Notifications\ForumInteraction($post, Auth::user(), 'comment')
+            );
         }
 
         return back();
@@ -339,5 +365,22 @@ class ForumController extends Controller
 
         $comment->update(['is_helpful' => !$comment->is_helpful]);
         return back();
+    }
+
+    // --- NOVO: SUBSCREVER POST ---
+    public function toggleSubscription(Post $post)
+    {
+        $user = Auth::user();
+
+        // Toggle (se existe, remove. se não existe, cria)
+        $subscription = $post->subscribers()->toggle($user->id);
+
+        // 'attached' significa que criou a subscrição, 'detached' que removeu
+        $subscribed = count($subscription['attached']) > 0;
+        
+        return response()->json([
+            'subscribed' => $subscribed,
+            'message' => $subscribed ? 'Notificações ativadas para este post.' : 'Notificações desativadas.'
+        ]);
     }
 }

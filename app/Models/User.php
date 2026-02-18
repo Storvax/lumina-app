@@ -21,6 +21,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'avatar',
+        'bio',
+        'shadowbanned_until',
+        'role',
     ];
 
     /**
@@ -74,5 +78,10 @@ class User extends Authenticatable
     public function isShadowbanned()
     {
         return $this->shadowbanned_until && $this->shadowbanned_until->isFuture();
+    }
+
+    public function subscribedPosts()
+    {
+        return $this->belongsToMany(Post::class, 'post_subscriptions');
     }
 }

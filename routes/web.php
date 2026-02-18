@@ -43,6 +43,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/mural/{post}/report', [ForumController::class, 'report'])->name('forum.report');
     Route::post('/mural/{post}/save', [ForumController::class, 'toggleSave'])->name('forum.save');
     Route::post('/users/{user}/shadowban', [ForumController::class, 'shadowbanUser'])->name('users.shadowban');
+    Route::post('/mural/{post}/subscrever', [ForumController::class, 'toggleSubscription'])->name('forum.subscribe');
 
     Route::post('/comentarios/{comment}/reagir', [ForumController::class, 'reactToComment'])->name('comments.react');
     Route::post('/comentarios/{comment}/util', [ForumController::class, 'markHelpful'])->name('comments.helpful');
@@ -72,6 +73,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->name('forum.destroy')->middleware('auth');
 
     Route::delete('/chat/message/{message}', [ChatController::class, 'destroyMessage'])->name('chat.message.destroy')->middleware('auth');
+    Route::post('/chat/messages/{message}/report', [ChatController::class, 'reportMessage'])->name('chat.report');
 
     Route::post('/notifications/mark-read', function () {
         Auth::user()->unreadNotifications->markAsRead();

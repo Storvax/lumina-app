@@ -55,6 +55,14 @@
             <div id="users-list-mobile" class="space-y-3 max-h-40 overflow-y-auto pr-1"></div>
         </div>
 
+        <div class="hidden md:flex flex-col w-64 bg-white border-l border-slate-100 p-4">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Na Fogueira
+            </h3>
+            <ul id="online-users-list" class="space-y-3 overflow-y-auto flex-1">
+                </ul>
+        </div>
+
         <div class="bg-indigo-900 rounded-3xl p-5 text-white relative overflow-hidden shadow-xl mb-6 ring-1 ring-white/20">
             <div class="absolute inset-0 bg-gradient-to-tr from-indigo-900 to-violet-900"></div>
             <div class="relative z-10">
@@ -166,7 +174,8 @@
             <div id="scroll-anchor"></div>
         </main>
 
-        <div id="typing-indicator" class="px-6 md:px-8 text-xs text-slate-400 italic h-6 flex items-center gap-2 opacity-0 transition-opacity duration-300"></div>
+        <div id="typing-indicator" class="text-xs text-slate-400 italic h-4 mb-2 transition-opacity opacity-0 pl-4">
+        </div>
         <footer class="p-3 md:p-6 bg-white/0 shrink-0">
             <form id="chat-form" class="max-w-4xl mx-auto relative flex items-end gap-2 md:gap-3 glass-panel p-1.5 md:p-2 rounded-[24px] md:rounded-[2rem] shadow-xl shadow-indigo-100/50 border border-white/60">
                 <button type="button" id="cw-btn" class="mb-1 p-2.5 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" title="Conteúdo Sensível"><i class="ri-eye-off-line text-lg md:text-xl"></i></button>
@@ -211,7 +220,6 @@
         const currentUserId = {{ Auth::id() ?? 'null' }};
         const roomId = {{ $room->id }};
         let isSensitive = false;
-        let typingTimer;
 
         // NÃO PRECISAMOS DE addWelcomeMessage() POR JAVASCRIPT
         // O aviso agora está fixo no HTML (primeiro elemento do scroll)
@@ -288,15 +296,17 @@
 
             function initChatSystem() {
                 window.Echo.join(`chat.${roomId}`)
-                    .here((users) => { updateCounter(users.length); updateUserList(users); })
-                    .joining((user) => { 
-                        // Atualiza IMEDIATAMENTE (sem esperar por callback lento)
-                        updateCounter(1, true); 
-                        addUserToList(user); 
+                    .here((users) => {
+                        // Lista inicial
+                        users.forEach(user => addUserToSidebar(user));
                     })
-                    .leaving((user) => { 
-                        updateCounter(-1, true); 
-                        removeUserFromList(user); 
+                    .joining((user) => {
+                        addUserToSidebar(user);
+                        console.log(user.name + ' entrou.');
+                    })
+                    .leaving((user) => {
+                        removeUserFromSidebar(user);
+                        console.log(user.name + ' saiu.');
                     })
                     .listen('MessageSent', (e) => {
                         const emptyState = document.getElementById('empty-state');
@@ -309,13 +319,30 @@
                         if (e.message_owner_id === currentUserId && e.action === 'added') triggerSupportEffect(e.type);
                     })
                     .listenForWhisper('typing', (e) => {
-                        if(typingIndicator) {
-                            typingIndicator.innerHTML = `<span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span> <span class="font-bold text-slate-600">${e.name}</span> <span class="text-slate-400">está a escrever...</span>`;
-                            typingIndicator.style.opacity = '1';
-                            clearTimeout(typingTimer);
-                            typingTimer = setTimeout(() => typingIndicator.style.opacity = '0', 2000);
-                        }
+                        showTypingIndicator(e.name);
                     });
+            }
+
+            // Funções Auxiliares de UI
+            function addUserToSidebar(user) {
+                const list = document.getElementById('online-users-list');
+                if(document.getElementById(`user-${user.id}`)) return; // Já existe
+
+                const li = document.createElement('li');
+                li.id = `user-${user.id}`;
+                li.className = 'flex items-center gap-3 animate-fade-in';
+                li.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold border border-indigo-200">
+                        ${user.name.substring(0, 1)}
+                    </div>
+                    <span class="text-sm font-medium text-slate-600 truncate">${user.name}</span>
+                `;
+                list.appendChild(li);
+            }
+
+            function removeUserFromSidebar(user) {
+                const el = document.getElementById(`user-${user.id}`);
+                if (el) el.remove();
             }
 
             function updateCounter(val, incremental = false) {
@@ -487,6 +514,27 @@
         }
 
         function escapeHtml(text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+        let typingTimer;
+        const messageInput = document.getElementById('messageInput'); // O teu <input> ou <textarea>
+
+        messageInput.addEventListener('input', () => {
+            window.Echo.join(`chat.${roomId}`)
+                .whisper('typing', {
+                    name: "{{ Auth::user()->name }}"
+                });
+        });
+
+        function showTypingIndicator(name) {
+            const indicator = document.getElementById('typing-indicator');
+            indicator.innerText = `${name} está a escrever...`;
+            indicator.classList.remove('opacity-0');
+            
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                indicator.classList.add('opacity-0');
+            }, 3000); // 3 segundos de debounce
+        }
     </script>
 </body>
 </html>

@@ -47,6 +47,15 @@
             @endif
         </div>
 
+        <div>
+            <x-input-label for="bio" :value="__('Bio Curta (Opcional)')" />
+            <textarea id="bio" name="bio" rows="2" 
+                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm"
+                placeholder="Ex: Mãe de dois, a lidar com ansiedade pós-parto.">{{ old('bio', $user->bio) }}</textarea>
+            <p class="mt-1 text-xs text-gray-500">Uma frase curta sobre quem és ou a tua jornada.</p>
+            <x-input-error class="mt-2" :messages="$errors->get('bio')" />
+        </div>
+
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Save') }}</x-primary-button>
 

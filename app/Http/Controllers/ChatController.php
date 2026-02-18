@@ -3,21 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Events\MessageSent;
+use App\Events\MessageReacted;
+use App\Events\MessageDeleted;
 use App\Models\Message;
+use App\Models\MessageReaction;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
 {
-    // Mostrar a sala de chat
+    // --- MOSTRAR A SALA ---
     public function show(Room $room)
     {
-        // Alteração: Carregar apenas mensagens das últimas 24 horas
-        // E no máximo 50 mensagens (para não sobrecarregar)
+        // Carregar apenas mensagens das últimas 24 horas e max 50
         $messages = Message::with(['user', 'reactions'])
             ->where('room_id', $room->id)
-            ->where('created_at', '>=', now()->subHours(24)) // <--- AQUI: Só as últimas 24h
+            ->where('created_at', '>=', now()->subHours(24))
             ->latest()
             ->take(50)
             ->get()
@@ -29,34 +32,47 @@ class ChatController extends Controller
         return view('chat.show', compact('room', 'messages', 'allRooms'));
     }
 
-    // Receber mensagem nova (AJAX)
+    // --- ENVIAR MENSAGEM (COM SLOW MODE) ---
     public function send(Request $request, Room $room)
     {
+        // 1. SLOW MODE: Verificar se o user escreveu há menos de 3 segundos
+        $lastMessage = Message::where('user_id', Auth::id())
+            ->where('room_id', $room->id)
+            ->latest()
+            ->first();
+
+        if ($lastMessage && $lastMessage->created_at->diffInSeconds(now()) < 3) {
+            return response()->json(['error' => 'Estás a escrever muito rápido. Respira fundo.'], 429);
+        }
+
+        // 2. Validação
         $request->validate([
             'content' => 'required|string|max:1000',
-            'is_sensitive' => 'boolean' // Validação nova
+            'is_sensitive' => 'boolean'
         ]);
 
+        // 3. Criar Mensagem
         $message = Message::create([
             'user_id' => Auth::id(),
             'room_id' => $room->id,
             'content' => $request->content,
-            'is_sensitive' => $request->is_sensitive ?? false, // Gravar na BD
+            'is_sensitive' => $request->is_sensitive ?? false,
+            'is_anonymous' => $request->is_anonymous ?? false, // Suporte para anónimo se tiveres o campo
         ]);
 
-        // Importante: Envia o is_sensitive no evento broadcast
+        // 4. Broadcast para os outros (Reverb)
         broadcast(new MessageSent($message))->toOthers();
 
         return response()->json(['status' => 'Message Sent!', 'message' => $message]);
     }
 
-    // 2. Adiciona esta NOVA função para as reações
+    // --- REAGIR A MENSAGEM ---
     public function react(Request $request, Room $room, Message $message)
     {
         $request->validate(['type' => 'required|in:hug,candle,ear']);
 
-        // Lógica "Toggle": Se já existe, remove. Se não, cria.
-        $existing = \App\Models\MessageReaction::where('message_id', $message->id)
+        // Toggle: Se existe remove, senão cria
+        $existing = MessageReaction::where('message_id', $message->id)
             ->where('user_id', Auth::id())
             ->where('type', $request->type)
             ->first();
@@ -65,7 +81,7 @@ class ChatController extends Controller
             $existing->delete();
             $action = 'removed';
         } else {
-            \App\Models\MessageReaction::create([
+            MessageReaction::create([
                 'message_id' => $message->id,
                 'user_id' => Auth::id(),
                 'type' => $request->type
@@ -73,12 +89,12 @@ class ChatController extends Controller
             $action = 'added';
         }
 
-        // Contar total atualizado para este tipo
-        $count = \App\Models\MessageReaction::where('message_id', $message->id)
+        // Contar total atualizado
+        $count = MessageReaction::where('message_id', $message->id)
             ->where('type', $request->type)
             ->count();
 
-        // Dados para o Frontend
+        // Payload para frontend e broadcast
         $payload = [
             'message_id' => $message->id,
             'message_owner_id' => $message->user_id,
@@ -87,22 +103,53 @@ class ChatController extends Controller
             'action' => $action
         ];
 
-        broadcast(new \App\Events\MessageReacted($room->id, $payload))->toOthers();
+        broadcast(new MessageReacted($room->id, $payload))->toOthers();
 
         return response()->json($payload);
     }
 
+    // --- APAGAR MENSAGEM ---
     public function destroyMessage(Message $message)
     {
-        if (!auth()->user()->isModerator()) {
+        // Permite apagar se for MODERADOR ou se for o DONO da mensagem
+        if (!auth()->user()->isModerator() && auth()->id() !== $message->user_id) {
             abort(403, 'Não tens permissão.');
         }
 
+        $roomId = $message->room_id; // Guardar ID antes de apagar para o evento
+        $messageId = $message->id;
+
         $message->delete();
         
-        // Opcional: Se usares broadcasting (Reverb), aqui dispararias um evento MessageDeleted
-        // para a mensagem desaparecer em tempo real para os outros.
+        // Avisar os outros em tempo real para removerem do ecrã
+        broadcast(new MessageDeleted($roomId, $messageId))->toOthers();
         
         return back()->with('status', 'Mensagem apagada.');
+    }
+
+    // --- NOVO: REPORTAR MENSAGEM ---
+    public function reportMessage(Request $request, Message $message)
+    {
+        $request->validate(['reason' => 'required|string|max:50']);
+
+        // Verifica se já reportou esta mensagem para evitar spam
+        $exists = DB::table('message_reports')
+            ->where('message_id', $message->id)
+            ->where('reporter_id', Auth::id())
+            ->exists();
+
+        if (!$exists) {
+            DB::table('message_reports')->insert([
+                'message_id' => $message->id,
+                'reporter_id' => Auth::id(),
+                'reason' => $request->reason,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            
+            // Opcional: Aqui poderias disparar uma notificação para os admins
+        }
+
+        return response()->json(['message' => 'Denúncia recebida. Obrigado por manteres a comunidade segura.']);
     }
 }

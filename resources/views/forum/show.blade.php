@@ -4,44 +4,19 @@
     <x-slot name="css">
         <style>
             @media print {
-                /* Esconder tudo o que não interessa */
-                nav, .fixed, .sidebar-col, .comments-section, .post-footer, .no-print { 
-                    display: none !important; 
-                }
-                /* Resetar cores e fundos para poupar tinta e ser legível */
-                body, article, .glass-card { 
-                    background: white !important; 
-                    color: black !important; 
-                    box-shadow: none !important; 
-                    border: none !important; 
-                    padding: 0 !important;
-                    margin: 0 !important;
-                }
-                /* Forçar largura total */
-                .main-col { 
-                    width: 100% !important; 
-                    grid-column: span 12 !important; 
-                }
-                /* Tipografia para papel */
+                nav, .fixed, .sidebar-col, .comments-section, .post-footer, .no-print { display: none !important; }
+                body, article, .glass-card { background: white !important; color: black !important; box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
+                .main-col { width: 100% !important; grid-column: span 12 !important; }
                 h1 { font-size: 24pt !important; color: black !important; }
                 p { font-size: 12pt !important; line-height: 1.5 !important; color: #333 !important; }
-                
-                /* Rodapé da impressão */
-                .print-footer {
-                    display: block !important;
-                    margin-top: 50px;
-                    border-top: 1px solid #ddd;
-                    padding-top: 10px;
-                    font-size: 10pt;
-                    color: #666;
-                    text-align: center;
-                }
+                .print-footer { display: block !important; margin-top: 50px; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10pt; color: #666; text-align: center; }
             }
             .print-footer { display: none; }
         </style>
     </x-slot>
 
     @php
+        // 1. CORES E ÍCONES
         $colors = match($post->tag) {
             'hope' => 'from-emerald-500 to-teal-400',
             'vent' => 'from-rose-500 to-pink-500',
@@ -60,6 +35,11 @@
             'anxiety' => 'ri-flashlight-fill',
             default => 'ri-chat-smile-fill'
         };
+
+        // 2. DETEÇÃO AUTOMÁTICA DE CRISE (Para a Sidebar)
+        $riskKeywords = ['suicidio', 'suicídio', 'morte', 'morrer', 'matar', 'desaparecer', 'acabar com tudo', 'sangue', 'cortar', 'não aguento mais'];
+        $fullText = strtolower($post->title . ' ' . $post->content);
+        $showCrisisBanner = \Illuminate\Support\Str::contains($fullText, $riskKeywords);
     @endphp
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -102,6 +82,13 @@
                                         <span class="bg-slate-100 px-2 py-0.5 rounded text-slate-500">Autor</span>
                                         <span>•</span>
                                         <span>{{ $post->created_at->diffForHumans() }}</span>
+                                        
+                                        @if($post->updated_at->gt($post->created_at))
+                                            <span class="text-slate-300">•</span>
+                                            <span class="italic text-slate-400 cursor-help" title="Editado em {{ $post->updated_at->format('d/m/Y às H:i') }}">
+                                                (editado)
+                                            </span>
+                                        @endif
                                     </p>
                                 </div>
                             </div>
@@ -135,6 +122,12 @@
                                         @auth
                                             <div class="h-px bg-slate-100 my-1"></div>
                                             
+                                            <button onclick="toggleSubscribe({{ $post->id }}, this)" 
+                                                    class="w-full text-left px-5 py-3 text-sm font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-3 group">
+                                                <i class="{{ $post->isSubscribedBy(Auth::user()) ? 'ri-notification-3-fill text-indigo-500' : 'ri-notification-3-line' }} text-lg group-hover:scale-110 transition-transform icon-bell"></i>
+                                                <span class="text-subscribe">{{ $post->isSubscribedBy(Auth::user()) ? 'Notificações Ativas' : 'Ativar Notificações' }}</span>
+                                            </button>
+
                                             <button onclick="toggleSave({{ $post->id }}, this)" class="w-full text-left px-5 py-3 text-sm font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-3 group">
                                                 <i class="{{ Auth::user()->savedPosts->contains($post->id) ? 'ri-bookmark-fill text-indigo-600' : 'ri-bookmark-line' }} text-lg group-hover:scale-110 transition-transform"></i>
                                                 <span class="save-text">{{ Auth::user()->savedPosts->contains($post->id) ? 'Remover dos Guardados' : 'Guardar Post' }}</span>
@@ -143,41 +136,27 @@
                                             @if(Auth::user()->isModerator())
                                                 <div class="h-px bg-slate-100 my-1"></div>
                                                 <form action="{{ route('forum.pin', $post) }}" method="POST"> @csrf @method('PATCH')
-                                                    <button type="submit" class="w-full text-left px-5 py-3 text-sm font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-3">
-                                                        <i class="ri-pushpin-line text-lg"></i> {{ $post->is_pinned ? 'Desafixar' : 'Fixar no Topo' }}
-                                                    </button>
+                                                    <button type="submit" class="w-full text-left px-5 py-3 text-sm font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-3"><i class="ri-pushpin-line text-lg"></i> {{ $post->is_pinned ? 'Desafixar' : 'Fixar no Topo' }}</button>
                                                 </form>
                                                 <form action="{{ route('forum.lock', $post) }}" method="POST"> @csrf @method('PATCH')
-                                                    <button type="submit" class="w-full text-left px-5 py-3 text-sm font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-3">
-                                                        <i class="{{ $post->is_locked ? 'ri-lock-unlock-line' : 'ri-lock-line' }} text-lg"></i> {{ $post->is_locked ? 'Destrancar' : 'Trancar' }}
-                                                    </button>
+                                                    <button type="submit" class="w-full text-left px-5 py-3 text-sm font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-3"><i class="{{ $post->is_locked ? 'ri-lock-unlock-line' : 'ri-lock-line' }} text-lg"></i> {{ $post->is_locked ? 'Destrancar' : 'Trancar' }}</button>
                                                 </form>
                                                 @if(!$post->user->isShadowbanned())
-                                                    <button onclick="shadowbanUser({{ $post->user->id }}, '{{ $post->user->name }}')" class="w-full text-left px-5 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50 flex items-center gap-3">
-                                                        <i class="ri-ghost-line text-lg"></i> Shadowban User
-                                                    </button>
+                                                    <button onclick="shadowbanUser({{ $post->user->id }}, '{{ $post->user->name }}')" class="w-full text-left px-5 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50 flex items-center gap-3"><i class="ri-ghost-line text-lg"></i> Shadowban</button>
                                                 @endif
                                             @endif
 
                                             @if(Auth::id() === $post->user_id)
                                                 <div class="h-px bg-slate-100 my-1"></div>
-                                                <button onclick="openEditModal({{ $post->id }}, '{{ e($post->title) }}', '{{ e($post->content) }}', '{{ $post->tag }}', {{ $post->is_sensitive ? 1 : 0 }})" 
-                                                        class="w-full text-left px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-3">
-                                                    <i class="ri-pencil-line text-lg"></i> Editar
-                                                </button>
+                                                <button onclick="openEditModal({{ $post->id }}, '{{ e($post->title) }}', '{{ e($post->content) }}', '{{ $post->tag }}', {{ $post->is_sensitive ? 1 : 0 }})" class="w-full text-left px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-3"><i class="ri-pencil-line text-lg"></i> Editar</button>
                                             @endif
 
                                             @if(Auth::user()->isModerator() || Auth::id() === $post->user_id)
-                                                <button onclick="openDeleteModal({{ $post->id }})" class="w-full text-left px-5 py-3 text-sm font-bold text-rose-500 hover:bg-rose-50 flex items-center gap-3">
-                                                    <i class="ri-delete-bin-line text-lg"></i> Eliminar
-                                                </button>
+                                                <button onclick="openDeleteModal({{ $post->id }})" class="w-full text-left px-5 py-3 text-sm font-bold text-rose-500 hover:bg-rose-50 flex items-center gap-3"><i class="ri-delete-bin-line text-lg"></i> Eliminar</button>
                                             @endif
-
                                             @if(Auth::id() !== $post->user_id && !Auth::user()->isModerator())
                                                 <div class="h-px bg-slate-100 my-1"></div>
-                                                <button onclick="openReportModal({{ $post->id }})" class="w-full text-left px-5 py-3 text-sm font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3">
-                                                    <i class="ri-flag-line text-lg"></i> Denunciar
-                                                </button>
+                                                <button onclick="openReportModal({{ $post->id }})" class="w-full text-left px-5 py-3 text-sm font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3"><i class="ri-flag-line text-lg"></i> Denunciar</button>
                                             @endif
                                         @endauth
                                     </div>
@@ -190,7 +169,7 @@
                             {{ $post->title }}
                         </h1>
                         
-                        <div class="prose prose-lg prose-slate max-w-none text-slate-600 leading-relaxed first-letter:text-7xl first-letter:font-bold first-letter:text-slate-900 first-letter:mr-3 first-letter:float-left first-letter:leading-[0.8]">
+                        <div id="post-content-body" class="prose prose-lg prose-slate max-w-none text-slate-600 leading-relaxed first-letter:text-7xl first-letter:font-bold first-letter:text-slate-900 first-letter:mr-3 first-letter:float-left first-letter:leading-[0.8]">
                             {!! nl2br(e($post->content)) !!}
                         </div>
 
@@ -341,20 +320,68 @@
             </div>
 
             <div class="lg:col-span-4 space-y-6 sidebar-col no-print">
-                <div class="bg-white rounded-3xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100 animate-fade-up" style="animation-delay: 0.2s;">
-                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Sobre o Autor</h4>
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="w-16 h-16 rounded-full bg-gradient-to-br {{ $colors }} p-1">
-                            <div class="w-full h-full bg-white rounded-full flex items-center justify-center text-xl font-bold text-slate-700">{{ substr($post->user->name, 0, 1) }}</div>
-                        </div>
-                        <div>
-                            <p class="font-bold text-slate-900 text-lg">{{ $post->user->name }}</p>
-                            <p class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded inline-block mt-1">Membro Ativo</p>
+                
+                @if($showCrisisBanner)
+                    <div class="bg-rose-50 border border-rose-100 rounded-3xl p-6 shadow-sm animate-fade-up">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center text-xl shrink-0">
+                                <i class="ri-alarm-warning-fill"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-rose-700 text-sm mb-1">Não estás sozinho(a)</h4>
+                                <p class="text-xs text-rose-600/80 mb-3 leading-relaxed">
+                                    Parece que estás a passar por um momento difícil. Há ajuda disponível agora mesmo.
+                                </p>
+                                <div class="space-y-2">
+                                    <a href="tel:112" class="flex items-center justify-between px-3 py-2 bg-white rounded-xl border border-rose-100 shadow-sm hover:shadow-md transition-all group">
+                                        <span class="text-xs font-bold text-slate-700">Emergência (112)</span>
+                                        <i class="ri-phone-fill text-rose-500"></i>
+                                    </a>
+                                    <a href="tel:808242424" class="flex items-center justify-between px-3 py-2 bg-white rounded-xl border border-blue-100 shadow-sm hover:shadow-md transition-all group">
+                                        <span class="text-xs font-bold text-slate-700">SNS 24 (Apoio)</span>
+                                        <i class="ri-phone-fill text-blue-500"></i>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-4">
-                        <div><span class="block font-bold text-slate-800 text-lg">{{ $post->user->posts->count() }}</span><span class="text-[10px] text-slate-400 uppercase font-bold">Posts</span></div>
-                        <div><span class="block font-bold text-slate-800 text-lg">{{ $post->user->comments_count ?? 0 }}</span><span class="text-[10px] text-slate-400 uppercase font-bold">Apoios</span></div>
+                @endif
+
+                <div class="bg-white rounded-3xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100 animate-fade-up" style="animation-delay: 0.2s;">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Quem escreve</h4>
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-16 h-16 rounded-full bg-gradient-to-br {{ $colors }} p-1 shrink-0">
+                            <div class="w-full h-full bg-white rounded-full flex items-center justify-center text-xl font-bold text-slate-700">
+                                {{ substr($post->user->name, 0, 1) }}
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-900 text-lg leading-tight">{{ $post->user->name }}</p>
+                            <div class="flex items-center gap-1.5 mt-1 text-slate-500 text-xs font-medium">
+                                <i class="ri-calendar-smile-line text-indigo-400"></i>
+                                <span>Na comunidade desde {{ $post->user->created_at->translatedFormat('M Y') }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if($post->user->bio)
+                        <div class="mb-6 relative">
+                            <i class="ri-double-quotes-l absolute -top-2 -left-1 text-indigo-100 text-3xl -z-10"></i>
+                            <p class="text-sm text-slate-600 italic leading-relaxed pl-2 relative z-10">
+                                "{{ $post->user->bio }}"
+                            </p>
+                        </div>
+                    @endif
+
+                    <div class="grid grid-cols-2 gap-3 text-center border-t border-slate-100 pt-4">
+                        <div class="bg-slate-50 rounded-xl p-2">
+                            <span class="block font-bold text-slate-800 text-lg">{{ $post->user->posts->count() }}</span>
+                            <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wide">Histórias</span>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl p-2">
+                            <span class="block font-bold text-slate-800 text-lg">{{ $post->user->comments_count ?? 0 }}</span>
+                            <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wide">Apoios</span>
+                        </div>
                     </div>
                 </div>
 
@@ -376,41 +403,67 @@
         </div>
     </div>
 
+    @if(in_array($post->tag, ['vent', 'anxiety']))
+        <div id="emotional-checkin" class="fixed bottom-6 right-6 z-[70] hidden animate-fade-up no-print">
+            <div class="bg-white border border-indigo-100 shadow-2xl rounded-2xl p-5 max-w-sm relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 to-violet-400"></div>
+                <div class="flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl shrink-0"><i class="ri-heart-pulse-line"></i></div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-sm mb-1">Como te sentes depois de ler?</h4>
+                        <p class="text-xs text-slate-500 mb-3 leading-relaxed">Este conteúdo foi intenso. Queremos garantir que estás bem.</p>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="closeCheckin()" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition-colors">Estou bem 👍</button>
+                            <button onclick="triggerBreathingFromCheckin()" class="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-bold hover:bg-indigo-100 transition-colors">Pausa 🍃</button>
+                            <button id="sosBtnTriggerCheckin" class="px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600 text-xs font-bold hover:bg-rose-50 transition-colors">Ajuda 🆘</button>
+                        </div>
+                    </div>
+                    <button onclick="closeCheckin()" class="text-slate-300 hover:text-slate-500"><i class="ri-close-line"></i></button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div id="postModal" class="fixed inset-0 z-[80] hidden"><div id="postModalBackdrop" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="togglePostModal()"></div><div class="absolute inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center pointer-events-none"><div id="postModalPanel" class="bg-white md:rounded-[2rem] rounded-t-[2rem] shadow-2xl w-full max-w-lg md:mx-4 transform pointer-events-auto p-6"><form id="create-post-form" class="space-y-4">@csrf<h3 class="text-xl font-bold">Editar Post</h3><input name="title" class="w-full bg-slate-50 p-3 rounded-xl border border-slate-200"><textarea name="content" class="w-full bg-slate-50 p-3 rounded-xl border border-slate-200" rows="5"></textarea><div class="hidden"><input type="radio" name="tag" value="hope"><input type="radio" name="tag" value="vent"><input type="radio" name="tag" value="anxiety"><input type="checkbox" name="is_sensitive"></div><button class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold">Guardar</button></form></div></div></div>
     <div id="deleteModal" class="fixed inset-0 z-[90] hidden"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeDeleteModal()"></div><div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none"><div id="deletePanel" class="bg-white rounded-3xl p-6 pointer-events-auto text-center max-w-sm"><h3 class="text-xl font-bold mb-2">Apagar?</h3><p class="text-slate-500 mb-4">Esta ação é irreversível.</p><div class="flex gap-2"><button onclick="closeDeleteModal()" class="flex-1 py-2 bg-slate-100 rounded-xl">Cancelar</button><button id="confirm-delete-btn" class="flex-1 py-2 bg-rose-500 text-white rounded-xl">Apagar</button></div></div></div></div>
     <div id="reportModal" class="fixed inset-0 z-[90] hidden"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeReportModal()"></div><div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none"><div id="reportPanel" class="bg-white rounded-3xl p-6 pointer-events-auto max-w-sm"><h3 class="text-xl font-bold mb-4">Denunciar</h3><button onclick="submitReport('spam')" class="w-full p-3 text-left hover:bg-slate-50 rounded-xl">🤖 Spam</button><button onclick="submitReport('hate')" class="w-full p-3 text-left hover:bg-slate-50 rounded-xl">🤬 Ódio</button><button onclick="submitReport('risk')" class="w-full p-3 text-left hover:bg-slate-50 rounded-xl text-rose-600">🆘 Risco</button></div></div></div>
 
     <x-slot name="scripts">
         <script>
-            // COPIAR LINK
-            function copyLink() {
-                navigator.clipboard.writeText(window.location.href).then(() => {
-                    alert("Link copiado para a área de transferência!");
-                }).catch(err => {
-                    console.error('Erro ao copiar', err);
-                });
-            }
-
-            // Respiração
+            function copyLink() { navigator.clipboard.writeText(window.location.href).then(() => { alert("Link copiado!"); }).catch(console.error); }
+            document.addEventListener('DOMContentLoaded', () => {
+                const checkin = document.getElementById('emotional-checkin');
+                if (!checkin || sessionStorage.getItem('emotionalCheckinShown')) return;
+                let shown = false;
+                const showIt = () => { if(shown) return; checkin.classList.remove('hidden'); shown = true; sessionStorage.setItem('emotionalCheckinShown', 'true'); };
+                window.addEventListener('scroll', () => { if((window.scrollY + window.innerHeight) / document.documentElement.scrollHeight > 0.8) showIt(); });
+                setTimeout(showIt, 45000); 
+                window.closeCheckin = () => { checkin.classList.add('opacity-0', 'translate-y-4'); setTimeout(() => checkin.remove(), 500); };
+                window.triggerBreathingFromCheckin = () => { closeCheckin(); document.getElementById('breathe-widget').scrollIntoView({behavior: 'smooth', block: 'center'}); setTimeout(toggleBreathing, 1000); };
+                const sosBtn = document.getElementById('sosBtnTriggerCheckin');
+                if(sosBtn) sosBtn.addEventListener('click', () => { closeCheckin(); document.getElementById('sosModal').classList.remove('hidden'); });
+            });
             let breatheInterval, isBreathing = false;
             function toggleBreathing() {
                 const circle = document.getElementById('breathe-circle'), ring1 = document.getElementById('breathe-ring-1'), icon = document.getElementById('breathe-icon'), textSpan = document.getElementById('breathe-text'), title = document.getElementById('breathe-instruction');
                 if (isBreathing) { clearInterval(breatheInterval); isBreathing = false; icon.classList.remove('hidden'); textSpan.classList.add('hidden'); circle.style.transform = 'scale(1)'; ring1.style.transform = 'scale(1)'; title.innerText = "Pausa terminada"; setTimeout(() => { title.innerText = "Precisas de uma pausa?"; }, 2000); } 
                 else { isBreathing = true; icon.classList.add('hidden'); textSpan.classList.remove('hidden'); let phase = 0; function runPhase() { if(!isBreathing) return; if (phase === 0) { title.innerText = "Inspira..."; textSpan.innerText = "Inspira"; circle.style.transform = 'scale(1.5)'; ring1.style.transform = 'scale(1.8)'; phase = 1; } else if (phase === 1) { title.innerText = "Segura..."; textSpan.innerText = "Segura"; phase = 2; } else { title.innerText = "Expira..."; textSpan.innerText = "Expira"; circle.style.transform = 'scale(1)'; ring1.style.transform = 'scale(1)'; phase = 0; } } runPhase(); breatheInterval = setInterval(runPhase, 4000); }
             }
-
-            // Reações (Post e Comentários)
             window.react = async function(pid, t, btn) { btn.classList.add('scale-110'); setTimeout(()=>btn.classList.remove('scale-110'),200); try{await axios.post(`/mural/${pid}/reagir`,{type:t}); let c=btn.querySelector('.count-hug,.count-candle,.count-ear'); c.innerText=parseInt(c.innerText)+1;}catch(e){} };
             window.reactComment = async function(cid, t, btn) { btn.classList.add('scale-110'); setTimeout(()=>btn.classList.remove('scale-110'),200); try{const r=await axios.post(`/comentarios/${cid}/reagir`,{type:t}); let c=btn.querySelector('.count'); let v=parseInt(c.innerText)||0; c.innerText=r.data.action==='added'?v+1:(v>0?v-1:'');}catch(e){} };
-
-            // Modais (Versão Simplificada para caber)
+            window.toggleSubscribe = async function(postId, btn) {
+                const icon = btn.querySelector('.icon-bell');
+                const text = btn.querySelector('.text-subscribe');
+                const wasSubscribed = icon.classList.contains('ri-notification-3-fill');
+                if (wasSubscribed) { icon.className = 'ri-notification-3-line text-lg group-hover:scale-110 transition-transform icon-bell'; text.innerText = 'Receber notificações'; icon.classList.remove('text-indigo-500'); } else { icon.className = 'ri-notification-3-fill text-lg group-hover:scale-110 transition-transform icon-bell text-indigo-500'; text.innerText = 'Notificações Ativas'; }
+                try { await axios.post(`/mural/${postId}/subscrever`); } catch (error) { alert("Erro ao subscrever."); }
+            };
             const postModal=document.getElementById('postModal'), deleteModal=document.getElementById('deleteModal'), reportModal=document.getElementById('reportModal');
             let delId=null, repId=null, editId=null;
             window.togglePostModal=()=>{postModal.classList.toggle('hidden')}; window.closeDeleteModal=()=>{deleteModal.classList.add('hidden')}; window.closeReportModal=()=>{reportModal.classList.add('hidden')};
             window.openEditModal=(id,t,c,tag,s)=>{editId=id; document.querySelector('#create-post-form input[name="title"]').value=t; document.querySelector('#create-post-form textarea').value=c; togglePostModal(); };
             window.openDeleteModal=(id)=>{delId=id; deleteModal.classList.remove('hidden');};
             window.openReportModal=(id)=>{repId=id; reportModal.classList.remove('hidden');};
-            
             document.getElementById('create-post-form').addEventListener('submit', async(e)=>{e.preventDefault(); try{const fd=new FormData(e.target); fd.append('_method','PATCH'); await axios.post(`/mural/${editId}`, fd); location.reload();}catch(e){alert('Erro');}});
             document.getElementById('confirm-delete-btn').addEventListener('click', async()=>{try{await axios.delete(`/mural/${delId}`); location.href='/mural';}catch(e){alert('Erro');}});
             window.submitReport=async(r)=>{try{await axios.post(`/mural/${repId}/report`,{reason:r}); alert('Enviado'); closeReportModal();}catch(e){alert('Erro');}};
