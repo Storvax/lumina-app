@@ -7,18 +7,27 @@ use App\Models\User;
 use App\Models\PostReaction;
 use App\Models\Comment;
 use App\Models\Report;
-use App\Models\ModerationLog; // Log de Moderação
+use App\Models\ModerationLog; 
 use App\Notifications\ForumInteraction;
+use App\Services\GamificationService; // <--- Importado
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Notification;
 
 class ForumController extends Controller
 {
+    protected $gamification;
+
+    // Injeção do Serviço de Gamificação
+    public function __construct(GamificationService $gamification)
+    {
+        $this->gamification = $gamification;
+    }
+
     // --- FUNÇÃO AUXILIAR: AUTO-TAGGING DE CONTEÚDO SENSÍVEL ---
     private function detectSensitiveContent($text)
     {
-        // Palavras-chave que ativam o blur automático
         $triggers = ['suicidio', 'suicídio', 'morte', 'sangue', 'cortar', 'abuso', 'violencia', 'matar', 'morrer'];
         foreach ($triggers as $word) {
             if (Str::contains(Str::lower($text), $word)) return true;
@@ -29,10 +38,9 @@ class ForumController extends Controller
     // --- LISTAGEM (MURAL) ---
     public function index(Request $request)
     {
-        // Query Inicial com Eager Loading (Performance) e Shadowban Scope (Automático)
         $query = Post::with(['user', 'reactions', 'comments'])
-            ->orderBy('is_pinned', 'desc') // Fixados no topo
-            ->latest(); // Mais recentes depois
+            ->orderBy('is_pinned', 'desc') 
+            ->latest(); 
 
         // 1. Filtro de Pesquisa
         if ($request->has('search') && $request->search != '') {
@@ -48,10 +56,8 @@ class ForumController extends Controller
             $query->where('tag', $request->tag);
         }
 
-        // Paginação mantendo os filtros na URL
         $posts = $query->paginate(20)->appends($request->query());
 
-        // Resposta AJAX para filtros sem refresh
         if ($request->ajax()) {
             return view('forum.partials.posts', compact('posts'))->render();
         }
@@ -62,18 +68,14 @@ class ForumController extends Controller
     // --- VER POST INDIVIDUAL ---
     public function show(Post $post)
     {
-        // Carrega o post e APENAS os comentários principais (parent_id = null)
-        // Mas traz agarradas as respostas (replies) de cada um.
         $post->load(['user', 'comments' => function($q) {
             $q->whereNull('parent_id')
               ->with(['user', 'replies.user', 'reactions', 'replies.reactions'])
               ->latest();
         }]);
         
-        // Carrega contagem TOTAL real (pais + filhos) para mostrar no topo
         $post->loadCount('comments');
 
-        // Posts Relacionados (Mantém o que tinhas)
         $relatedPosts = Post::where('tag', $post->tag)
                             ->where('id', '!=', $post->id)
                             ->latest()->take(3)->get();
@@ -91,16 +93,18 @@ class ForumController extends Controller
             'is_sensitive' => 'sometimes|accepted'
         ]);
 
-        // Auto-tagging: Se o sistema detetar perigo, força is_sensitive = true
         $autoSensitive = $this->detectSensitiveContent($validated['title'] . ' ' . $validated['content']);
 
-        Post::create([
+        $post = Post::create([
             'user_id' => Auth::id(),
             'title' => $validated['title'],
             'content' => $validated['content'],
             'tag' => $validated['tag'],
             'is_sensitive' => $request->has('is_sensitive') || $autoSensitive,
         ]);
+
+        // --- GAMIFICAÇÃO: Criar Tópico ---
+        $this->gamification->trackAction(Auth::user(), 'first_post');
 
         return response()->json(['message' => 'Post criado!']);
     }
@@ -117,7 +121,6 @@ class ForumController extends Controller
             'is_sensitive' => 'sometimes|accepted'
         ]);
 
-        // Auto-tagging na edição também
         $autoSensitive = $this->detectSensitiveContent($validated['title'] . ' ' . $validated['content']);
 
         $post->update([
@@ -137,7 +140,6 @@ class ForumController extends Controller
             abort(403, 'Sem permissão.');
         }
 
-        // Se foi um moderador a apagar post de outra pessoa, cria log
         if (Auth::user()->isModerator() && Auth::id() !== $post->user_id) {
             ModerationLog::create([
                 'moderator_id' => Auth::id(),
@@ -167,10 +169,10 @@ class ForumController extends Controller
 
         if ($existingReaction) {
             if ($existingReaction->type == $request->type) {
-                $existingReaction->delete(); // Remove se clicar no mesmo
+                $existingReaction->delete(); 
                 $action = 'removed';
             } else {
-                $existingReaction->update(['type' => $request->type]); // Muda se clicar noutro
+                $existingReaction->update(['type' => $request->type]); 
                 $action = 'updated';
             }
         } else {
@@ -181,8 +183,10 @@ class ForumController extends Controller
             ]);
             $action = 'added';
 
-            // NOTIFICAÇÃO (Só se não for o próprio dono)
+            // --- GAMIFICAÇÃO: Reagir a Post ---
+            // Só conta se for uma nova reação (não updates) e se não for ao próprio post
             if ($post->user_id !== $user->id) {
+                $this->gamification->trackAction($user, 'reaction');
                 $post->user->notify(new ForumInteraction($post, $user, 'reaction'));
             }
         }
@@ -197,7 +201,7 @@ class ForumController extends Controller
         ]);
     }
 
-    // --- COMENTAR E RESPONDER (ATUALIZADO COM NOTIFICAÇÕES) ---
+    // --- COMENTAR E RESPONDER ---
     public function comment(Request $request, Post $post)
     {
         if ($post->is_locked) return back()->with('error', 'Trancado.');
@@ -207,32 +211,28 @@ class ForumController extends Controller
             'parent_id' => 'nullable|exists:comments,id'
         ]);
 
-        // Criar o comentário
-        $comment = $post->comments()->create([
+        $post->comments()->create([
             'user_id' => Auth::id(),
             'body' => $request->body,
             'parent_id' => $request->parent_id
         ]);
 
-        // --- LÓGICA DE NOTIFICAÇÃO (ATUALIZADA) ---
-        // Quem vamos notificar?
-        // 1. O autor do post
-        // 2. Todos os subscritores
-        // 3. O autor do comentário pai (se for uma resposta)
-        // EXCLUINDO sempre o próprio utilizador que está a comentar agora
-        
-        $recipients = collect(); // Coleção vazia para começar
+        // --- GAMIFICAÇÃO: Comentar/Ajudar ---
+        $this->gamification->trackAction(Auth::user(), 'reply');
 
-        // 1. Adicionar Autor do Post
+        // --- NOTIFICAÇÕES ---
+        $recipients = collect();
+
+        // 1. Autor do Post
         if ($post->user_id !== Auth::id()) {
             $recipients->push($post->user);
         }
 
-        // 2. Adicionar Subscritores (que não sejam o próprio a comentar)
+        // 2. Subscritores
         $subscribers = $post->subscribers()->where('user_id', '!=', Auth::id())->get();
         $recipients = $recipients->merge($subscribers);
 
-        // 3. Adicionar Autor do Comentário Pai (se for resposta)
+        // 3. Autor do Comentário Pai
         if ($request->parent_id) {
             $parent = \App\Models\Comment::find($request->parent_id);
             if ($parent && $parent->user_id !== Auth::id()) {
@@ -240,13 +240,12 @@ class ForumController extends Controller
             }
         }
 
-        // Remove duplicados (ex: se o autor também subscreveu, só recebe 1 vez) e envia
         $uniqueRecipients = $recipients->unique('id');
         
         if ($uniqueRecipients->count() > 0) {
-            \Illuminate\Support\Facades\Notification::send(
+            Notification::send(
                 $uniqueRecipients, 
-                new \App\Notifications\ForumInteraction($post, Auth::user(), 'comment')
+                new ForumInteraction($post, Auth::user(), 'comment')
             );
         }
 
@@ -257,12 +256,7 @@ class ForumController extends Controller
     public function togglePin(Post $post)
     {
         if (!Auth::user()->isModerator()) abort(403);
-        
         $post->update(['is_pinned' => !$post->is_pinned]);
-        
-        // Log Opcional
-        // ModerationLog::create([...]);
-
         return back();
     }
 
@@ -270,7 +264,6 @@ class ForumController extends Controller
     public function toggleLock(Post $post)
     {
         if (!Auth::user()->isModerator()) abort(403);
-        
         $post->update(['is_locked' => !$post->is_locked]);
         return back();
     }
@@ -280,11 +273,8 @@ class ForumController extends Controller
     {
         if (!Auth::user()->isModerator()) abort(403);
         
-        // Bane por 7 dias (ou define null para remover ban)
-        // Aqui assumimos banir. Para desbanir terias de criar outro método ou toggle.
         $user->update(['shadowbanned_until' => now()->addDays(7)]);
 
-        // Log Obrigatório
         ModerationLog::create([
             'moderator_id' => Auth::id(),
             'target_user_id' => $user->id,
@@ -302,7 +292,6 @@ class ForumController extends Controller
     {
         $request->validate(['reason' => 'required|string|max:50']);
 
-        // Evitar spam de reports do mesmo user no mesmo post
         $exists = Report::where('user_id', Auth::id())
                         ->where('post_id', $post->id)
                         ->exists();
@@ -360,9 +349,7 @@ class ForumController extends Controller
     // --- NOVA: MARCAR COMO ÚTIL ---
     public function markHelpful(Comment $comment)
     {
-        // Só o dono do post pode marcar
         if (Auth::id() !== $comment->post->user_id) abort(403);
-
         $comment->update(['is_helpful' => !$comment->is_helpful]);
         return back();
     }
@@ -371,11 +358,7 @@ class ForumController extends Controller
     public function toggleSubscription(Post $post)
     {
         $user = Auth::user();
-
-        // Toggle (se existe, remove. se não existe, cria)
         $subscription = $post->subscribers()->toggle($user->id);
-
-        // 'attached' significa que criou a subscrição, 'detached' que removeu
         $subscribed = count($subscription['attached']) > 0;
         
         return response()->json([

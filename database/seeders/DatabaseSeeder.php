@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\Comment;
 use App\Models\Message;
 use Illuminate\Database\Seeder;
+use App\Models\Achievement;
 
 class DatabaseSeeder extends Seeder
 {
@@ -76,5 +77,32 @@ class DatabaseSeeder extends Seeder
                 'user_id' => $users->random()->id,
             ]);
         }
+
+        Achievement::create([
+        'slug' => 'voice-found',
+        'name' => 'Encontraste a tua Voz',
+        'description' => 'Partilhaste a tua primeira história na Fogueira.',
+        'icon' => 'ri-mic-line',
+        'color' => 'indigo',
+        'flames_reward' => 20
+    ]);
+
+    Achievement::create([
+        'slug' => 'first-journal',
+        'name' => 'Querido Diário',
+        'description' => 'Fizeste o teu primeiro registo de humor.',
+        'icon' => 'ri-book-heart-line',
+        'color' => 'rose',
+        'flames_reward' => 15
+    ]);
+
+    Achievement::create([
+        'slug' => 'consistency-3',
+        'name' => 'Faísca Constante',
+        'description' => 'Visitaste a Lumina 3 dias seguidos.',
+        'icon' => 'ri-fire-line',
+        'color' => 'orange',
+        'flames_reward' => 50
+    ]);
     }
 }

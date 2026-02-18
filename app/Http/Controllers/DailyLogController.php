@@ -3,12 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\DailyLog;
+use App\Services\GamificationService; // <--- Importado
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class DailyLogController extends Controller
 {
+    protected $gamification;
+
+    // Injeção de dependência do serviço de Gamificação
+    public function __construct(GamificationService $gamification)
+    {
+        $this->gamification = $gamification;
+    }
+
     public function index()
     {
         $user = Auth::user();
@@ -35,7 +44,7 @@ class DailyLogController extends Controller
             'note' => 'nullable|string|max:2000',
         ]);
 
-        DailyLog::updateOrCreate(
+        $log = DailyLog::updateOrCreate(
             [
                 'user_id' => Auth::id(),
                 'log_date' => Carbon::today(),
@@ -46,6 +55,12 @@ class DailyLogController extends Controller
                 'note' => $request->note,
             ]
         );
+
+        // --- GAMIFICAÇÃO ---
+        // Apenas recompensa se for um novo registo (evita spam de updates no mesmo dia)
+        if ($log->wasRecentlyCreated) {
+            $this->gamification->trackAction(Auth::user(), 'daily_log');
+        }
 
         return redirect()->route('diary.index')->with('success', 'Diário atualizado com sucesso!');
     }

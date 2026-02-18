@@ -25,6 +25,9 @@ class User extends Authenticatable implements FilamentUser
         'role',
         'read_receipts_enabled',
         'chat_view_mode',
+        'flames', 
+        'current_streak', 
+        'last_activity_at'
     ];
 
     /**
@@ -46,6 +49,7 @@ class User extends Authenticatable implements FilamentUser
             'banned_at' => 'datetime',
             'shadowbanned_until' => 'datetime',
             'read_receipts_enabled' => 'boolean',
+            'last_activity_at' => 'datetime',
         ];
     }
 
@@ -104,5 +108,29 @@ class User extends Authenticatable implements FilamentUser
     public function presenceSubscriptions()
     {
         return $this->hasMany(PresenceSubscription::class);
+    }
+
+    // Relação com Conquistas
+    public function achievements()
+    {
+        return $this->belongsToMany(Achievement::class, 'user_achievements')
+            ->withPivot('unlocked_at')
+            ->orderBy('pivot_unlocked_at', 'desc');
+    }
+
+    // Helper para adicionar chamas
+    public function addFlames(int $amount)
+    {
+        $this->increment('flames', $amount);
+    }
+    
+    // Nível da Fogueira (Metáfora Visual)
+    // Nível 1: Faísca (0-50), Nível 2: Chama (50-200), Nível 3: Fogueira (200+)
+    public function getBonfireLevelAttribute()
+    {
+        if ($this->flames < 50) return 'spark';
+        if ($this->flames < 200) return 'flame';
+        if ($this->flames < 500) return 'bonfire';
+        return 'beacon'; // Farol
     }
 }

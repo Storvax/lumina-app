@@ -117,6 +117,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Auth::user()->unreadNotifications->markAsRead();
         return response()->json(['status' => 'success']);
     })->name('notifications.read');
+
+    Route::post('/perfil/respirar', [ProfileController::class, 'logBreathing'])->name('profile.breathe');
 });
 
 require __DIR__.'/auth.php';

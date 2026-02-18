@@ -8,10 +8,10 @@ export default defineConfig({
             refresh: true,
         }),
     ],
-    server: { // Adiciona isto
+    server: { 
+        host: '0.0.0.0', // Permite ligações externas
         hmr: {
-            host: 'localhost',
-            protocol: 'ws', // Força o Hot Module Replacement a usar ws
+            host: '192.168.1.111' // <--- SUBSTITUI PELO TEU IP (o mesmo do php artisan serve)
         },
     },
 });

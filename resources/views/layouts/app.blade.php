@@ -32,5 +32,41 @@
                 {{ $slot }}
             </main>
         </div>
+        @if(session('gamification.flames') || session('gamification.badge'))
+        <div id="gamification-toast" class="fixed bottom-6 right-6 z-50 animate-bounce-in-up">
+            <div class="bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4">
+                
+                @if(session('gamification.badge'))
+                    <div class="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center text-yellow-400 text-2xl">
+                        <i class="{{ session('gamification.badge')['icon'] }}"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-yellow-500 uppercase">Badge Desbloqueado!</p>
+                        <p class="font-bold text-lg">{{ session('gamification.badge')['name'] }}</p>
+                    </div>
+                @elseif(session('gamification.flames'))
+                    <div class="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center text-orange-500 text-xl">
+                        <i class="ri-fire-fill"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-lg">+{{ session('gamification.flames') }} Chamas</p>
+                        <p class="text-xs text-slate-400">Continua assim!</p>
+                    </div>
+                @endif
+
+            </div>
+        </div>
+
+        <script>
+            setTimeout(() => {
+                const toast = document.getElementById('gamification-toast');
+                if(toast) {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(20px)';
+                    setTimeout(() => toast.remove(), 500);
+                }
+            }, 4000); // Desaparece após 4 segundos
+        </script>
+        @endif
     </body>
 </html>
