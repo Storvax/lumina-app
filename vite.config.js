@@ -1,5 +1,20 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
+import os from 'os';
+
+// Função para descobrir o IP local automaticamente
+function getLocalIP() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            // Procura o IP que seja IPv4 e que não seja o localhost (127.0.0.1)
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return 'localhost'; // Fallback de segurança
+}
 
 export default defineConfig({
     plugins: [
@@ -9,9 +24,9 @@ export default defineConfig({
         }),
     ],
     server: { 
-        host: '0.0.0.0', // Permite ligações externas
+        host: '0.0.0.0', // Permite que o servidor Vite oiça ligações externas
         hmr: {
-            host: '192.168.1.111' // <--- SUBSTITUI PELO TEU IP (o mesmo do php artisan serve)
+            host: getLocalIP(), // Injeta o IP dinâmico para o telemóvel encontrar o CSS
         },
     },
 });

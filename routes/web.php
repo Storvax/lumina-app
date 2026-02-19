@@ -9,28 +9,30 @@ use App\Http\Controllers\ForumController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LibraryController;
+use App\Http\Controllers\BuddyController;
+use App\Http\Controllers\CalmZoneController;
+use App\Http\Controllers\PrivacyController;
+use App\Http\Controllers\DashboardController;
+
 /*
 |--------------------------------------------------------------------------
-| Rotas Web da Aplicação
+| Web Routes
 |--------------------------------------------------------------------------
 */
 
-// --- Rotas Públicas ---
-
-// Homepage com "Smart Welcome" e "Pulso"
 Route::get('/', [HomeController::class, 'index'])->name('home');
-
-// Lista de Salas
 Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
 
-// --- Rotas Autenticadas ---
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    Route::view('/dashboard', 'dashboard')->name('dashboard');
+    Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+    Route::patch('/perfil/notificacoes', [\App\Http\Controllers\ProfileController::class, 'updateNotificationPrefs'])->name('profile.notifications');
 
-    /**
-     * Módulo: Mural (Fórum)
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Fórum (Mural da Esperança)
+    |--------------------------------------------------------------------------
+    */
     Route::controller(ForumController::class)->prefix('mural')->name('forum.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/criar', 'store')->name('store');
@@ -49,18 +51,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
     });
 
-    // Ações de Utilizador no Fórum
     Route::post('/users/{user}/shadowban', [ForumController::class, 'shadowbanUser'])->name('users.shadowban');
     
-    // Comentários
     Route::controller(ForumController::class)->prefix('comentarios/{comment}')->name('comments.')->group(function () {
         Route::post('/reagir', 'reactToComment')->name('react');
         Route::post('/util', 'markHelpful')->name('helpful');
     });
 
-    /**
-     * Módulo: Chat (A Fogueira)
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Chat (A Fogueira)
+    |--------------------------------------------------------------------------
+    */
     Route::controller(ChatController::class)->group(function () {
         Route::get('/sala/{room:slug}', 'show')->name('chat.show');
         
@@ -68,57 +70,109 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/{room}/message', 'send')->name('send');
             Route::patch('/{room}/message/{message}', 'updateMessage')->name('update');
             Route::post('/{room}/read', 'markAsRead')->name('read');
-            Route::post('/preferences/mode', 'toggleViewMode')->name('mode'); // Preferência UI
+            Route::post('/preferences/mode', 'toggleViewMode')->name('mode');
             
             Route::post('/{room}/message/{message}/react', 'react')->name('react');
             Route::delete('/messages/{message}', 'destroyMessage')->name('delete');
             Route::post('/messages/{message}/report', 'reportMessage')->name('report');
             
-            // Moderação
             Route::post('/{room}/mute/{targetUser}', 'muteUser')->name('mute');
             Route::post('/{room}/pin', 'pinMessage')->name('pin');
             Route::post('/{room}/follow/{targetUser}', 'togglePresenceAlert')->name('follow');
-            Route::post('/chat/{room}/crisis', 'toggleCrisisMode')->name('crisis');
+            Route::post('/{room}/crisis', 'toggleCrisisMode')->name('crisis');
         });
     });
 
-    /**
-     * Módulo: Biblioteca (Recursos)
-     * CORREÇÃO: Usar LibraryController::class
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Biblioteca de Recursos
+    |--------------------------------------------------------------------------
+    */
     Route::controller(LibraryController::class)->prefix('biblioteca')->name('library.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/sugerir', 'store')->name('store');
         Route::post('/{resource}/votar', 'toggleVote')->name('vote');
     });
 
-    /**
-     * Módulo: Diário
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Diário Emocional
+    |--------------------------------------------------------------------------
+    */
     Route::controller(DailyLogController::class)->prefix('diario')->name('diary.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
     });
 
-    /**
-     * Módulo: Perfil
-     */
-    Route::controller(ProfileController::class)->group(function () {
-        Route::get('/perfil', 'show')->name('profile.show');
-        Route::post('/perfil/energia', 'updateEnergy')->name('profile.energy');
-        Route::post('/perfil/seguranca', 'updateSafetyPlan')->name('profile.safety');
-        Route::get('/profile', 'edit')->name('profile.edit');
-        Route::patch('/profile', 'update')->name('profile.update');
-        Route::delete('/profile', 'destroy')->name('profile.destroy');
+    /*
+    |--------------------------------------------------------------------------
+    | Sistema Buddy (Ouvinte)
+    |--------------------------------------------------------------------------
+    */
+    Route::controller(BuddyController::class)->prefix('ouvinte')->name('buddy.')->group(function () {
+        Route::get('/dashboard', 'dashboard')->name('dashboard');
+        Route::post('/pedir', 'requestBuddy')->name('request');
+        Route::post('/candidatura', 'apply')->name('apply');
+        Route::post('/{session}/aceitar', 'acceptSession')->name('accept');
+        Route::post('/{session}/escalar', 'escalate')->name('escalate');
+        Route::post('/{session}/avaliar', 'evaluate')->name('evaluate');
     });
 
-    // Utilitários
+    /*
+    |--------------------------------------------------------------------------
+    | Perfil & Configurações de Conta
+    |--------------------------------------------------------------------------
+    */
+    Route::controller(ProfileController::class)->group(function () {
+        Route::get('/perfil', 'show')->name('profile.show');
+        Route::get('/profile/edit', 'edit')->name('profile.edit');
+        Route::patch('/profile', 'update')->name('profile.update');
+        Route::delete('/profile', 'destroy')->name('profile.destroy');
+        
+        // Custom Profile Features
+        Route::post('/perfil/energia', 'updateEnergy')->name('profile.energy');
+        Route::post('/perfil/seguranca', 'updateSafetyPlan')->name('profile.safety');
+        Route::post('/perfil/respirar', 'logBreathing')->name('profile.breathe');
+        Route::post('/perfil/tags', 'updateTags')->name('profile.tags');
+        Route::post('/perfil/jornada', 'storeMilestone')->name('profile.milestones.store');
+        Route::delete('/perfil/jornada/{milestone}', 'destroyMilestone')->name('profile.milestones.destroy');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Utilitários
+    |--------------------------------------------------------------------------
+    */
     Route::post('/notifications/mark-read', function () {
         Auth::user()->unreadNotifications->markAsRead();
         return response()->json(['status' => 'success']);
     })->name('notifications.read');
 
-    Route::post('/perfil/respirar', [ProfileController::class, 'logBreathing'])->name('profile.breathe');
+    /*
+    |--------------------------------------------------------------------------
+    | Privacidade e Segurança
+    |--------------------------------------------------------------------------
+    */
+    Route::controller(PrivacyController::class)->prefix('privacidade')->name('privacy.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/exportar', 'exportData')->name('export');
+        Route::post('/hibernar', 'hibernate')->name('hibernate');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Zona Calma
+    |--------------------------------------------------------------------------
+    */
+    Route::controller(CalmZoneController::class)->prefix('zona-calma')->name('calm.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/grounding', 'grounding')->name('grounding');
+        Route::get('/crise', 'crisis')->name('crisis');
+        
+        Route::post('/playlist/sugerir', 'suggestSong')->name('playlist.suggest');
+        Route::post('/playlist/{song}/votar', 'voteSong')->name('playlist.vote');
+    });
+
 });
 
 require __DIR__.'/auth.php';

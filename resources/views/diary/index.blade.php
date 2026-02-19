@@ -210,6 +210,37 @@
 
             </div>
         </form>
+        @if(isset($todayLog) && $todayLog->cbt_insight)
+            @php $insight = json_decode($todayLog->cbt_insight, true); @endphp
+            
+            <div class="mt-8 bg-indigo-50 border border-indigo-100 rounded-3xl p-6 md:p-8 relative overflow-hidden animate-fade-up">
+                <div class="absolute -top-6 -right-6 text-9xl text-indigo-500/10"><i class="ri-brain-line"></i></div>
+                
+                <div class="relative z-10">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="px-3 py-1 bg-indigo-200 text-indigo-700 text-xs font-bold rounded-full uppercase tracking-wider">
+                            Lumina Insight
+                        </span>
+                        <span class="text-xs text-slate-500 font-medium">Reflexão Guiada</span>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">{{ $insight['message'] }}</h3>
+                    <p class="text-sm text-slate-600 mb-6 border-l-2 border-indigo-300 pl-3">Aviso: Isto é um exercício de reflexão (Terapia Cognitivo-Comportamental), não substitui aconselhamento médico profissional.</p>
+                    
+                    <div class="space-y-3">
+                        <p class="font-bold text-slate-700 text-sm">Responde a ti próprio mentalmente ou num papel:</p>
+                        <ul class="space-y-2">
+                            @foreach($insight['prompts'] as $index => $prompt)
+                                <li class="bg-white p-4 rounded-xl shadow-sm text-slate-700 text-sm flex gap-3 items-start border border-slate-100">
+                                    <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">{{ $index + 1 }}</span>
+                                    {{ $prompt }}
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        @endif
     </div>
 
     <script>

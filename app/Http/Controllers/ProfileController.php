@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 use App\Models\DailyLog;
-use App\Models\Achievement; // <--- Importante para Gamificação
+use App\Models\Achievement; // Importante para Gamificação
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 
@@ -58,13 +58,75 @@ class ProfileController extends Controller
             'badges_count' => count($unlockedIds) . '/' . $allAchievements->count()
         ];
 
+        // 4. DADOS PARA O GRÁFICO DE HUMOR (Últimos 30 dias)
+        $chartData = DailyLog::where('user_id', $user->id)
+            ->where('log_date', '>=', Carbon::today()->subDays(30))
+            ->orderBy('log_date', 'asc')
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'date' => Carbon::parse($log->log_date)->format('d/m'),
+                    'mood' => $log->mood_level
+                ];
+            });
+
+        // 5. JORNADA E IDENTIDADE EMOCIONAL
+        $milestones = $user->milestones; 
+        $tagsList = ['Ansiedade', 'Luto', 'Burnout', 'Depressão', 'TDAH', 'Pânico', 'Recuperação', 'Stress', 'Solidão'];
+
+        // UM ÚNICO RETURN no final com tudo!
         return view('profile.show', [
             'user' => $user,
             'garden' => $garden,
             'stats' => $stats,
             'achievements' => $allAchievements,
-            'unlockedIds' => $unlockedIds
+            'unlockedIds' => $unlockedIds,
+            'chartData' => $chartData,
+            'milestones' => $milestones,
+            'tagsList' => $tagsList
         ]);
+    }
+
+    // --- ATUALIZAR TAGS DE IDENTIDADE ---
+    public function updateTags(Request $request)
+    {
+        $validated = $request->validate([
+            'tags' => 'nullable|array|max:3', // Máximo 3 tags
+            'tags.*' => 'string|max:30'
+        ]);
+
+        $user = Auth::user();
+        $user->emotional_tags = $validated['tags'] ?? [];
+        $user->save();
+
+        return back()->with('success', 'Tags de identidade atualizadas!');
+    }
+
+    // --- JORNADA: ADICIONAR MARCO ---
+    public function storeMilestone(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:100',
+            'date' => 'required|date',
+            'is_public' => 'sometimes|accepted'
+        ]);
+
+        Auth::user()->milestones()->create([
+            'title' => $validated['title'],
+            'date' => $validated['date'],
+            'is_public' => $request->has('is_public'),
+        ]);
+
+        return back()->with('success', 'Novo marco adicionado à tua jornada!');
+    }
+
+    // --- JORNADA: APAGAR MARCO ---
+    public function destroyMilestone(\App\Models\Milestone $milestone)
+    {
+        if ($milestone->user_id !== Auth::id()) abort(403);
+        $milestone->delete();
+        
+        return back()->with('success', 'Marco removido.');
     }
 
     // --- EDIÇÃO DE CONTA ---
@@ -143,5 +205,30 @@ class ProfileController extends Controller
     {
         $gamification->trackAction(Auth::user(), 'breathe');
         return response()->json(['success' => true, 'flames' => 5]);
+    }
+
+    public function updateNotificationPrefs(Request $request)
+    {
+        $validated = $request->validate([
+            'wants_weekly_summary' => 'boolean',
+            'quiet_hours_start' => 'nullable|date_format:H:i',
+            'quiet_hours_end' => 'nullable|date_format:H:i',
+        ]);
+
+        $user = Auth::user();
+        $user->wants_weekly_summary = $request->has('wants_weekly_summary');
+        
+        // Só guarda as horas se ambas forem preenchidas
+        if ($request->quiet_hours_start && $request->quiet_hours_end) {
+            $user->quiet_hours_start = $request->quiet_hours_start;
+            $user->quiet_hours_end = $request->quiet_hours_end;
+        } else {
+            $user->quiet_hours_start = null;
+            $user->quiet_hours_end = null;
+        }
+
+        $user->save();
+
+        return back()->with('status', 'notification-prefs-updated');
     }
 }

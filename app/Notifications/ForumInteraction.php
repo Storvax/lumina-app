@@ -3,52 +3,55 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue; // <--- Importante para performance
-use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
+use App\Models\Post;
+use App\Models\User;
 
-class ForumInteraction extends Notification implements ShouldQueue
+class ForumInteraction extends Notification
 {
     use Queueable;
 
     public $post;
-    public $sender;
-    public $type; // 'reaction' ou 'comment'
+    public $user;
+    public $type; // 'reaction', 'comment'
 
-    public function __construct($post, $sender, $type)
+    public function __construct(Post $post, User $user, string $type)
     {
         $this->post = $post;
-        $this->sender = $sender;
+        $this->user = $user;
         $this->type = $type;
     }
 
-    public function via($notifiable)
+    public function via(object $notifiable): array
     {
-        return ['database', 'broadcast']; // Guarda na BD e envia via Reverb
+        // Se o utilizador estiver em Hora de Silêncio, recebe APENAS na base de dados (visível quando abrir a app).
+        // Se não estiver, poderia receber 'broadcast' (som) ou 'mail'.
+        if ($notifiable->isInQuietHours()) {
+            return ['database']; 
+        }
+
+        return ['database', 'broadcast']; // Adiciona 'mail' aqui se quiseres no futuro (opt-in)
     }
 
-    // Dados para a Base de Dados
-    public function toArray($notifiable)
+    public function toArray(object $notifiable): array
     {
+        // Copywriting Empático em vez de genérico
+        if ($this->type === 'reaction') {
+            $message = "Alguém deixou um abraço virtual na tua história.";
+            $icon = "ri-heart-fill";
+            $color = "text-rose-500 bg-rose-100";
+        } else {
+            $message = "Alguém tirou um momento para te ouvir e responder.";
+            $icon = "ri-chat-1-fill";
+            $color = "text-indigo-500 bg-indigo-100";
+        }
+
         return [
             'post_id' => $this->post->id,
-            'sender_id' => $this->sender->id,
-            'sender_name' => $this->sender->name,
-            'type' => $this->type,
-            'message' => $this->type === 'reaction' 
-                ? "{$this->sender->name} reagiu ao teu post." 
-                : "{$this->sender->name} comentou a tua história."
+            'user_id' => $this->user->id,
+            'message' => $message,
+            'icon' => $icon,
+            'color' => $color,
         ];
-    }
-
-    // Dados para o Websocket (Reverb)
-    public function toBroadcast($notifiable)
-    {
-        return new BroadcastMessage([
-            'message' => $this->type === 'reaction' 
-                ? "{$this->sender->name} enviou-te apoio." 
-                : "{$this->sender->name} comentou.",
-            'post_id' => $this->post->id,
-        ]);
     }
 }

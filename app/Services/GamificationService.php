@@ -16,6 +16,9 @@ class GamificationService
         // 1. Atualizar Streak (apenas uma vez por dia)
         $this->checkDailyStreak($user);
 
+        // 1.2. Progredir Missões Diárias
+        $this->updateMissionProgress($user, $actionType);
+
         // 2. Processar ação específica
         switch ($actionType) {
             case 'daily_log':
@@ -110,6 +113,61 @@ class GamificationService
         
         if ($count >= $targetCount) {
             $this->unlockAchievement($user, $badgeSlug);
+        }
+    }
+
+    /**
+     * Atribui 3 missões diárias ao utilizador, se ainda não as tiver hoje.
+     */
+    public function assignDailyMissions(\App\Models\User $user)
+    {
+        $today = now()->toDateString();
+        $hasMissions = $user->missions()->wherePivot('assigned_date', $today)->exists();
+
+        // Se já tem missões hoje, não faz nada
+        if ($hasMissions) return;
+
+        // Se não tem, vai buscar 3 aleatórias e atribui
+        $missions = \App\Models\Mission::inRandomOrder()->limit(3)->get();
+        
+        foreach ($missions as $mission) {
+            $user->missions()->attach($mission->id, [
+                'assigned_date' => $today,
+                'progress' => 0
+            ]);
+        }
+    }
+
+    /**
+     * Atualiza o progresso das missões ativas baseadas na ação.
+     */
+    private function updateMissionProgress(\App\Models\User $user, string $actionType)
+    {
+        $today = now()->toDateString();
+
+        // Vai buscar as missões de hoje que correspondem a esta ação e que ainda não estão concluídas
+        $activeMissions = $user->missions()
+            ->wherePivot('assigned_date', $today)
+            ->whereNull('mission_user.completed_at')
+            ->where('action_type', $actionType)
+            ->get();
+
+        foreach ($activeMissions as $mission) {
+            $newProgress = $mission->pivot->progress + 1;
+            
+            // Atualiza o progresso na Base de Dados
+            $user->missions()->updateExistingPivot($mission->id, ['progress' => $newProgress]);
+
+            // Se atingiu o objetivo, conclui a missão
+            if ($newProgress >= $mission->target_count) {
+                $user->missions()->updateExistingPivot($mission->id, ['completed_at' => now()]);
+                
+                // Dá a recompensa
+                $this->addFlames($user, $mission->flames_reward);
+                
+                // Dispara o Toast de "Missão Concluída"
+                session()->flash('gamification.mission', $mission->title);
+            }
         }
     }
 }

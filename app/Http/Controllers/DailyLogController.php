@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\DailyLog;
-use App\Services\GamificationService; // <--- Importado
+use App\Services\GamificationService;
+use App\Services\CBTAnalysisService; // <--- NOVO
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -11,23 +12,22 @@ use Carbon\Carbon;
 class DailyLogController extends Controller
 {
     protected $gamification;
+    protected $cbtService;
 
-    // Injeção de dependência do serviço de Gamificação
-    public function __construct(GamificationService $gamification)
+    public function __construct(GamificationService $gamification, CBTAnalysisService $cbtService)
     {
         $this->gamification = $gamification;
+        $this->cbtService = $cbtService; // <--- Injeção
     }
 
     public function index()
     {
         $user = Auth::user();
         
-        // Verifica se já escreveu hoje
         $todayLog = DailyLog::where('user_id', $user->id)
                             ->where('log_date', Carbon::today())
                             ->first();
 
-        // Busca os últimos 7 dias para o histórico visual
         $history = DailyLog::where('user_id', $user->id)
                            ->where('log_date', '>=', Carbon::today()->subDays(6))
                            ->orderBy('log_date', 'asc')
@@ -44,6 +44,9 @@ class DailyLogController extends Controller
             'note' => 'nullable|string|max:2000',
         ]);
 
+        // Gerar Insight CBT
+        $insight = $this->cbtService->analyze($request->note);
+
         $log = DailyLog::updateOrCreate(
             [
                 'user_id' => Auth::id(),
@@ -51,13 +54,12 @@ class DailyLogController extends Controller
             ],
             [
                 'mood_level' => $request->mood_level,
-                'tags' => $request->tags,
+                'tags' => $request->tags ? json_encode($request->tags) : null,
                 'note' => $request->note,
+                'cbt_insight' => $insight ? json_encode($insight) : null, // <--- Guardar Insight
             ]
         );
 
-        // --- GAMIFICAÇÃO ---
-        // Apenas recompensa se for um novo registo (evita spam de updates no mesmo dia)
         if ($log->wasRecentlyCreated) {
             $this->gamification->trackAction(Auth::user(), 'daily_log');
         }

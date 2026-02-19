@@ -45,7 +45,6 @@
             text-decoration: underline;
             font-weight: 700 !important;
         }
-        /* Focus Ring muito visível para navegação por teclado */
         :focus-visible {
             outline: 3px solid #000000 !important;
             outline-offset: 2px;
@@ -122,14 +121,22 @@
                 </a>
 
                 <div class="hidden md:flex items-center gap-6 text-sm font-medium">
-                    <a href="{{ url('/#inicio') }}" class="text-slate-600 hover:text-indigo-600 transition-colors">Início</a>
-                    <a href="{{ url('/#calma') }}" class="text-slate-600 hover:text-indigo-600 transition-colors">Zona Calma</a>
+                    @auth
+                        <a href="{{ route('dashboard') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('dashboard') ? 'text-indigo-600 font-bold' : '' }}">Dashboard</a>
+                    @else
+                        <a href="{{ url('/#inicio') }}" class="text-slate-600 hover:text-indigo-600 transition-colors">Início</a>
+                    @endauth
                     <a href="{{ route('forum.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('forum.*') ? 'text-indigo-600 font-bold' : '' }}">Mural</a>
                     <a href="{{ route('rooms.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('rooms.*') ? 'text-indigo-600 font-bold' : '' }}">Fogueira</a>
+                    <a href="{{ route('calm.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('calm.*') ? 'text-indigo-600 font-bold' : '' }}">Zona Calma</a>
                 </div>
 
                 <div class="flex items-center gap-3">
                     @auth
+                        <a href="{{ route('calm.crisis') }}" class="hidden lg:flex items-center gap-2 px-4 py-1.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-100 transition-all font-bold text-sm">
+                            <i class="ri-alarm-warning-line text-lg"></i> Modo Crise
+                        </a>
+
                         <div class="relative" x-data="{ open: false, count: {{ Auth::user()->unreadNotifications->count() }} }" x-on:new-notification.window="count++">
                             <button @click="open = !open; if(open) { axios.post('{{ route('notifications.read') }}'); count = 0; }" 
                                     class="relative w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm">
@@ -166,7 +173,7 @@
                             </div>
                         </div>
 
-                        <a href="{{ url('/dashboard') }}" class="hidden md:flex text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-full transition-colors border border-transparent hover:border-indigo-100">Minha Conta</a>
+                        <a href="{{ route('profile.show') }}" class="hidden md:flex text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-full transition-colors border border-transparent hover:border-indigo-100">Perfil</a>
                     @else
                         <a href="{{ route('login') }}" class="hidden md:flex text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-full transition-colors">Entrar</a>
                     @endauth
@@ -186,23 +193,36 @@
             </div>
             
             <div id="mobileMenu" class="hidden absolute top-20 left-4 right-4 bg-white rounded-3xl shadow-xl border border-slate-100 p-6 flex flex-col gap-4 animate-fade-up md:hidden">
-                <a href="{{ url('/') }}" class="text-lg font-medium text-slate-600">Início</a>
+                @auth
+                    <a href="{{ route('dashboard') }}" class="text-lg font-medium text-slate-600">Dashboard</a>
+                @else
+                    <a href="{{ url('/') }}" class="text-lg font-medium text-slate-600">Início</a>
+                @endauth
                 <a href="{{ route('forum.index') }}" class="text-lg font-medium text-slate-600">Mural da Esperança</a>
                 <a href="{{ route('rooms.index') }}" class="text-lg font-medium text-slate-600">A Fogueira (Chat)</a>
+                <a href="{{ route('calm.index') }}" class="text-lg font-medium text-indigo-600 flex items-center gap-2"><i class="ri-leaf-line"></i> Zona Calma</a>
+                
                 @auth 
-                    <hr class="border-slate-100">
-                    <a href="{{ url('/dashboard') }}" class="flex items-center gap-2 text-lg font-medium text-indigo-600">
-                        <i class="ri-user-line"></i> Minha Conta
+                    <a href="{{ route('calm.crisis') }}" class="text-lg font-medium text-rose-600 flex items-center gap-2 bg-rose-50 p-3 rounded-xl border border-rose-100 mt-2">
+                        <i class="ri-alarm-warning-line"></i> Modo Crise
                     </a>
-                    <form method="POST" action="{{ route('logout') }}"> @csrf
+                    <hr class="border-slate-100 mt-2">
+                    <a href="{{ route('profile.show') }}" class="flex items-center gap-2 text-lg font-medium text-slate-600">
+                        <i class="ri-user-line"></i> Meu Perfil
+                    </a>
+                    <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 text-lg font-medium text-slate-600">
+                        <i class="ri-settings-3-line"></i> Definições
+                    </a>
+                    <form method="POST" action="{{ route('logout') }}" class="mt-2"> 
+                        @csrf
                         <button type="submit" class="text-slate-400 font-medium">Sair</button>
                     </form>
                 @else
-                    <a href="{{ route('login') }}" class="text-center w-full py-3 rounded-xl bg-indigo-50 text-indigo-600 font-bold">Entrar</a>
+                    <a href="{{ route('login') }}" class="text-center w-full py-3 rounded-xl bg-indigo-50 text-indigo-600 font-bold mt-4">Entrar / Registar</a>
                 @endauth
             </div>
         </nav>
-    @endif
+        @endif
 
     <div class="fixed top-0 left-0 w-full h-full mesh-gradient opacity-60 -z-10 pointer-events-none"></div>
     
@@ -232,6 +252,7 @@
                     <ul class="space-y-3 text-sm text-slate-500">
                         <li><a href="{{ route('rooms.index') }}" class="hover:text-indigo-600 transition-colors">A Fogueira</a></li>
                         <li><a href="{{ route('forum.index') }}" class="hover:text-indigo-600 transition-colors">Mural</a></li>
+                        <li><a href="{{ route('calm.index') }}" class="hover:text-indigo-600 transition-colors">Zona Calma</a></li>
                     </ul>
                 </div>
 
@@ -239,7 +260,7 @@
                     <h4 class="font-bold text-slate-900 mb-6">Legal</h4>
                     <ul class="space-y-3 text-sm text-slate-500">
                         <li><a href="#" class="hover:text-indigo-600 transition-colors">Termos de Uso</a></li>
-                        <li><a href="#" class="hover:text-indigo-600 transition-colors">Política de Privacidade</a></li>
+                        <li><a href="{{ route('privacy.index') }}" class="hover:text-indigo-600 transition-colors">Privacidade e Dados</a></li>
                         <li><a href="#" class="hover:text-indigo-600 transition-colors">Regras da Comunidade</a></li>
                     </ul>
                 </div>
@@ -257,7 +278,7 @@
             </div>
             
             <div class="border-t border-slate-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p class="text-xs text-slate-400">© 2026 Lumina Portugal. Todos os direitos reservados.</p>
+                <p class="text-xs text-slate-400">© {{ date('Y') }} Lumina Portugal. Todos os direitos reservados.</p>
                 <p class="text-xs text-slate-400 flex items-center gap-1">Feito com <i class="ri-heart-fill text-rose-400"></i> e empatia.</p>
             </div>
         </div>
@@ -348,9 +369,7 @@
                 if(window.lastFocusedElement) window.lastFocusedElement.focus();
             };
 
-            // --- FIM ACESSIBILIDADE ---
-
-            // LOGICA ANTIGA (SOS, MENU, ETC)
+            // LOGICA DOS MENUS E SOS
             const sosBtns = document.querySelectorAll('#sosBtnTrigger, .sos-trigger'); 
             const modal = document.getElementById('sosModal');
             const overlay = document.getElementById('modalOverlay');

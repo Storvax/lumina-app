@@ -1,4 +1,4 @@
-<x-lumina-layout>
+<x-lumina-layout title="Dashboard | Lumina">
     <div class="py-12">
         <div class="max-w-7xl mx-auto px-6 lg:px-8">
             
@@ -42,18 +42,67 @@
             </div>
 
             <div class="mt-12">
-                <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Para hoje</h2>
-                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 space-y-4">
-                    <div class="flex items-center gap-4 group">
-                        <div class="w-6 h-6 rounded-full border-2 border-slate-200 dark:border-slate-600 flex items-center justify-center group-hover:border-green-500 transition-colors cursor-pointer">
-                            <div class="w-3 h-3 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 dark:bg-orange-900/20 rounded-bl-full -mr-8 -mt-8"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                            <div>
+                                <h2 class="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2">
+                                    <i class="ri-focus-2-line text-orange-500"></i> Foco de Hoje
+                                </h2>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Pequenos passos para cuidares de ti.</p>
+                            </div>
+                            <span class="text-xs font-bold text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full border border-orange-100 dark:border-orange-800">Renova à meia-noite</span>
                         </div>
-                        <span class="text-slate-600 dark:text-slate-300 text-sm line-through decoration-slate-300">Entrar na app (Feito!)</span>
-                    </div>
-                    <div class="flex items-center gap-4 group cursor-pointer" onclick="window.location='{{ route('diary.index') }}'">
-                        <div class="w-6 h-6 rounded-full border-2 border-slate-200 dark:border-slate-600 flex items-center justify-center group-hover:border-primary-500 transition-colors"></div>
-                        <span class="text-slate-600 dark:text-slate-300 text-sm group-hover:text-primary-500">Escrever como me sinto</span>
-                        <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">+5 🔥</span>
+
+                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            @if(isset($dailyMissions))
+                                @forelse($dailyMissions as $mission)
+                                    @php 
+                                        $isCompleted = !is_null($mission->pivot->completed_at);
+                                        $progressPercent = min(100, ($mission->pivot->progress / $mission->target_count) * 100);
+                                    @endphp
+
+                                    <div class="p-5 rounded-2xl border transition-all {{ $isCompleted ? 'bg-orange-50/50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-800 opacity-80' : 'bg-slate-50 dark:bg-slate-700/50 border-slate-100 dark:border-slate-600 hover:border-orange-200 dark:hover:border-orange-700' }}">
+                                        <div class="flex justify-between items-start mb-3">
+                                            <div class="flex items-start gap-3">
+                                                <div class="w-6 h-6 mt-0.5 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors {{ $isCompleted ? 'bg-orange-500 border-orange-500 text-white' : 'border-slate-300 dark:border-slate-500 text-transparent' }}">
+                                                    <i class="ri-check-line text-xs font-bold"></i>
+                                                </div>
+                                                
+                                                <div>
+                                                    <p class="text-sm font-bold leading-tight {{ $isCompleted ? 'text-orange-800 dark:text-orange-400 line-through' : 'text-slate-800 dark:text-white' }}">{{ $mission->title }}</p>
+                                                    @if(!$isCompleted)
+                                                        <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">{{ $mission->description }}</p>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            
+                                            <span class="text-xs font-bold flex items-center gap-1 shrink-0 ml-2 {{ $isCompleted ? 'text-orange-500' : 'text-slate-400 dark:text-slate-500' }}">
+                                                <i class="ri-fire-fill"></i> {{ $mission->flames_reward }}
+                                            </span>
+                                        </div>
+
+                                        @if(!$isCompleted)
+                                            <div class="ml-9 h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden mt-3">
+                                                <div class="h-full bg-orange-400 transition-all duration-1000 ease-out" style="width: {{ $progressPercent }}%"></div>
+                                            </div>
+                                            <p class="ml-9 text-[9px] font-bold text-slate-400 dark:text-slate-500 mt-1.5 uppercase tracking-wider">{{ $mission->pivot->progress }} / {{ $mission->target_count }}</p>
+                                        @endif
+                                    </div>
+                                @empty
+                                    <div class="col-span-full text-center py-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                                        <i class="ri-leaf-line text-3xl text-slate-300 dark:text-slate-600 mb-2"></i>
+                                        <p class="text-sm text-slate-500 dark:text-slate-400">Sem missões para hoje. Tira o dia para ti e descansa!</p>
+                                    </div>
+                                @endforelse
+                            @else
+                                <div class="col-span-full text-center py-6">
+                                    <p class="text-sm text-slate-500">A carregar os teus objetivos...</p>
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>

@@ -103,5 +103,33 @@
     <audio id="audio-forest" loop src="https://cdn.pixabay.com/audio/2021/09/06/audio_450d0325b3.mp3"></audio>
 
     @include('chat.partials.scripts')
+
+    <div id="evaluation-modal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-2xl text-center">
+            <h3 class="text-2xl font-black text-slate-800 dark:text-white mb-2">Como te sentes agora?</h3>
+            <p class="text-slate-500 text-sm mb-8">Esta conversa ajudou-te? (Ouve é anónimo)</p>
+            
+            @if(isset($buddySession))
+            <form action="{{ route('buddy.evaluate', $buddySession) }}" method="POST" class="flex justify-center gap-4">
+                @csrf
+                <button name="rating" value="1" class="group flex flex-col items-center gap-2 outline-none">
+                    <div class="w-16 h-16 rounded-2xl bg-rose-50 flex items-center justify-center text-4xl group-hover:bg-rose-100 group-hover:scale-110 transition-all border border-rose-100">🌧️</div>
+                    <span class="text-xs font-bold text-slate-400 group-hover:text-rose-500">Na mesma</span>
+                </button>
+                <button name="rating" value="2" class="group flex flex-col items-center gap-2 outline-none">
+                    <div class="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-4xl group-hover:bg-amber-100 group-hover:scale-110 transition-all border border-amber-100">🌤️</div>
+                    <span class="text-xs font-bold text-slate-400 group-hover:text-amber-500">Um pouco melhor</span>
+                </button>
+                <button name="rating" value="3" class="group flex flex-col items-center gap-2 outline-none">
+                    <div class="w-16 h-16 rounded-2xl bg-teal-50 flex items-center justify-center text-4xl group-hover:bg-teal-100 group-hover:scale-110 transition-all border border-teal-100">☀️</div>
+                    <span class="text-xs font-bold text-slate-400 group-hover:text-teal-500">Muito melhor</span>
+                </button>
+            </form>
+            @endif
+            
+            <button onclick="document.getElementById('evaluation-modal').classList.add('hidden')" class="mt-8 text-xs font-bold text-slate-400 hover:text-slate-600 underline">Saltar avaliação</button>
+        </div>
+    </div>
 </body>
 </html>
