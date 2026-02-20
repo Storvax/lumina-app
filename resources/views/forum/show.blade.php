@@ -36,20 +36,44 @@
             default => 'ri-chat-smile-fill'
         };
 
+        // NOVO: Gradiente de fundo que pinta a página toda (Tema de Interface)
+        $themeGradient = match($post->tag) {
+            'hope' => 'from-emerald-100/40 via-teal-50/20 to-transparent dark:from-emerald-900/10',
+            'vent' => 'from-rose-100/40 via-pink-50/20 to-transparent dark:from-rose-900/10',
+            'anxiety' => 'from-amber-100/40 via-orange-50/20 to-transparent dark:from-amber-900/10',
+            default => 'from-indigo-100/40 via-blue-50/20 to-transparent dark:from-indigo-900/10'
+        };
+
+        // NOVO: BREADCRUMB EMOCIONAL (Linguagem Humana)
+        $emotionalPath = match($post->tag) {
+            'hope' => 'À procura de luz',
+            'vent' => 'A libertar o peso',
+            'anxiety' => 'A acalmar a tempestade',
+            default => 'Uma voz amiga'
+        };
+
         // 2. DETEÇÃO AUTOMÁTICA DE CRISE (Para a Sidebar)
         $riskKeywords = ['suicidio', 'suicídio', 'morte', 'morrer', 'matar', 'desaparecer', 'acabar com tudo', 'sangue', 'cortar', 'não aguento mais'];
         $fullText = strtolower($post->title . ' ' . $post->content);
         $showCrisisBanner = \Illuminate\Support\Str::contains($fullText, $riskKeywords);
     @endphp
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="fixed inset-0 bg-gradient-to-b {{ $themeGradient }} -z-10 pointer-events-none transition-opacity duration-1000"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10">
         
-        <nav class="flex items-center justify-between mb-8 animate-fade-up no-print">
-            <div class="flex items-center gap-2 text-sm text-slate-400">
-                <a href="{{ route('forum.index') }}" class="hover:text-indigo-600 transition-colors"><i class="ri-arrow-left-line"></i> Voltar ao Mural</a>
-                <span>/</span>
-                <span class="font-medium text-slate-600">{{ ucfirst($post->tag) }}</span>
-            </div>
+        <nav class="flex flex-wrap items-center gap-2 md:gap-3 mb-8 animate-fade-up no-print text-[10px] md:text-xs font-bold text-slate-400 tracking-wider uppercase">
+            <a href="{{ route('dashboard') }}" class="hover:text-indigo-600 transition-colors flex items-center gap-1">
+                <i class="ri-home-smile-line text-lg"></i> O Teu Refúgio
+            </a>
+            <i class="ri-arrow-right-s-line text-slate-300"></i>
+            <a href="{{ route('forum.index') }}" class="hover:text-indigo-600 transition-colors">
+                Espaço de Partilha
+            </a>
+            <i class="ri-arrow-right-s-line text-slate-300"></i>
+            <span class="text-slate-600 dark:text-slate-300 flex items-center gap-1 bg-white/50 px-2 py-1 rounded-md shadow-sm border border-slate-100 backdrop-blur-sm">
+                <i class="{{ $icon }} text-sm"></i> {{ $emotionalPath }}
+            </span>
         </nav>
 
         <div class="grid lg:grid-cols-12 gap-8">
@@ -62,7 +86,7 @@
 
                 <article class="bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-xl shadow-slate-200/50 overflow-visible border border-white/50 relative animate-fade-up isolate">
                     <div class="absolute -top-24 -right-24 w-96 h-96 bg-gradient-to-br {{ $colors }} opacity-10 rounded-full blur-3xl -z-10 no-print"></div>
-                    <div class="h-2 w-full bg-gradient-to-r {{ $colors }} no-print"></div>
+                    <div class="h-2 w-full bg-gradient-to-r {{ $colors }} no-print rounded-t-[2.5rem]"></div>
 
                     @if($post->is_pinned)
                         <div class="bg-indigo-50 text-indigo-600 text-xs font-bold px-8 py-2 flex items-center gap-2 no-print">
@@ -164,7 +188,7 @@
                             </div>
                         </div>
 
-                        <h1 class="text-3xl md:text-5xl font-extrabold text-slate-900 mb-8 leading-[1.15] tracking-tight">
+                        <h1 class="text-24pt md:text-5xl font-extrabold text-slate-900 mb-8 leading-[1.15] tracking-tight">
                             @if($post->is_locked) <i class="ri-lock-fill text-amber-500" title="Trancado"></i> @endif
                             {{ $post->title }}
                         </h1>

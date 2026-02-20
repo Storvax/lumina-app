@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PlaylistSong extends Model
 {
-    protected $fillable = ['user_id', 'title', 'artist', 'spotify_url', 'votes_count', 'is_weekly_winner'];
+    // Adicionado 'cover_url' aqui
+    protected $fillable = ['user_id', 'title', 'artist', 'spotify_url', 'cover_url', 'votes_count', 'is_weekly_winner'];
 
     public function user(): BelongsTo
     {

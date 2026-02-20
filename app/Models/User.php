@@ -179,4 +179,9 @@ class User extends Authenticatable implements FilamentUser
 
         return $now >= $start && $now <= $end;
     }
+
+    public function playlistSongs()
+    {
+        return $this->hasMany(PlaylistSong::class);
+    }
 }

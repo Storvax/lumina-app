@@ -171,8 +171,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
         Route::post('/playlist/sugerir', 'suggestSong')->name('playlist.suggest');
         Route::post('/playlist/{song}/votar', 'voteSong')->name('playlist.vote');
+        Route::delete('/playlist/{song}', 'deleteSong')->name('playlist.delete');
     });
-
 });
 
 require __DIR__.'/auth.php';
