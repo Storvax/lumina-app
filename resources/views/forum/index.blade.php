@@ -209,8 +209,10 @@
     </div>
 
     <x-slot name="scripts">
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        
         <script>
-            // --- Lógica do Modal de Criar Post (Mantém-se igual) ---
+            // --- Lógica do Modal de Criar Post ---
             const postModal = document.getElementById('postModal');
             const postPanel = document.getElementById('postModalPanel');
             const postBackdrop = document.getElementById('postModalBackdrop');
@@ -225,22 +227,17 @@
                 }
             }
 
-            // --- Lógica do Modal de Eliminar (NOVO) ---
+            // --- Lógica do Modal de Eliminar ---
             const deleteModal = document.getElementById('deleteModal');
             const deletePanel = document.getElementById('deletePanel');
             const deleteBackdrop = document.getElementById('deleteBackdrop');
             const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
             let postToDeleteId = null;
 
-            // Função chamada pelo botão no cartão do post
             window.openDeleteModal = function(postId) {
-                // Previne abrir o link do post
                 event.preventDefault();
                 event.stopPropagation();
-                
                 postToDeleteId = postId;
-                
-                // Mostrar Modal com Animação
                 deleteModal.classList.remove('hidden');
                 setTimeout(() => {
                     deleteBackdrop.classList.remove('opacity-0');
@@ -259,44 +256,34 @@
                 }, 300);
             }
 
-            // Ação Real de Apagar (Ao clicar no botão vermelho)
             confirmDeleteBtn.addEventListener('click', async () => {
                 if(!postToDeleteId) return;
-                
                 const id = postToDeleteId;
                 const card = document.getElementById(`post-card-${id}`);
                 const btnContent = confirmDeleteBtn.innerHTML;
                 
-                // Feedback de loading no botão
                 confirmDeleteBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
                 
                 try {
-                    // Fecha o modal primeiro para ser fluido
                     closeDeleteModal();
-                    
-                    // Anima o cartão a desaparecer
                     if(card) {
                         card.style.transition = "all 0.5s ease";
                         card.style.transform = "scale(0.9)";
                         card.style.opacity = "0";
                     }
-
                     await axios.delete(`/mural/${id}`);
-                    
                     setTimeout(() => { if(card) card.remove(); }, 500);
                     
                 } catch (error) {
                     console.error(error);
-                    alert("Erro ao apagar post."); // Fallback se der erro
+                    Swal.fire({ title: 'Erro!', text: 'Erro ao apagar post.', icon: 'error', customClass: { popup: 'rounded-3xl' } });
                     if(card) { card.style.opacity = "1"; card.style.transform = "scale(1)"; }
                 } finally {
                     confirmDeleteBtn.innerHTML = btnContent;
                 }
             });
 
-            // (Resto das funções: filterPosts, createForm, react mantêm-se iguais...)
             async function filterPosts(tag) {
-                /* ... código que já tinhas ... */
                 const grid = document.getElementById('posts-grid');
                 grid.style.opacity = '0.5';
                 document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -312,22 +299,8 @@
                     window.history.pushState(null, '', newUrl);
                 } catch (error) { console.error(error); } finally { grid.style.opacity = '1'; }
             }
-            
-            const createForm = document.getElementById('create-post-form');
-            if(createForm) {
-                createForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    /* ... código que já tinhas ... */
-                    const btn = createForm.querySelector('button[type="submit"]');
-                    const original = btn.innerHTML;
-                    btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>'; btn.disabled = true;
-                    try { await axios.post('{{ route("forum.store") }}', new FormData(createForm)); window.location.reload(); }
-                    catch (error) { alert("Erro ao publicar."); btn.innerHTML = original; btn.disabled = false; }
-                });
-            }
 
             window.react = async function(postId, type, btn) {
-                 /* ... código que já tinhas ... */
                 btn.classList.add('scale-125'); setTimeout(() => btn.classList.remove('scale-125'), 200);
                 const countSpan = btn.querySelector(`span[class*="count-"]`);
                 let current = parseInt(countSpan.textContent) || 0;
@@ -335,16 +308,12 @@
                 try { await axios.post(`/mural/${postId}/reagir`, { type: type }); } catch (e) { countSpan.textContent = current; }
             };
 
-            // Função de "Debounce" para não pesquisar a cada letra (espera 500ms)
             let timeout = null;
             window.debounceSearch = function(query) {
                 clearTimeout(timeout);
                 const loader = document.getElementById('search-loading');
                 if(loader) loader.classList.remove('hidden');
-                
-                timeout = setTimeout(() => {
-                    performSearch(query);
-                }, 500);
+                timeout = setTimeout(() => { performSearch(query); }, 500);
             };
 
             async function performSearch(query) {
@@ -353,14 +322,10 @@
                 grid.style.opacity = '0.5';
 
                 try {
-                    // Mantém a tag atual se houver uma selecionada
                     const urlParams = new URLSearchParams(window.location.search);
                     const currentTag = urlParams.get('tag') || 'all';
-                    
                     const response = await axios.get(`{{ route('forum.index') }}?tag=${currentTag}&search=${query}`);
                     grid.innerHTML = response.data;
-                    
-                    // Atualiza o URL sem recarregar
                     const newUrl = `{{ route('forum.index') }}?tag=${currentTag}&search=${query}`;
                     window.history.pushState(null, '', newUrl);
                 } catch (error) {
@@ -371,43 +336,28 @@
                 }
             }
 
-            // Variável para guardar o estado original do formulário
             let isEditing = false;
             let editingPostId = null;
 
             window.openEditModal = function(id, title, content, tag, sensitive) {
                 isEditing = true;
                 editingPostId = id;
-
-                // Preencher os campos
                 const form = document.getElementById('create-post-form');
                 form.querySelector('input[name="title"]').value = title;
                 form.querySelector('textarea[name="content"]').value = content;
-                
-                // Marcar a radio box correta
                 const radio = form.querySelector(`input[value="${tag}"]`);
                 if(radio) radio.checked = true;
-
-                // Marcar a checkbox sensitive
                 form.querySelector('input[name="is_sensitive"]').checked = (sensitive == 1);
-
-                // Mudar títulos e botões para parecer "Edição"
                 document.querySelector('#postModalPanel h3').textContent = 'Editar Post';
                 form.querySelector('button[type="submit"] span').textContent = 'Guardar Alterações';
-
                 togglePostModal();
             };
 
-            // Atualizar o 'togglePostModal' para limpar o form quando fecha
             const originalToggle = window.togglePostModal;
             window.togglePostModal = function() {
                 originalToggle();
-                
-                // Se estivermos a fechar, limpa tudo após a animação
                 if (!document.getElementById('postModal').classList.contains('hidden')) {
-                    // Está a abrir, não faz nada
                 } else {
-                    // Está a fechar: Reset ao formulário após 300ms
                     setTimeout(() => {
                         isEditing = false;
                         editingPostId = null;
@@ -418,12 +368,8 @@
                 }
             };
 
-            // Atualizar o Submit do Formulário para lidar com Edição
+            const createForm = document.getElementById('create-post-form');
             if(createForm) {
-                // Remover o listener antigo para não duplicar (é difícil remover listeners anónimos, 
-                // por isso vamos substituir o elemento clone para "limpar" listeners ou usar lógica IF dentro do existente)
-                
-                // A SOLUÇÃO MAIS LIMPA: Substitui o teu bloco 'createForm.addEventListener' antigo por este NOVO bloco completo:
                 createForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = createForm.querySelector('button[type="submit"]');
@@ -433,51 +379,33 @@
 
                     try {
                         if (isEditing && editingPostId) {
-                            // MODO EDIÇÃO: Envia PATCH para a rota de update
-                            // Nota: HTML forms não suportam PATCH nativo, o Laravel precisa de _method
                             const formData = new FormData(createForm);
                             formData.append('_method', 'PATCH');
-                            
                             await axios.post(`/mural/${editingPostId}`, formData);
                             window.location.reload(); 
                         } else {
-                            // MODO CRIAÇÃO (Normal)
                             await axios.post('{{ route("forum.store") }}', new FormData(createForm)); 
                             window.location.reload();
                         }
                     } catch (error) { 
                         console.error(error);
-                        alert("Erro ao processar."); 
+                        Swal.fire({ title: 'Erro!', text: 'Erro ao publicar.', icon: 'error', customClass: { popup: 'rounded-3xl' } });
                         btn.innerHTML = originalText; 
                         btn.disabled = false; 
                     }
                 });
             }
 
-            // --- DETEÇÃO DE CRISE ---
-            const crisisKeywords = [
-                'suicidio', 'suicídio', 'matar', 'morrer', 'acabar com tudo', 
-                'não aguento mais', 'desistir de tudo', 'cortar os pulsos', 
-                'tomar comprimidos', 'ninguém gosta de mim', 'desaparecer',
-                'adeus mundo', 'sem saída', 'inútil', 'dor insuportável'
-            ];
+            const crisisKeywords = ['suicidio', 'suicídio', 'matar', 'morrer', 'acabar com tudo', 'não aguento mais', 'desistir de tudo', 'cortar os pulsos', 'tomar comprimidos', 'ninguém gosta de mim', 'desaparecer', 'adeus mundo', 'sem saída', 'inútil', 'dor insuportável'];
 
             function checkCrisisContent() {
                 const title = document.querySelector('#create-post-form input[name="title"]').value.toLowerCase();
                 const content = document.querySelector('#create-post-form textarea[name="content"]').value.toLowerCase();
                 const banner = document.getElementById('crisis-banner');
-                
-                // Verifica se alguma palavra-chave está presente
                 const found = crisisKeywords.some(keyword => title.includes(keyword) || content.includes(keyword));
-
-                if (found) {
-                    banner.classList.remove('hidden');
-                } else {
-                    banner.classList.add('hidden');
-                }
+                if (found) { banner.classList.remove('hidden'); } else { banner.classList.add('hidden'); }
             }
 
-            // Adicionar Listeners aos campos
             document.addEventListener('DOMContentLoaded', () => {
                 const form = document.getElementById('create-post-form');
                 if(form) {
@@ -486,7 +414,6 @@
                 }
             });
 
-            // --- Lógica de Denúncia ---
             let reportPostId = null;
             const reportModal = document.getElementById('reportModal');
             const reportPanel = document.getElementById('reportPanel');
@@ -511,23 +438,20 @@
 
             window.submitReport = async function(reason) {
                 if(!reportPostId) return;
-                
                 try {
                     await axios.post(`/mural/${reportPostId}/report`, { reason: reason });
-                    alert("Denúncia enviada. Obrigado."); // Podes trocar por um Toast mais bonito depois
                     closeReportModal();
+                    Swal.fire({ title: 'Denúncia Enviada', text: 'A nossa equipa vai rever este conteúdo. Obrigado.', icon: 'success', customClass: { popup: 'rounded-3xl' }});
                 } catch (error) {
                     console.error(error);
-                    alert("Erro ao enviar denúncia.");
+                    Swal.fire({ title: 'Erro!', text: 'Erro ao enviar denúncia.', icon: 'error', customClass: { popup: 'rounded-3xl' }});
                 }
             };
 
             window.toggleSave = async function(postId, btn) {
-                // Animação de clique
                 const icon = btn.querySelector('i');
                 icon.classList.add('scale-125');
                 setTimeout(() => icon.classList.remove('scale-125'), 200);
-
                 try {
                     const response = await axios.post(`/mural/${postId}/save`);
                     if (response.data.saved) {
@@ -537,69 +461,61 @@
                         icon.classList.remove('ri-bookmark-fill', 'text-indigo-600');
                         icon.classList.add('ri-bookmark-line');
                     }
-                } catch (error) {
-                    console.error(error);
-                }
+                } catch (error) { console.error(error); }
             };
 
             window.shadowbanUser = async function(userId, userName) {
-                if(!confirm(`Tens a certeza que queres ativar o Shadowban para ${userName}? Ele deixará de ser visível para os outros, mas não saberá.`)) return;
+                const result = await Swal.fire({
+                    title: 'Ativar Shadowban?',
+                    text: `Tens a certeza que queres ativar o Shadowban para ${userName}? Ele deixará de ser visível para os outros, mas não saberá.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#4f46e5',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Sim, ativar',
+                    cancelButtonText: 'Cancelar',
+                    customClass: { popup: 'rounded-3xl' }
+                });
+
+                if(!result.isConfirmed) return;
 
                 try {
                     await axios.post(`/users/${userId}/shadowban`);
-                    alert(`${userName} está agora em modo fantasma.`);
+                    await Swal.fire({ title: 'Ativado', text: `${userName} está agora em modo fantasma.`, icon: 'success', customClass: { popup: 'rounded-3xl' }});
                     window.location.reload();
                 } catch (error) {
                     console.error(error);
-                    alert("Erro ao aplicar shadowban.");
+                    Swal.fire({ title: 'Erro!', text: 'Erro ao aplicar shadowban.', icon: 'error', customClass: { popup: 'rounded-3xl' }});
                 }
             };
 
-            // --- INFINITE SCROLL ---
             let nextPage = 2;
-            let lastPage = {{ $posts->lastPage() }}; // O Laravel diz-nos qual é a última
+            let lastPage = {{ $posts->lastPage() ?? 1 }};
             let isLoading = false;
-            let noMorePosts = false;
-
             const sentinel = document.getElementById('infinite-scroll-sentinel');
             const grid = document.getElementById('posts-grid');
 
             const observer = new IntersectionObserver(async (entries) => {
-                // Se o sentinela for visível e não estivermos a carregar e houver mais páginas
                 if (entries[0].isIntersecting && !isLoading && nextPage <= lastPage) {
                     isLoading = true;
-                    sentinel.classList.remove('opacity-0'); // Mostra o loading
-
+                    sentinel.classList.remove('opacity-0');
                     try {
-                        // Obtém os parâmetros atuais (search, tag) para não perder o filtro
                         const params = new URLSearchParams(window.location.search);
                         params.set('page', nextPage);
-
                         const response = await axios.get(`{{ route('forum.index') }}?${params.toString()}`);
-                        
-                        // Adiciona o HTML novo ao fim da grelha
                         grid.insertAdjacentHTML('beforeend', response.data);
-                        
                         nextPage++;
-                        
-                        // Se chegámos ao fim
                         if (nextPage > lastPage) {
                             sentinel.innerHTML = '<span class="text-slate-400 text-xs">Chegaste ao fim. 🌱</span>';
                             setTimeout(() => sentinel.classList.add('opacity-0'), 2000);
                         }
-                    } catch (error) {
-                        console.error('Erro ao carregar mais posts:', error);
-                    } finally {
-                        isLoading = false;
-                        // Esconde o loading se ainda houver páginas, senão mantém mensagem de fim
-                        if(nextPage <= lastPage) sentinel.classList.add('opacity-0');
-                    }
+                    } catch (error) { console.error('Erro ao carregar mais posts:', error); } 
+                    finally { isLoading = false; if(nextPage <= lastPage) sentinel.classList.add('opacity-0'); }
                 }
-            }, { rootMargin: '200px' }); // Começa a carregar 200px antes de chegar ao fundo
+            }, { rootMargin: '200px' });
 
             if (sentinel) observer.observe(sentinel);
 
-            // Resetar o scroll quando se muda o filtro
             window.resetInfiniteScroll = function() {
                 nextPage = 2;
                 sentinel.innerHTML = '<div class="flex flex-col items-center gap-2 text-indigo-500"><i class="ri-loader-4-line text-2xl animate-spin"></i><span class="text-xs font-bold uppercase tracking-widest">A carregar mais histórias...</span></div>';

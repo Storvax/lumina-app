@@ -25,12 +25,30 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
+
+        // --- ATUALIZAÇÃO DO STREAK DE LOGIN ---
+        $user = Auth::user();
+        $today = now()->startOfDay();
+        $lastActivity = $user->last_activity_at ? \Carbon\Carbon::parse($user->last_activity_at)->startOfDay() : null;
+
+        if (!$lastActivity || $lastActivity->lessThan($today)) {
+            // Se a última atividade foi exatamente ontem
+            if ($lastActivity && $lastActivity->equalTo($today->copy()->subDay())) {
+                $user->increment('current_streak');
+            } 
+            // Se passou mais de um dia, ou é a primeira vez
+            elseif (!$lastActivity || $lastActivity->lessThan($today->copy()->subDay())) {
+                $user->current_streak = 1;
+            }
+            
+            // Atualiza a data de última atividade
+            $user->last_activity_at = now();
+            $user->save();
+        }
 
         return redirect()->intended(route('dashboard', absolute: false));
     }
-
     /**
      * Destroy an authenticated session.
      */

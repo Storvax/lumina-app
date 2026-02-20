@@ -429,8 +429,15 @@
     <div id="reportModal" class="fixed inset-0 z-[90] hidden"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeReportModal()"></div><div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none"><div id="reportPanel" class="bg-white rounded-3xl p-6 pointer-events-auto max-w-sm"><h3 class="text-xl font-bold mb-4">Denunciar</h3><button onclick="submitReport('spam')" class="w-full p-3 text-left hover:bg-slate-50 rounded-xl">🤖 Spam</button><button onclick="submitReport('hate')" class="w-full p-3 text-left hover:bg-slate-50 rounded-xl">🤬 Ódio</button><button onclick="submitReport('risk')" class="w-full p-3 text-left hover:bg-slate-50 rounded-xl text-rose-600">🆘 Risco</button></div></div></div>
 
     <x-slot name="scripts">
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        
         <script>
-            function copyLink() { navigator.clipboard.writeText(window.location.href).then(() => { alert("Link copiado!"); }).catch(console.error); }
+            function copyLink() { 
+                navigator.clipboard.writeText(window.location.href).then(() => { 
+                    Swal.fire({ title: 'Copiado!', text: 'Link copiado para a área de transferência.', icon: 'success', timer: 1500, showConfirmButton: false, customClass: { popup: 'rounded-3xl' }});
+                }).catch(console.error); 
+            }
+
             document.addEventListener('DOMContentLoaded', () => {
                 const checkin = document.getElementById('emotional-checkin');
                 if (!checkin || sessionStorage.getItem('emotionalCheckinShown')) return;
@@ -443,31 +450,71 @@
                 const sosBtn = document.getElementById('sosBtnTriggerCheckin');
                 if(sosBtn) sosBtn.addEventListener('click', () => { closeCheckin(); document.getElementById('sosModal').classList.remove('hidden'); });
             });
+            
             let breatheInterval, isBreathing = false;
             function toggleBreathing() {
                 const circle = document.getElementById('breathe-circle'), ring1 = document.getElementById('breathe-ring-1'), icon = document.getElementById('breathe-icon'), textSpan = document.getElementById('breathe-text'), title = document.getElementById('breathe-instruction');
                 if (isBreathing) { clearInterval(breatheInterval); isBreathing = false; icon.classList.remove('hidden'); textSpan.classList.add('hidden'); circle.style.transform = 'scale(1)'; ring1.style.transform = 'scale(1)'; title.innerText = "Pausa terminada"; setTimeout(() => { title.innerText = "Precisas de uma pausa?"; }, 2000); } 
                 else { isBreathing = true; icon.classList.add('hidden'); textSpan.classList.remove('hidden'); let phase = 0; function runPhase() { if(!isBreathing) return; if (phase === 0) { title.innerText = "Inspira..."; textSpan.innerText = "Inspira"; circle.style.transform = 'scale(1.5)'; ring1.style.transform = 'scale(1.8)'; phase = 1; } else if (phase === 1) { title.innerText = "Segura..."; textSpan.innerText = "Segura"; phase = 2; } else { title.innerText = "Expira..."; textSpan.innerText = "Expira"; circle.style.transform = 'scale(1)'; ring1.style.transform = 'scale(1)'; phase = 0; } } runPhase(); breatheInterval = setInterval(runPhase, 4000); }
             }
+            
             window.react = async function(pid, t, btn) { btn.classList.add('scale-110'); setTimeout(()=>btn.classList.remove('scale-110'),200); try{await axios.post(`/mural/${pid}/reagir`,{type:t}); let c=btn.querySelector('.count-hug,.count-candle,.count-ear'); c.innerText=parseInt(c.innerText)+1;}catch(e){} };
             window.reactComment = async function(cid, t, btn) { btn.classList.add('scale-110'); setTimeout(()=>btn.classList.remove('scale-110'),200); try{const r=await axios.post(`/comentarios/${cid}/reagir`,{type:t}); let c=btn.querySelector('.count'); let v=parseInt(c.innerText)||0; c.innerText=r.data.action==='added'?v+1:(v>0?v-1:'');}catch(e){} };
+            
             window.toggleSubscribe = async function(postId, btn) {
                 const icon = btn.querySelector('.icon-bell');
                 const text = btn.querySelector('.text-subscribe');
                 const wasSubscribed = icon.classList.contains('ri-notification-3-fill');
                 if (wasSubscribed) { icon.className = 'ri-notification-3-line text-lg group-hover:scale-110 transition-transform icon-bell'; text.innerText = 'Receber notificações'; icon.classList.remove('text-indigo-500'); } else { icon.className = 'ri-notification-3-fill text-lg group-hover:scale-110 transition-transform icon-bell text-indigo-500'; text.innerText = 'Notificações Ativas'; }
-                try { await axios.post(`/mural/${postId}/subscrever`); } catch (error) { alert("Erro ao subscrever."); }
+                try { await axios.post(`/mural/${postId}/subscrever`); } catch (error) { Swal.fire({ title: 'Erro!', text: 'Erro ao subscrever.', icon: 'error', customClass: { popup: 'rounded-3xl' } }); }
             };
+
             const postModal=document.getElementById('postModal'), deleteModal=document.getElementById('deleteModal'), reportModal=document.getElementById('reportModal');
             let delId=null, repId=null, editId=null;
             window.togglePostModal=()=>{postModal.classList.toggle('hidden')}; window.closeDeleteModal=()=>{deleteModal.classList.add('hidden')}; window.closeReportModal=()=>{reportModal.classList.add('hidden')};
+            
             window.openEditModal=(id,t,c,tag,s)=>{editId=id; document.querySelector('#create-post-form input[name="title"]').value=t; document.querySelector('#create-post-form textarea').value=c; togglePostModal(); };
             window.openDeleteModal=(id)=>{delId=id; deleteModal.classList.remove('hidden');};
             window.openReportModal=(id)=>{repId=id; reportModal.classList.remove('hidden');};
-            document.getElementById('create-post-form').addEventListener('submit', async(e)=>{e.preventDefault(); try{const fd=new FormData(e.target); fd.append('_method','PATCH'); await axios.post(`/mural/${editId}`, fd); location.reload();}catch(e){alert('Erro');}});
-            document.getElementById('confirm-delete-btn').addEventListener('click', async()=>{try{await axios.delete(`/mural/${delId}`); location.href='/mural';}catch(e){alert('Erro');}});
-            window.submitReport=async(r)=>{try{await axios.post(`/mural/${repId}/report`,{reason:r}); alert('Enviado'); closeReportModal();}catch(e){alert('Erro');}};
+            
+            document.getElementById('create-post-form').addEventListener('submit', async(e)=>{e.preventDefault(); try{const fd=new FormData(e.target); fd.append('_method','PATCH'); await axios.post(`/mural/${editId}`, fd); location.reload();}catch(e){Swal.fire({ title: 'Erro!', text: 'Ocorreu um erro ao guardar.', icon: 'error', customClass: { popup: 'rounded-3xl' }});}});
+            document.getElementById('confirm-delete-btn').addEventListener('click', async()=>{try{await axios.delete(`/mural/${delId}`); location.href='/mural';}catch(e){Swal.fire({ title: 'Erro!', text: 'Erro ao apagar.', icon: 'error', customClass: { popup: 'rounded-3xl' }});}});
+            
+            window.submitReport=async(r)=>{
+                try{
+                    await axios.post(`/mural/${repId}/report`,{reason:r}); 
+                    closeReportModal(); 
+                    Swal.fire({ title: 'Denúncia Enviada', text: 'Obrigado por ajudares a manter a comunidade segura.', icon: 'success', timer: 2000, showConfirmButton: false, customClass: { popup: 'rounded-3xl' }});
+                }catch(e){
+                    Swal.fire({ title: 'Erro!', text: 'Erro ao enviar denúncia.', icon: 'error', customClass: { popup: 'rounded-3xl' }});
+                }
+            };
+            
             window.toggleSave=async(id,btn)=>{try{const r=await axios.post(`/mural/${id}/save`); btn.querySelector('.save-text').innerText=r.data.saved?'Remover':'Guardar';}catch(e){}};
+
+            window.shadowbanUser = async function(userId, userName) {
+                const result = await Swal.fire({
+                    title: 'Ativar Shadowban?',
+                    text: `Tens a certeza que queres ativar o Shadowban para ${userName}?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#4f46e5',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Sim, ativar',
+                    cancelButtonText: 'Cancelar',
+                    customClass: { popup: 'rounded-3xl' }
+                });
+
+                if(!result.isConfirmed) return;
+
+                try {
+                    await axios.post(`/users/${userId}/shadowban`);
+                    await Swal.fire({ title: 'Ativado', text: `${userName} está agora em modo fantasma.`, icon: 'success', customClass: { popup: 'rounded-3xl' }});
+                    window.location.reload();
+                } catch (error) {
+                    Swal.fire({ title: 'Erro!', text: 'Erro ao aplicar shadowban.', icon: 'error', customClass: { popup: 'rounded-3xl' }});
+                }
+            };
         </script>
     </x-slot>
 

@@ -11,7 +11,7 @@
         <a href="{{ route('forum.show', $post) }}" class="absolute inset-0 z-0" aria-label="Ver post completo: {{ $post->title }}"></a>
 
         @if($post->is_sensitive)
-            <div class="overlay-warning absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 backdrop-blur-md p-6 text-center cursor-pointer transition-opacity duration-300" onclick="event.preventDefault(); this.parentElement.classList.add('revealed')">
+            <div class="overlay-warning absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 backdrop-blur-md p-6 text-center cursor-pointer transition-opacity duration-300" onclick="event.preventDefault(); this.parentElement.classList.add('revealed'); setTimeout(() => this.style.display = 'none', 300);">
                 <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center mb-3 shadow-inner"><i class="ri-eye-close-line text-xl" aria-hidden="true"></i></div>
                 <p class="font-bold text-slate-800 text-sm">Conteúdo Sensível</p>
                 <button class="text-[10px] font-bold text-indigo-600 border border-indigo-200 bg-white px-4 py-1.5 rounded-full hover:bg-indigo-50 mt-3 shadow-sm">Mostrar Conteúdo</button>
@@ -156,4 +156,4 @@
         </div>
     </article>
 @empty
-    @endforelse
+@endforelse
