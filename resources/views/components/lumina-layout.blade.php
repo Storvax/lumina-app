@@ -39,10 +39,32 @@
         body.high-contrast button, body.high-contrast a { text-decoration: underline; font-weight: 700 !important; }
         :focus-visible { outline: 3px solid #000000 !important; outline-offset: 2px; }
 
+        /* --- MICROINTERAÇÕES TERAPÊUTICAS --- */
+        .wave-effect { position: relative; overflow: hidden; }
+        .wave-effect::after { 
+            content: ''; position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; 
+            background: currentColor; border-radius: 50%; transform: translate(-50%, -50%) scale(0); 
+            opacity: 0.2; pointer-events: none; 
+        }
+        .wave-effect.active::after { animation: expandWave 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        @keyframes expandWave { 
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.3; } 
+            100% { transform: translate(-50%, -50%) scale(4); opacity: 0; } 
+        }
+
         {{ $css ?? '' }}
     </style>
 </head>
 <body class="antialiased text-slate-600 bg-slate-50 font-sans selection:bg-indigo-500 selection:text-white relative flex flex-col min-h-screen">
+
+    <div id="calm-loader" class="fixed inset-0 z-[9999] bg-slate-50/90 backdrop-blur-md flex flex-col items-center justify-center transition-opacity duration-700 opacity-0 pointer-events-none">
+        <div class="relative w-24 h-24 flex items-center justify-center">
+            <div class="absolute inset-0 border-2 border-indigo-200 rounded-full animate-[ping_4s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+            <div class="absolute inset-4 border-2 border-indigo-300 rounded-full animate-[ping_4s_cubic-bezier(0,0,0.2,1)_infinite]" style="animation-delay: 1s;"></div>
+            <i class="ri-leaf-line text-3xl text-indigo-500 animate-pulse"></i>
+        </div>
+        <p class="mt-8 text-xs font-bold text-indigo-400 tracking-widest uppercase animate-pulse">Respira...</p>
+    </div>
 
     <div id="night-mode-filter" class="fixed inset-0 w-full h-full"></div>
 
@@ -343,6 +365,20 @@
                         });
                 }
             @endauth
+
+            // Intercetor Global: Se um pedido demorar mais de 400ms, mostra o ecrã de respiração
+            let loaderTimeout;
+            axios.interceptors.request.use(config => {
+                if(config.method !== 'get') { // Apenas ao guardar ou reagir
+                    loaderTimeout = setTimeout(() => { document.getElementById('calm-loader').classList.remove('opacity-0', 'pointer-events-none'); }, 400);
+                }
+                return config;
+            });
+            axios.interceptors.response.use(res => {
+                clearTimeout(loaderTimeout); document.getElementById('calm-loader').classList.add('opacity-0', 'pointer-events-none'); return res;
+            }, err => {
+                clearTimeout(loaderTimeout); document.getElementById('calm-loader').classList.add('opacity-0', 'pointer-events-none'); return Promise.reject(err);
+            });
         });
     </script>
     

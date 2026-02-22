@@ -1,15 +1,31 @@
 <x-lumina-layout title="Dashboard | Lumina">
-    <div class="py-12">
+    @php
+        // Extrai a tag emocional principal do utilizador (se existir)
+        $tags = Auth::user()->emotional_tags ?? [];
+        $primaryMood = count($tags) > 0 ? strtolower($tags[0]) : 'neutro';
+
+        // Mapeamento Psicológico de Cores (Com suporte a Dark Mode)
+        $moodGradient = match(true) {
+            str_contains($primaryMood, 'ansiedade') => 'from-amber-50/80 via-orange-50/30 to-transparent dark:from-amber-900/20 dark:via-orange-900/10',
+            str_contains($primaryMood, 'tristeza') => 'from-emerald-50/80 via-teal-50/30 to-transparent dark:from-emerald-900/20 dark:via-teal-900/10',
+            str_contains($primaryMood, 'sobrecarregado') => 'from-blue-50/80 via-indigo-50/30 to-transparent dark:from-blue-900/20 dark:via-indigo-900/10',
+            default => 'from-indigo-50/50 via-violet-50/20 to-transparent dark:from-indigo-900/20 dark:via-violet-900/10'
+        };
+    @endphp
+
+    <div class="fixed inset-0 bg-gradient-to-b {{ $moodGradient }} -z-10 transition-colors duration-1000"></div>
+
+    <div class="py-12 pt-28 md:pt-32 relative z-10">
         <div class="max-w-7xl mx-auto px-6 lg:px-8">
             
             <div class="mb-8">
-                <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Olá, {{ Auth::user()->name }} 👋</h1>
+                <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Olá, {{ explode(' ', trim(Auth::user()->name))[0] }} 👋</h1>
                 <p class="text-slate-500 dark:text-slate-400">O que queres fazer pelo teu bem-estar hoje?</p>
             </div>
 
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
-                <a href="{{ route('rooms.index') }}" class="group relative bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all border border-slate-100 dark:border-slate-700 overflow-hidden">
+                <a href="{{ route('rooms.index') }}" class="group relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all border border-slate-100 dark:border-slate-700 overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 dark:bg-indigo-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div class="relative z-10">
                         <div class="w-14 h-14 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-sm"><i class="ri-group-line"></i></div>
@@ -19,7 +35,7 @@
                     </div>
                 </a>
 
-                <a href="{{ route('diary.index') }}" class="group relative bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all border border-slate-100 dark:border-slate-700 overflow-hidden">
+                <a href="{{ route('diary.index') }}" class="group relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all border border-slate-100 dark:border-slate-700 overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-teal-50 dark:bg-teal-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div class="relative z-10">
                         <div class="w-14 h-14 bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-300 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-sm"><i class="ri-book-heart-line"></i></div>
@@ -29,7 +45,7 @@
                     </div>
                 </a>
 
-                <a href="{{ route('profile.show') }}" class="group relative bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all border border-slate-100 dark:border-slate-700 overflow-hidden">
+                <a href="{{ route('profile.show') }}" class="group relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all border border-slate-100 dark:border-slate-700 overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 dark:bg-orange-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div class="relative z-10">
                         <div class="w-14 h-14 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-300 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-sm"><i class="ri-fire-line"></i></div>
@@ -42,7 +58,7 @@
             </div>
 
             <div class="mt-12">
-                <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
+                <div class="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 dark:bg-orange-900/20 rounded-bl-full -mr-8 -mt-8"></div>
                     
                     <div class="relative z-10">

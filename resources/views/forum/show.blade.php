@@ -482,7 +482,22 @@
                 else { isBreathing = true; icon.classList.add('hidden'); textSpan.classList.remove('hidden'); let phase = 0; function runPhase() { if(!isBreathing) return; if (phase === 0) { title.innerText = "Inspira..."; textSpan.innerText = "Inspira"; circle.style.transform = 'scale(1.5)'; ring1.style.transform = 'scale(1.8)'; phase = 1; } else if (phase === 1) { title.innerText = "Segura..."; textSpan.innerText = "Segura"; phase = 2; } else { title.innerText = "Expira..."; textSpan.innerText = "Expira"; circle.style.transform = 'scale(1)'; ring1.style.transform = 'scale(1)'; phase = 0; } } runPhase(); breatheInterval = setInterval(runPhase, 4000); }
             }
             
-            window.react = async function(pid, t, btn) { btn.classList.add('scale-110'); setTimeout(()=>btn.classList.remove('scale-110'),200); try{await axios.post(`/mural/${pid}/reagir`,{type:t}); let c=btn.querySelector('.count-hug,.count-candle,.count-ear'); c.innerText=parseInt(c.innerText)+1;}catch(e){} };
+            // Reação Sensorial: Em vez de um salto robótico, cria uma onda de calor/luz
+            window.react = async function(pid, t, btn) { 
+                // Adiciona a classe da onda visual
+                btn.classList.add('wave-effect', 'active'); 
+                
+                // Feedback Háptico (Vibração subtil no telemóvel - se suportado)
+                if(window.navigator && window.navigator.vibrate) navigator.vibrate([30, 50, 30]);
+
+                setTimeout(() => btn.classList.remove('active'), 1000); 
+                
+                try {
+                    await axios.post(`/mural/${pid}/reagir`,{type:t}); 
+                    let c = btn.querySelector('.count-hug,.count-candle,.count-ear'); 
+                    c.innerText = parseInt(c.innerText) + 1;
+                } catch(e) {} 
+            };
             window.reactComment = async function(cid, t, btn) { btn.classList.add('scale-110'); setTimeout(()=>btn.classList.remove('scale-110'),200); try{const r=await axios.post(`/comentarios/${cid}/reagir`,{type:t}); let c=btn.querySelector('.count'); let v=parseInt(c.innerText)||0; c.innerText=r.data.action==='added'?v+1:(v>0?v-1:'');}catch(e){} };
             
             window.toggleSubscribe = async function(postId, btn) {
