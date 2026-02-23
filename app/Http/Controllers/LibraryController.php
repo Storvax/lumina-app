@@ -55,16 +55,30 @@ class LibraryController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|in:book,podcast,video,article',
             'url' => 'required|url',
+            'type' => 'required|in:book,video,podcast',
         ]);
-        
-        $resource = Resource::create([
-            ...$validated,
-            'user_id' => Auth::id(),
-            'is_approved' => Auth::user()->isModerator(), // Auto-aprova se for mod
+    
+        // O recurso é criado como "is_approved = false" para que os moderadores revejam no Filament
+        Resource::create([
+            'title' => $validated['title'],
+            'url' => $validated['url'],
+            'type' => $validated['type'],
+            'is_approved' => false, 
+            'icon' => match($validated['type']) {
+                'book' => 'ri-book-3-line',
+                'video' => 'ri-play-circle-line',
+                'podcast' => 'ri-mic-line',
+                default => 'ri-links-line'
+            },
+            'color' => match($validated['type']) {
+                'book' => 'indigo',
+                'video' => 'amber',
+                'podcast' => 'rose',
+                default => 'slate'
+            }
         ]);
-        
-        return back()->with('status', 'Recurso sugerido com sucesso!');
+    
+        return back()->with('success', 'Obrigado! A tua sugestão foi enviada para revisão da equipa.');
     }
 }

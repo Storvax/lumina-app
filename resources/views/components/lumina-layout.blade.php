@@ -5,7 +5,7 @@
         {{ auth()->check() && auth()->user()->a11y_dyslexic_font ? 'font-dyslexic' : '' }}
         {{ auth()->check() && auth()->user()->a11y_reduced_motion ? 'reduced-motion' : '' }}
       ">
-    <head>
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -16,9 +16,10 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -27,35 +28,18 @@
         .animate-fade-up { animation: fadeUp 0.6s ease-out forwards; opacity: 0; }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* O FILTRO DE TEMPERATURA (F.lux effect) */
-        #night-mode-filter {
-            background-color: #ff9900;
-            mix-blend-mode: multiply;
-            opacity: 0;
-            transition: opacity 2s ease-in-out;
-            pointer-events: none;
-            z-index: 9999;
-        }
+        #night-mode-filter { background-color: #ff9900; mix-blend-mode: multiply; opacity: 0; transition: opacity 2s ease-in-out; pointer-events: none; z-index: 9999; }
         
-        /* --- MODO ALTO CONTRASTE --- */
         body.high-contrast { background-color: #ffffff !important; color: #000000 !important; }
         body.high-contrast .glass-card, body.high-contrast .glass, body.high-contrast nav .glass { background: #ffffff !important; backdrop-filter: none !important; border: 2px solid #000000 !important; box-shadow: none !important; }
         body.high-contrast .text-slate-400, body.high-contrast .text-slate-500, body.high-contrast .text-slate-600 { color: #000000 !important; }
         body.high-contrast button, body.high-contrast a { text-decoration: underline; font-weight: 700 !important; }
         :focus-visible { outline: 3px solid #000000 !important; outline-offset: 2px; }
 
-        /* --- MICROINTERAÇÕES TERAPÊUTICAS --- */
         .wave-effect { position: relative; overflow: hidden; }
-        .wave-effect::after { 
-            content: ''; position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; 
-            background: currentColor; border-radius: 50%; transform: translate(-50%, -50%) scale(0); 
-            opacity: 0.2; pointer-events: none; 
-        }
+        .wave-effect::after { content: ''; position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; background: currentColor; border-radius: 50%; transform: translate(-50%, -50%) scale(0); opacity: 0.2; pointer-events: none; }
         .wave-effect.active::after { animation: expandWave 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-        @keyframes expandWave { 
-            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.3; } 
-            100% { transform: translate(-50%, -50%) scale(4); opacity: 0; } 
-        }
+        @keyframes expandWave { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.3; } 100% { transform: translate(-50%, -50%) scale(4); opacity: 0; } }
 
         {{ $css ?? '' }}
     </style>
@@ -73,49 +57,45 @@
 
     <div id="night-mode-filter" class="fixed inset-0 w-full h-full"></div>
 
-    <div id="sosModal" class="fixed inset-0 z-[100] hidden">
+    <div id="sosModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
         <div id="modalOverlay" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity cursor-pointer"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 animate-fade-up">
-            <div class="bg-white rounded-3xl shadow-2xl overflow-hidden border border-rose-100">
-                <div class="bg-rose-50 p-6 text-center border-b border-rose-100">
-                    <div class="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-500 text-3xl">
-                        <i class="ri-alarm-warning-fill"></i>
+        <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-rose-100 animate-fade-up z-10">
+            <div class="bg-rose-50 p-6 text-center border-b border-rose-100">
+                <div class="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-500 text-3xl">
+                    <i class="ri-alarm-warning-fill"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-slate-800">Ajuda Imediata</h3>
+                <p class="text-slate-600 mt-2 text-sm">Não estás sozinho. Estas linhas estão disponíveis agora.</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <a href="tel:112" class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 hover:bg-rose-50 hover:border-rose-200 transition-colors group">
+                    <div class="flex items-center gap-4">
+                        <span class="text-2xl font-black text-slate-800 group-hover:text-rose-600">112</span>
+                        <div class="text-left"><p class="font-bold text-slate-800">Emergência Nacional</p><p class="text-xs text-slate-500">Risco de vida iminente</p></div>
                     </div>
-                    <h3 class="text-2xl font-bold text-slate-800">Ajuda Imediata</h3>
-                    <p class="text-slate-600 mt-2 text-sm">Não estás sozinho. Estas linhas estão disponíveis agora.</p>
-                </div>
-                <div class="p-6 space-y-4">
-                    <a href="tel:112" class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 hover:bg-rose-50 hover:border-rose-200 transition-colors group">
-                        <div class="flex items-center gap-4">
-                            <span class="text-2xl font-black text-slate-800 group-hover:text-rose-600">112</span>
-                            <div class="text-left"><p class="font-bold text-slate-800">Emergência Nacional</p><p class="text-xs text-slate-500">Risco de vida iminente</p></div>
-                        </div>
-                        <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 group-hover:text-rose-500 shadow-sm"><i class="ri-phone-fill"></i></div>
-                    </a>
-                    <a href="tel:808242424" class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 hover:bg-blue-50 hover:border-blue-200 transition-colors group">
-                        <div class="flex items-center gap-4">
-                            <span class="text-xl font-bold text-slate-800 group-hover:text-blue-600">SNS 24</span>
-                            <div class="text-left"><p class="font-bold text-slate-800">Apoio Psicológico</p><p class="text-xs text-slate-500">Disponível 24h por dia</p></div>
-                        </div>
-                        <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 group-hover:text-blue-500 shadow-sm"><i class="ri-phone-fill"></i></div>
-                    </a>
-                </div>
-                <div class="bg-slate-50 p-4 text-center">
-                    <button id="modalClose" class="text-slate-500 font-semibold hover:text-slate-800 text-sm">Cancelar / Voltar</button>
-                </div>
+                    <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 group-hover:text-rose-500 shadow-sm"><i class="ri-phone-fill"></i></div>
+                </a>
+                <a href="tel:808242424" class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 hover:bg-blue-50 hover:border-blue-200 transition-colors group">
+                    <div class="flex items-center gap-4">
+                        <span class="text-xl font-bold text-slate-800 group-hover:text-blue-600">SNS 24</span>
+                        <div class="text-left"><p class="font-bold text-slate-800">Apoio Psicológico</p><p class="text-xs text-slate-500">Disponível 24h por dia</p></div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 group-hover:text-blue-500 shadow-sm"><i class="ri-phone-fill"></i></div>
+                </a>
+            </div>
+            <div class="bg-slate-50 p-4 text-center">
+                <button id="modalClose" class="text-slate-500 font-semibold hover:text-slate-800 text-sm">Cancelar / Voltar</button>
             </div>
         </div>
     </div>
 
-    <div id="globalAlertModal" class="fixed inset-0 z-[150] hidden" role="dialog" aria-modal="true" aria-labelledby="globalAlertTitle">
+    <div id="globalAlertModal" class="fixed inset-0 z-[150] hidden flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onclick="closeAlert()"></div>
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none p-4">
-            <div id="globalAlertPanel" class="bg-white rounded-2xl shadow-2xl w-full max-w-sm pointer-events-auto p-6 text-center border-2 border-transparent high-contrast:border-black transform transition-all scale-100">
-                <div id="globalAlertIcon" class="mb-4 text-4xl"></div>
-                <h3 id="globalAlertTitle" class="text-xl font-bold text-slate-900 mb-2"></h3>
-                <p id="globalAlertMessage" class="text-slate-600 mb-6 text-sm"></p>
-                <button id="globalAlertBtn" onclick="closeAlert()" class="close-modal-btn w-full py-3 rounded-xl font-bold text-white shadow-lg transition-all active:scale-95">Entendido</button>
-            </div>
+        <div id="globalAlertPanel" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border-2 border-transparent high-contrast:border-black transform transition-all scale-100 z-10">
+            <div id="globalAlertIcon" class="mb-4 text-4xl"></div>
+            <h3 id="globalAlertTitle" class="text-xl font-bold text-slate-900 mb-2"></h3>
+            <p id="globalAlertMessage" class="text-slate-600 mb-6 text-sm"></p>
+            <button id="globalAlertBtn" onclick="closeAlert()" class="close-modal-btn w-full py-3 rounded-xl font-bold text-white shadow-lg transition-all active:scale-95">Entendido</button>
         </div>
     </div>
 
@@ -137,13 +117,13 @@
                     @endauth
                     <a href="{{ route('forum.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('forum.*') ? 'text-indigo-600 font-bold' : '' }}">Mural</a>
                     <a href="{{ route('rooms.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('rooms.*') ? 'text-indigo-600 font-bold' : '' }}">Fogueira</a>
-                    <a href="{{ route('calm.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('calm.*') ? 'text-indigo-600 font-bold' : '' }}">Zona Calma</a>
+                    <a href="{{ route('library.index') ?? url('/#biblioteca') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('library.*') ? 'text-indigo-600 font-bold' : '' }}">Biblioteca</a>
                 </div>
 
                 <div class="flex items-center gap-3">
                     @auth
                         <div class="relative" x-data="{ open: false, count: {{ Auth::user()->unreadNotifications->count() }} }" x-on:new-notification.window="count++">
-                            <button @click="open = !open; if(open) { axios.post('{{ route('notifications.read') }}'); count = 0; }" 
+                            <button type="button" @click.prevent="open = !open; if(open) { axios.post('{{ route('notifications.read') }}'); count = 0; }" 
                                     class="relative w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm">
                                 <i class="ri-notification-3-line"></i>
                                 <span x-show="count > 0" x-text="count" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white animate-pulse"></span>
@@ -155,7 +135,7 @@
                                  class="absolute right-0 top-full mt-3 w-80 max-w-[90vw] bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden py-2" style="display: none;">
                                 <div class="px-4 py-2 border-b border-slate-50 flex justify-between items-center">
                                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Notificações</h3>
-                                    <button @click="open = false" class="text-slate-300 hover:text-slate-500"><i class="ri-close-line"></i></button>
+                                    <button type="button" @click.prevent="open = false" class="text-slate-300 hover:text-slate-500"><i class="ri-close-line"></i></button>
                                 </div>
                                 <div class="max-h-64 overflow-y-auto">
                                     @forelse(Auth::user()->notifications()->latest()->take(8)->get() as $notification)
@@ -183,7 +163,7 @@
                         <a href="{{ route('login') }}" class="text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-full transition-colors">Entrar</a>
                     @endauth
 
-                    <button id="sosBtnTrigger" class="bg-white border border-rose-100 text-rose-500 hover:bg-rose-50 hover:border-rose-200 px-3 md:px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all shadow-sm">
+                    <button type="button" id="sosBtnTrigger" class="bg-white border border-rose-100 text-rose-500 hover:bg-rose-50 hover:border-rose-200 px-3 md:px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all shadow-sm">
                         <span class="relative flex h-2 w-2">
                           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                           <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
@@ -203,19 +183,16 @@
 
     @auth
         @php
-            // Lógica para detetar se o utilizador está ansioso/sobrecarregado
             $tags = Auth::user()->emotional_tags ?? [];
             $needsCalm = in_array('Ansiedade', $tags) || in_array('Sobrecarregado(a)', $tags);
         @endphp
 
         <div class="md:hidden fixed bottom-0 left-0 w-full z-40 bg-white/90 backdrop-blur-xl border-t border-slate-100 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)] transition-all">
             <div class="flex justify-around items-center h-[70px] px-2 pb-2">
-                
                 <a href="{{ route('dashboard') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-indigo-600 {{ request()->routeIs('dashboard') ? 'text-indigo-600' : '' }}">
                     <i class="ri-home-smile-2-{{ request()->routeIs('dashboard') ? 'fill' : 'line' }} text-2xl"></i>
                     <span class="text-[9px] font-bold">Início</span>
                 </a>
-                
                 <a href="{{ route('forum.index') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-indigo-600 {{ request()->routeIs('forum.*') ? 'text-indigo-600' : '' }}">
                     <i class="ri-quill-pen-{{ request()->routeIs('forum.*') ? 'fill' : 'line' }} text-2xl"></i>
                     <span class="text-[9px] font-bold">Mural</span>
@@ -225,18 +202,14 @@
                     <a href="{{ route('calm.index') }}" class="flex flex-col items-center justify-center w-14 h-14 -mt-8 bg-teal-500 text-white rounded-full shadow-lg shadow-teal-500/30 ring-4 ring-white animate-[pulse_4s_ease-in-out_infinite]">
                         <i class="ri-lungs-fill text-2xl"></i>
                     </a>
-                @else
-                    <a href="{{ route('rooms.index') }}" class="flex flex-col items-center justify-center w-14 h-14 -mt-8 bg-orange-500 text-white rounded-full shadow-lg shadow-orange-500/30 ring-4 ring-white">
-                        <i class="ri-fire-fill text-2xl"></i>
-                    </a>
-                @endif
-                
-                @if($needsCalm)
                     <a href="{{ route('rooms.index') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-orange-500 {{ request()->routeIs('rooms.*') ? 'text-orange-500' : '' }}">
                         <i class="ri-fire-{{ request()->routeIs('rooms.*') ? 'fill' : 'line' }} text-2xl"></i>
                         <span class="text-[9px] font-bold">Fogueira</span>
                     </a>
                 @else
+                    <a href="{{ route('rooms.index') }}" class="flex flex-col items-center justify-center w-14 h-14 -mt-8 bg-orange-500 text-white rounded-full shadow-lg shadow-orange-500/30 ring-4 ring-white">
+                        <i class="ri-fire-fill text-2xl"></i>
+                    </a>
                     <a href="{{ route('calm.index') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-teal-500 {{ request()->routeIs('calm.*') ? 'text-teal-500' : '' }}">
                         <i class="ri-leaf-{{ request()->routeIs('calm.*') ? 'fill' : 'line' }} text-2xl"></i>
                         <span class="text-[9px] font-bold">Calma</span>
@@ -267,6 +240,7 @@
                         <li><a href="{{ route('rooms.index') }}" class="hover:text-indigo-600 transition-colors">A Fogueira</a></li>
                         <li><a href="{{ route('forum.index') }}" class="hover:text-indigo-600 transition-colors">Mural</a></li>
                         <li><a href="{{ route('calm.index') }}" class="hover:text-indigo-600 transition-colors">Zona Calma</a></li>
+                        <li><a href="{{ route('library.index') ?? url('/#biblioteca') }}" class="hover:text-indigo-600 transition-colors">Biblioteca</a></li>
                     </ul>
                 </div>
                 <div>
@@ -292,47 +266,22 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- 🌙 MODO NOTURNO (TEMPERATURA) F.lux Effect ---
-            // Aplica um filtro de redução de luz azul entre as 21:00 e as 06:00
             const hour = new Date().getHours();
-            if (hour >= 21 || hour < 6) {
-                const filter = document.getElementById('night-mode-filter');
-                filter.style.opacity = '0.07'; // Um toque super subtil de sépia
-            }
+            if (hour >= 21 || hour < 6) { document.getElementById('night-mode-filter').style.opacity = '0.07'; }
 
-            // --- GESTOR DE ACESSIBILIDADE LUMINA ---
             const announcer = document.createElement('div');
             announcer.setAttribute('aria-live', 'polite');
             announcer.setAttribute('class', 'sr-only');
             document.body.appendChild(announcer);
 
-            window.announce = function(message) {
-                announcer.textContent = ''; 
-                setTimeout(() => { announcer.textContent = message; }, 100); 
-            };
+            window.announce = function(message) { announcer.textContent = ''; setTimeout(() => { announcer.textContent = message; }, 100); };
 
-            window.toggleHighContrast = function() {
-                document.body.classList.toggle('high-contrast');
-                const isActive = document.body.classList.contains('high-contrast');
-                localStorage.setItem('highContrast', isActive);
-                announce(isActive ? "Modo de alto contraste ativado" : "Modo de alto contraste desativado");
-            };
-            if(localStorage.getItem('highContrast') === 'true') {
-                document.body.classList.add('high-contrast');
-            }
-
-            // SISTEMA DE ALERTA GLOBAL
             window.showAlert = function(title, message, type = 'info') {
                 const modal = document.getElementById('globalAlertModal');
-                const titleEl = document.getElementById('globalAlertTitle');
-                const msgEl = document.getElementById('globalAlertMessage');
+                document.getElementById('globalAlertTitle').textContent = title;
+                document.getElementById('globalAlertMessage').textContent = message;
                 const iconEl = document.getElementById('globalAlertIcon');
                 const btn = document.getElementById('globalAlertBtn');
-
-                if(!modal) return alert(message);
-
-                titleEl.textContent = title;
-                msgEl.textContent = message;
                 
                 if(type === 'error') {
                     iconEl.innerHTML = '<i class="ri-error-warning-fill text-rose-500"></i>';
@@ -341,15 +290,11 @@
                     iconEl.innerHTML = '<i class="ri-information-fill text-indigo-500"></i>';
                     btn.className = "close-modal-btn w-full py-3 rounded-xl font-bold text-white bg-indigo-500 hover:bg-indigo-600 shadow-lg transition-all";
                 }
-
                 modal.classList.remove('hidden');
             };
 
-            window.closeAlert = function() {
-                document.getElementById('globalAlertModal').classList.add('hidden');
-            };
+            window.closeAlert = function() { document.getElementById('globalAlertModal').classList.add('hidden'); };
 
-            // LOGICA DO SOS
             const sosBtns = document.querySelectorAll('#sosBtnTrigger, .sos-trigger'); 
             const modal = document.getElementById('sosModal');
             const overlay = document.getElementById('modalOverlay');
@@ -371,10 +316,9 @@
                 }
             @endauth
 
-            // Intercetor Global: Se um pedido demorar mais de 400ms, mostra o ecrã de respiração
             let loaderTimeout;
             axios.interceptors.request.use(config => {
-                if(config.method !== 'get') { // Apenas ao guardar ou reagir
+                if(config.method !== 'get') { 
                     loaderTimeout = setTimeout(() => { document.getElementById('calm-loader').classList.remove('opacity-0', 'pointer-events-none'); }, 400);
                 }
                 return config;
@@ -385,69 +329,34 @@
                 clearTimeout(loaderTimeout); document.getElementById('calm-loader').classList.add('opacity-0', 'pointer-events-none'); return Promise.reject(err);
             });
         });
-    </script>
 
-    <script>
-        /**
-         * Acionado pelo botão "Saída Rápida" (geralmente fixo no ecrã ou ativado via tecla 'Esc' dupla).
-         * Camufla o histórico, destrói a sessão e muda a interface imediatamente.
-         */
         function triggerSafeHouse() {
-            // 1. Camuflagem imediata de UI (Evita o flash visual durante o redirecionamento)
             document.body.innerHTML = '';
             document.title = "Google";
-            
-            // 2. Mudança de Favicon
             let link = document.querySelector("link[rel*='icon']") || document.createElement('link');
-            link.type = 'image/x-icon';
-            link.rel = 'shortcut icon';
-            link.href = 'https://www.google.com/favicon.ico';
+            link.type = 'image/x-icon'; link.rel = 'shortcut icon'; link.href = 'https://www.google.com/favicon.ico';
             document.getElementsByTagName('head')[0].appendChild(link);
-
-            // 3. Destruição de dados locais do browser
-            window.localStorage.clear();
-            window.sessionStorage.clear();
-
-            // 4. Manipulação de Histórico
-            // Remove a página atual do histórico do browser
+            window.localStorage.clear(); window.sessionStorage.clear();
             window.history.replaceState(null, '', 'https://www.google.com');
-
-            // 5. Invalidação de Sessão Server-side (Logout Invisível)
-            // Submetemos o form de logout atual (se existir) para destruir o cookie de sessão Laravel,
-            // mas redirecionamos a janela imediatamente para segurança física.
-            const logoutForm = document.createElement('form');
-            logoutForm.method = 'POST';
-            logoutForm.action = '{{ route("logout") ?? "#" }}';
-            logoutForm.style.display = 'none';
-            
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = '_token';
-            csrfToken.value = '{{ csrf_token() }}';
-            
-            logoutForm.appendChild(csrfToken);
-            document.body.appendChild(logoutForm);
-            
+            const logoutForm = document.createElement('form'); logoutForm.method = 'POST'; logoutForm.action = '{{ route("logout") ?? "#" }}'; logoutForm.style.display = 'none';
+            const csrfToken = document.createElement('input'); csrfToken.type = 'hidden'; csrfToken.name = '_token'; csrfToken.value = '{{ csrf_token() }}';
+            logoutForm.appendChild(csrfToken); document.body.appendChild(logoutForm);
             try { logoutForm.submit(); } catch(e) {}
-
             window.location.replace("https://www.google.com");
         }
 
-        // Ativador Global: Duplo clique na tecla ESCapatória
-        let escCount = 0;
-        let escTimeout = null;
+        let escCount = 0, escTimeout = null;
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 escCount++;
-                if (escCount >= 2) {
-                    triggerSafeHouse();
-                } else {
-                    escTimeout = setTimeout(() => { escCount = 0; }, 500); // Meio segundo para o duplo clique
-                }
+                if (escCount >= 2) { triggerSafeHouse(); } 
+                else { escTimeout = setTimeout(() => { escCount = 0; }, 500); }
             }
         });
     </script>
     
-    {{ $scripts ?? '' }}
+    @if(isset($scripts))
+        {{ $scripts }}
+    @endif
 </body>
 </html>

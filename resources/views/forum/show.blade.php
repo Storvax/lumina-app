@@ -464,15 +464,57 @@
 
             document.addEventListener('DOMContentLoaded', () => {
                 const checkin = document.getElementById('emotional-checkin');
-                if (!checkin || sessionStorage.getItem('emotionalCheckinShown')) return;
+                const postBody = document.getElementById('post-content-body');
+                
+                // Se não há widget, se já foi mostrado nesta sessão, ou não há corpo do post, ignorar.
+                if (!checkin || !postBody || sessionStorage.getItem('emotionalCheckinShown_post_{{ $post->id }}')) return;
+                
                 let shown = false;
-                const showIt = () => { if(shown) return; checkin.classList.remove('hidden'); shown = true; sessionStorage.setItem('emotionalCheckinShown', 'true'); };
-                window.addEventListener('scroll', () => { if((window.scrollY + window.innerHeight) / document.documentElement.scrollHeight > 0.8) showIt(); });
-                setTimeout(showIt, 45000); 
-                window.closeCheckin = () => { checkin.classList.add('opacity-0', 'translate-y-4'); setTimeout(() => checkin.remove(), 500); };
-                window.triggerBreathingFromCheckin = () => { closeCheckin(); document.getElementById('breathe-widget').scrollIntoView({behavior: 'smooth', block: 'center'}); setTimeout(toggleBreathing, 1000); };
+                const showIt = () => { 
+                    if(shown) return; 
+                    checkin.classList.remove('hidden'); 
+                    shown = true; 
+                    sessionStorage.setItem('emotionalCheckinShown_post_{{ $post->id }}', 'true'); 
+                };
+
+                // BUG CORRIGIDO: Intersection Observer em vez de scroll de página inteira
+                // O widget aparece assim que o utilizador acaba de ler o parágrafo final da história
+                const observer = new IntersectionObserver((entries) => {
+                    if(entries[0].isIntersecting) {
+                        showIt();
+                        observer.disconnect(); // Para de observar após disparar
+                    }
+                }, {
+                    root: null,
+                    threshold: 0.1, // Dispara assim que os últimos 10% do texto ficam visíveis
+                    rootMargin: "0px 0px -50px 0px" // Reduz a margem para evitar falsos positivos
+                });
+
+                // Se o texto for muito curto, ele já está visível. Disparamos logo após alguns segundos.
+                if (postBody.getBoundingClientRect().height < window.innerHeight) {
+                    setTimeout(showIt, 15000); // 15 segundos para ler um texto curto
+                } else {
+                    // Seleciona o próprio corpo do texto (fim do artigo)
+                    observer.observe(postBody);
+                }
+
+                // Segurança: se o utilizador fechar ou interagir
+                window.closeCheckin = () => { 
+                    checkin.classList.add('opacity-0', 'translate-y-4'); 
+                    setTimeout(() => checkin.remove(), 500); 
+                };
+                
+                window.triggerBreathingFromCheckin = () => { 
+                    closeCheckin(); 
+                    document.getElementById('breathe-widget').scrollIntoView({behavior: 'smooth', block: 'center'}); 
+                    setTimeout(toggleBreathing, 1000); 
+                };
+                
                 const sosBtn = document.getElementById('sosBtnTriggerCheckin');
-                if(sosBtn) sosBtn.addEventListener('click', () => { closeCheckin(); document.getElementById('sosModal').classList.remove('hidden'); });
+                if(sosBtn) sosBtn.addEventListener('click', () => { 
+                    closeCheckin(); 
+                    document.getElementById('sosModal').classList.remove('hidden'); 
+                });
             });
             
             let breatheInterval, isBreathing = false;

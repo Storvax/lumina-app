@@ -53,13 +53,16 @@ class ForumController extends Controller
 
         $posts = $query->paginate(20)->appends($request->query());
 
-        if ($request->ajax()) {
+        // BUG CORRIGIDO: Se for um pedido AJAX (filtros ou scroll infinito), 
+        // devolvemos APENAS a grelha de cartões, sem a Navbar nem o Layout.
+        // Adicionámos os headers `X-Requested-With` no Axios para garantir que o Laravel deteta o AJAX.
+        if ($request->ajax() || $request->wantsJson()) {
             return view('forum.partials.posts', compact('posts'))->render();
         }
 
         return view('forum.index', compact('posts'));
     }
-
+    
     /**
      * Exibe os detalhes de uma publicação específica e os respetivos comentários.
      */

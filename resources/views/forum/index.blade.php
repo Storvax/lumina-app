@@ -289,16 +289,18 @@
             });
 
             // Filtros com atualização de aria-pressed para Screen Readers
-            window.filterPosts = async function(tag, clickedBtn = null) {
+            window.filterPosts = async function(tag, btnElement = null) {
                 const grid = document.getElementById('posts-grid');
                 grid.style.opacity = '0.5';
                 
+                // Reset de botões (Acessibilidade + UI)
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.className = "filter-btn px-6 py-3 rounded-xl bg-transparent border border-transparent text-slate-500 font-medium text-sm hover:bg-white/50 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500";
                     btn.setAttribute('aria-pressed', 'false');
                 });
                 
-                const activeBtn = clickedBtn || document.getElementById(`btn-${tag}`);
+                // Botão Ativo
+                const activeBtn = btnElement || document.getElementById(`btn-${tag}`);
                 if(activeBtn) {
                     activeBtn.className = "filter-btn px-6 py-3 rounded-xl bg-white shadow-sm border border-slate-100 text-slate-800 font-bold text-sm transition-all ring-2 ring-indigo-500/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500";
                     activeBtn.setAttribute('aria-pressed', 'true');
@@ -306,12 +308,30 @@
 
                 try {
                     const response = await axios.get(`{{ route('forum.index') }}?tag=${tag}`);
-                    grid.innerHTML = response.data;
-                    const newUrl = tag === 'all' ? '{{ route('forum.index') }}' : `{{ route('forum.index') }}?tag=${tag}`;
-                    window.history.pushState(null, '', newUrl);
-                } catch (error) { console.error(error); } finally { grid.style.opacity = '1'; }
-            }
+                    
+                    // Limpar grelha antiga antes de injetar a nova (Impede quebra do Masonry)
+                    grid.innerHTML = '';
+                    
+                    setTimeout(() => {
+                        grid.innerHTML = response.data;
+                        grid.style.opacity = '1';
+                        
+                        // Atualiza o URL da barra de navegação sem reload
+                        const newUrl = tag === 'all' ? '{{ route('forum.index') }}' : `{{ route('forum.index') }}?tag=${tag}`;
+                        window.history.pushState(null, '', newUrl);
+                        
+                        // Reset do Scroll Infinito
+                        if (typeof window.resetInfiniteScroll === 'function') {
+                            window.resetInfiniteScroll();
+                        }
+                    }, 50);
 
+                } catch (error) { 
+                    console.error("Erro ao aplicar filtros:", error); 
+                    grid.style.opacity = '1';
+                }
+            };
+            
             window.react = async function(postId, type, btn) {
                 btn.classList.add('scale-125'); setTimeout(() => btn.classList.remove('scale-125'), 200);
                 const countSpan = btn.querySelector(`span[class*="count-"]`);
@@ -423,7 +443,16 @@
                     } catch (error) {} finally { isLoading = false; if(nextPage <= lastPage) sentinel.classList.add('opacity-0'); }
                 }
             }, { rootMargin: '200px' });
+            
             if (sentinel) observer.observe(sentinel);
+
+            window.resetInfiniteScroll = function() {
+                nextPage = 2;
+                if(sentinel) {
+                    sentinel.innerHTML = '<div class="flex flex-col items-center gap-2 text-indigo-500"><i class="ri-loader-4-line text-2xl animate-spin"></i><span class="text-xs font-bold uppercase tracking-widest">A carregar mais histórias...</span></div>';
+                    observer.observe(sentinel);
+                }
+            };
         </script>
     </x-slot>
 </x-lumina-layout>

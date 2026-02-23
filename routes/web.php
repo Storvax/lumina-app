@@ -94,6 +94,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/sugerir', 'store')->name('store');
         Route::post('/{resource}/votar', 'toggleVote')->name('vote');
+        Route::post('/biblioteca', [LibraryController::class, 'store'])->name('library.store')->middleware('auth');
     });
 
     /*

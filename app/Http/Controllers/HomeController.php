@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache; // <--- Importante
-use Illuminate\Support\Facades\DB;    // <--- Importante
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use App\Models\Post;
 use App\Models\Room;
 use App\Models\DailyLog;
+use App\Models\User;
 
 class HomeController extends Controller
 {
@@ -16,18 +17,22 @@ class HomeController extends Controller
     {
         // 1. PULSO DA COMUNIDADE (Cache de 5 minutos)
         $communityStats = Cache::remember('community_pulse', 300, function () {
+            
+            // Conta utilizadores reais que tiveram atividade nos últimos 15 minutos
+            $realOnlineCount = User::where('last_activity_at', '>=', now()->subMinutes(15))->count();
+            
+            // Evita a sensação de "lugar vazio" de madrugada (fallback terapêutico)
+            $displayOnline = $realOnlineCount < 3 ? $realOnlineCount + rand(3, 7) : $realOnlineCount;
+
             return [
-                // Pessoas nas salas (baseado em visitas nos últimos 15 min)
-                'online' => DB::table('room_visits')
-                    ->where('updated_at', '>=', now()->subMinutes(15))
-                    ->count(),
+                'online' => $displayOnline,
                 
                 // Sala mais ativa do dia (com mais mensagens)
                 'top_room' => Room::withCount(['messages' => function($q) {
                         $q->whereDate('created_at', now());
                     }])
                     ->orderByDesc('messages_count')
-                    ->value('name') ?? 'Geral', // Fallback se não houver mensagens
+                    ->value('name') ?? 'Geral', 
                 
                 // Posts criados hoje
                 'posts_today' => Post::whereDate('created_at', now())->count()
