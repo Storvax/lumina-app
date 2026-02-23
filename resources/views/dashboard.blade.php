@@ -57,7 +57,45 @@
 
             </div>
 
-            <div class="mt-12">
+            @if(isset($pendingMilestone) || true) 
+            <div class="mt-8">
+                <div x-data="{ open: false, message: '' }" class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/10 rounded-3xl p-6 shadow-sm border border-amber-100 dark:border-amber-900/50">
+                    <div class="flex items-center space-x-4">
+                        <div class="p-3 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 rounded-full animate-pulse shadow-sm">
+                            <i class="ri-fire-fill text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800 dark:text-white">7 Dias de Reflexão</h3>
+                            <p class="text-sm text-slate-600 dark:text-slate-300">A tua consistência é inspiradora. Queres partilhar esta luz na Fogueira?</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 flex space-x-3">
+                        <button @click="open = !open" class="px-5 py-2.5 bg-amber-500 text-white rounded-full text-sm font-bold hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500 transition-colors shadow-sm focus:ring-2 ring-amber-300 ring-offset-1 dark:ring-offset-slate-800">
+                            Partilhar Marco
+                        </button>
+                    </div>
+
+                    <div x-show="open" x-collapse class="mt-4">
+                        <form action="{{ route('forum.store') ?? '#' }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="milestone_type" value="7_days_streak">
+                            <textarea 
+                                name="custom_message" 
+                                rows="2" 
+                                class="w-full rounded-xl border-amber-200 dark:border-amber-800/50 bg-white/50 dark:bg-slate-800/50 text-slate-800 dark:text-white focus:ring-amber-500 focus:border-amber-500 text-sm p-4 placeholder-slate-400 dark:placeholder-slate-500 resize-none transition-colors" 
+                                placeholder="Adiciona os teus sentimentos (opcional)..."
+                            ></textarea>
+                            <button type="submit" class="mt-3 w-full py-3 bg-slate-800 dark:bg-slate-700 text-white rounded-xl text-sm font-bold hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors shadow-sm">
+                                Publicar na Fogueira
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <div class="mt-8">
                 <div class="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 dark:bg-orange-900/20 rounded-bl-full -mr-8 -mt-8"></div>
                     

@@ -1,6 +1,11 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
-<head>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
+      class="
+        {{ auth()->check() && auth()->user()->a11y_text_size !== 'base' ? 'text-'.auth()->user()->a11y_text_size : 'text-base' }}
+        {{ auth()->check() && auth()->user()->a11y_dyslexic_font ? 'font-dyslexic' : '' }}
+        {{ auth()->check() && auth()->user()->a11y_reduced_motion ? 'reduced-motion' : '' }}
+      ">
+    <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -379,6 +384,67 @@
             }, err => {
                 clearTimeout(loaderTimeout); document.getElementById('calm-loader').classList.add('opacity-0', 'pointer-events-none'); return Promise.reject(err);
             });
+        });
+    </script>
+
+    <script>
+        /**
+         * Acionado pelo botão "Saída Rápida" (geralmente fixo no ecrã ou ativado via tecla 'Esc' dupla).
+         * Camufla o histórico, destrói a sessão e muda a interface imediatamente.
+         */
+        function triggerSafeHouse() {
+            // 1. Camuflagem imediata de UI (Evita o flash visual durante o redirecionamento)
+            document.body.innerHTML = '';
+            document.title = "Google";
+            
+            // 2. Mudança de Favicon
+            let link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+            link.type = 'image/x-icon';
+            link.rel = 'shortcut icon';
+            link.href = 'https://www.google.com/favicon.ico';
+            document.getElementsByTagName('head')[0].appendChild(link);
+
+            // 3. Destruição de dados locais do browser
+            window.localStorage.clear();
+            window.sessionStorage.clear();
+
+            // 4. Manipulação de Histórico
+            // Remove a página atual do histórico do browser
+            window.history.replaceState(null, '', 'https://www.google.com');
+
+            // 5. Invalidação de Sessão Server-side (Logout Invisível)
+            // Submetemos o form de logout atual (se existir) para destruir o cookie de sessão Laravel,
+            // mas redirecionamos a janela imediatamente para segurança física.
+            const logoutForm = document.createElement('form');
+            logoutForm.method = 'POST';
+            logoutForm.action = '{{ route("logout") ?? "#" }}';
+            logoutForm.style.display = 'none';
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+            
+            logoutForm.appendChild(csrfToken);
+            document.body.appendChild(logoutForm);
+            
+            try { logoutForm.submit(); } catch(e) {}
+
+            window.location.replace("https://www.google.com");
+        }
+
+        // Ativador Global: Duplo clique na tecla ESCapatória
+        let escCount = 0;
+        let escTimeout = null;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                escCount++;
+                if (escCount >= 2) {
+                    triggerSafeHouse();
+                } else {
+                    escTimeout = setTimeout(() => { escCount = 0; }, 500); // Meio segundo para o duplo clique
+                }
+            }
         });
     </script>
     

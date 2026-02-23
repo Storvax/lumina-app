@@ -13,9 +13,12 @@ class PrivacyController extends Controller
      */
     public function index()
     {
-        return view('privacy.index');
+        $auditLogs = \App\Models\DataAccessLog::where('user_id', Auth::id())
+            ->latest()
+            ->get();
+    
+        return view('privacy.index', compact('auditLogs'));
     }
-
     /**
      * Exporta todos os dados do utilizador em formato JSON (Compliance RGPD).
      */

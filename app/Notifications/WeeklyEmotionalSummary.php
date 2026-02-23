@@ -3,13 +3,18 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class WeeklyEmotionalSummary extends Notification
+/**
+ * Notificação de email formatada como uma reflexão suave.
+ */
+class WeeklyEmotionalSummary extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public $stats;
+    public array $stats;
 
     public function __construct(array $stats)
     {
@@ -18,17 +23,31 @@ class WeeklyEmotionalSummary extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database']; // Guardamos na BD para ele ler com calma
+        return ['mail', 'database'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        $firstName = explode(' ', trim($notifiable->name))[0];
+
+        return (new MailMessage)
+            ->subject("Um momento para ti, {$firstName} 🌻")
+            ->greeting("Olá, {$firstName}.")
+            ->line('Mais uma semana passou. O mundo lá fora continua acelerado, mas queríamos tirar um momento para celebrar os teus passos no teu próprio ritmo.')
+            ->line("Esta semana:")
+            ->line("📖 Tiraste tempo para escrever e cuidar de ti {$this->stats['logs_count']} vezes.")
+            ->line("🫂 A comunidade enviou-te {$this->stats['hugs_received']} abraços de apoio.")
+            ->line("🔥 A tua chama interior continua viva.")
+            ->action('Visitar o meu Refúgio', url('/dashboard'))
+            ->line('Pequenos passos são vitórias gigantes. Estamos aqui por ti na próxima semana.');
     }
 
     public function toArray(object $notifiable): array
     {
         return [
-            'type' => 'weekly_summary',
-            'message' => "O teu resumo semanal chegou. Cuidaste de ti {$this->stats['logs_count']} vezes esta semana.",
-            'icon' => "ri-calendar-heart-fill",
-            'color' => "text-amber-500 bg-amber-100",
-            'details' => $this->stats // Podemos ler isto no Frontend depois
+            'icon' => 'ri-sun-line',
+            'color' => 'text-amber-500 bg-amber-50',
+            'message' => 'O teu resumo de bem-estar desta semana está pronto. Obrigado por estares aqui.',
         ];
     }
 }

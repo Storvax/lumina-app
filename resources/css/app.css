@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import url('https://fonts.cdnfonts.com/css/opendyslexic');
 
 /* Importar Fontes */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -26,4 +27,24 @@
         radial-gradient(at 40% 20%, hsla(260,100%,94%,1) 0px, transparent 50%),
         radial-gradient(at 80% 0%, hsla(189,100%,92%,1) 0px, transparent 50%),
         radial-gradient(at 0% 50%, hsla(341,100%,94%,1) 0px, transparent 50%);
+}
+
+/*  Utilitários de Acessibilidade 
+  O !important garante que sobrescreve qualquer classe Tailwind gerada dinamicamente.
+ */
+.font-dyslexic {
+    font-family: 'OpenDyslexic', sans-serif !important;
+    letter-spacing: 0.05em !important; /* Espaçamento vital para dislexia */
+    word-spacing: 0.1em !important;
+}
+
+/* Redução Drástica de Movimento (Respeita a preferência do sistema operativo OU do utilizador) */
+@media (prefers-reduced-motion: reduce) {
+    :root { --a11y-motion-duration: 0.01ms; }
+}
+.reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
 }

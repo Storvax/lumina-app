@@ -9,7 +9,7 @@ use App\Models\Comment;
 use App\Models\Report;
 use App\Models\ModerationLog; 
 use App\Notifications\ForumInteraction;
-use App\Services\GamificationService; // <--- Importado
+use App\Services\GamificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -17,32 +17,36 @@ use Illuminate\Support\Facades\Notification;
 
 class ForumController extends Controller
 {
-    protected $gamification;
+    protected GamificationService $gamification;
 
-    // Injeção do Serviço de Gamificação
     public function __construct(GamificationService $gamification)
     {
         $this->gamification = $gamification;
     }
 
-    // --- FUNÇÃO AUXILIAR: AUTO-TAGGING DE CONTEÚDO SENSÍVEL ---
-    private function detectSensitiveContent($text)
+    /**
+     * Verifica automaticamente a presença de palavras-chave sensíveis.
+     */
+    private function detectSensitiveContent(string $text): bool
     {
         $triggers = ['suicidio', 'suicídio', 'morte', 'sangue', 'cortar', 'abuso', 'violencia', 'matar', 'morrer'];
         foreach ($triggers as $word) {
-            if (Str::contains(Str::lower($text), $word)) return true;
+            if (Str::contains(Str::lower($text), $word)) {
+                return true;
+            }
         }
         return false;
     }
 
-    // --- LISTAGEM (MURAL) ---
+    /**
+     * Lista as publicações do mural com suporte a filtros e paginação.
+     */
     public function index(Request $request)
     {
         $query = Post::with(['user', 'reactions', 'comments'])
             ->orderBy('is_pinned', 'desc') 
             ->latest(); 
 
-        // 1. Filtro de Pesquisa
         if ($request->has('search') && $request->search != '') {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -51,7 +55,6 @@ class ForumController extends Controller
             });
         }
 
-        // 2. Filtro de Tags (Emoções)
         if ($request->has('tag') && $request->tag != 'all') {
             $query->where('tag', $request->tag);
         }
@@ -65,7 +68,9 @@ class ForumController extends Controller
         return view('forum.index', compact('posts'));
     }
 
-    // --- VER POST INDIVIDUAL ---
+    /**
+     * Exibe os detalhes de uma publicação específica.
+     */
     public function show(Post $post)
     {
         $post->load(['user', 'comments' => function($q) {
@@ -83,7 +88,9 @@ class ForumController extends Controller
         return view('forum.show', compact('post', 'relatedPosts'));
     }
 
-    // --- CRIAR POST ---
+    /**
+     * Regista uma nova publicação no mural.
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -103,13 +110,14 @@ class ForumController extends Controller
             'is_sensitive' => $request->has('is_sensitive') || $autoSensitive,
         ]);
 
-        // --- GAMIFICAÇÃO: Criar Tópico ---
         $this->gamification->trackAction(Auth::user(), 'first_post');
 
         return response()->json(['message' => 'Post criado!']);
     }
 
-    // --- ATUALIZAR POST ---
+    /**
+     * Atualiza uma publicação existente.
+     */
     public function update(Request $request, Post $post)
     {
         if (Auth::id() !== $post->user_id) abort(403);
@@ -133,16 +141,20 @@ class ForumController extends Controller
         return response()->json(['message' => 'Post atualizado!']);
     }
 
-    // --- APAGAR POST ---
+    /**
+     * Remove uma publicação (pelo autor ou por um moderador).
+     */
     public function destroy(Post $post)
     {
-        if (!Auth::user()->isModerator() && Auth::id() !== $post->user_id) {
-            abort(403, 'Sem permissão.');
+        $user = Auth::user();
+
+        if (!$user->isModerator() && $user->id !== $post->user_id) {
+            abort(403, 'Acesso não autorizado.');
         }
 
-        if (Auth::user()->isModerator() && Auth::id() !== $post->user_id) {
+        if ($user->isModerator() && $user->id !== $post->user_id) {
             ModerationLog::create([
-                'moderator_id' => Auth::id(),
+                'moderator_id' => $user->id,
                 'target_user_id' => $post->user_id,
                 'target_type' => Post::class,
                 'target_id' => $post->id,
@@ -155,10 +167,14 @@ class ForumController extends Controller
         return response()->json(['message' => 'Post apagado com sucesso.']);
     }
 
-    // --- REAGIR A POST ---
+    /**
+     * Processa reações emocionais a uma publicação e notifica o autor.
+     */
     public function react(Request $request, Post $post)
     {
-        if ($post->is_locked) return response()->json(['error' => 'Locked'], 403);
+        if ($post->is_locked) {
+            return response()->json(['error' => 'A publicação está trancada.'], 403);
+        }
 
         $request->validate(['type' => 'required|in:hug,candle,ear']);
         $user = Auth::user();
@@ -183,11 +199,18 @@ class ForumController extends Controller
             ]);
             $action = 'added';
 
-            // --- GAMIFICAÇÃO: Reagir a Post ---
-            // Só conta se for uma nova reação (não updates) e se não for ao próprio post
             if ($post->user_id !== $user->id) {
                 $this->gamification->trackAction($user, 'reaction');
-                $post->user->notify(new ForumInteraction($post, $user, 'reaction'));
+
+                // Geração do copywriting emocional baseado na reação escolhida
+                $customMessage = match($request->type) {
+                    'hug' => 'Alguém deixou-te um abraço apertado na tua história.',
+                    'candle' => 'Alguém acendeu uma vela de esperança por ti.',
+                    'ear' => 'Alguém está aqui para te ouvir, em silêncio.',
+                    default => 'Alguém interagiu com a tua história.',
+                };
+
+                $post->user->notify(new ForumInteraction($post, $user, 'reaction', $customMessage));
             }
         }
 
@@ -201,10 +224,14 @@ class ForumController extends Controller
         ]);
     }
 
-    // --- COMENTAR E RESPONDER ---
+    /**
+     * Adiciona um comentário ou resposta.
+     */
     public function comment(Request $request, Post $post)
     {
-        if ($post->is_locked) return back()->with('error', 'Trancado.');
+        if ($post->is_locked) {
+            return back()->with('error', 'A publicação encontra-se trancada.');
+        }
 
         $request->validate([
             'body' => 'required|max:500',
@@ -217,24 +244,19 @@ class ForumController extends Controller
             'parent_id' => $request->parent_id
         ]);
 
-        // --- GAMIFICAÇÃO: Comentar/Ajudar ---
         $this->gamification->trackAction(Auth::user(), 'reply');
 
-        // --- NOTIFICAÇÕES ---
         $recipients = collect();
 
-        // 1. Autor do Post
         if ($post->user_id !== Auth::id()) {
             $recipients->push($post->user);
         }
 
-        // 2. Subscritores
         $subscribers = $post->subscribers()->where('user_id', '!=', Auth::id())->get();
         $recipients = $recipients->merge($subscribers);
 
-        // 3. Autor do Comentário Pai
         if ($request->parent_id) {
-            $parent = \App\Models\Comment::find($request->parent_id);
+            $parent = Comment::find($request->parent_id);
             if ($parent && $parent->user_id !== Auth::id()) {
                 $recipients->push($parent->user);
             }
@@ -243,16 +265,22 @@ class ForumController extends Controller
         $uniqueRecipients = $recipients->unique('id');
         
         if ($uniqueRecipients->count() > 0) {
+            $customMessage = $request->parent_id 
+                ? 'Alguém respondeu diretamente ao teu comentário.' 
+                : 'Alguém partilhou palavras de conforto na tua publicação.';
+
             Notification::send(
                 $uniqueRecipients, 
-                new ForumInteraction($post, Auth::user(), 'comment')
+                new ForumInteraction($post, Auth::user(), 'comment', $customMessage)
             );
         }
 
         return back();
     }
 
-    // --- MODERAÇÃO: FIXAR (PIN) ---
+    /**
+     * Alterna o estado de afixação de uma publicação (Apenas Moderadores).
+     */
     public function togglePin(Post $post)
     {
         if (!Auth::user()->isModerator()) abort(403);
@@ -260,7 +288,9 @@ class ForumController extends Controller
         return back();
     }
 
-    // --- MODERAÇÃO: TRANCAR (LOCK) ---
+    /**
+     * Tranca ou destranca uma publicação (Apenas Moderadores).
+     */
     public function toggleLock(Post $post)
     {
         if (!Auth::user()->isModerator()) abort(403);
@@ -268,7 +298,9 @@ class ForumController extends Controller
         return back();
     }
 
-    // --- MODERAÇÃO: SHADOWBAN ---
+    /**
+     * Aplica o estado de "Shadowban" a um utilizador reportado.
+     */
     public function shadowbanUser(Request $request, User $user)
     {
         if (!Auth::user()->isModerator()) abort(403);
@@ -287,7 +319,9 @@ class ForumController extends Controller
         return response()->json(['message' => 'Utilizador em modo fantasma.']);
     }
 
-    // --- SEGURANÇA: REPORTAR ---
+    /**
+     * Regista uma denúncia para análise por parte da moderação.
+     */
     public function report(Request $request, Post $post)
     {
         $request->validate(['reason' => 'required|string|max:50']);
@@ -307,24 +341,29 @@ class ForumController extends Controller
         return response()->json(['message' => 'Denúncia recebida.']);
     }
 
-    // --- UTILIDADE: GUARDAR POST ---
+    /**
+     * Guarda ou remove uma publicação dos favoritos do utilizador.
+     */
     public function toggleSave(Post $post)
     {
         $user = Auth::user();
         
         if ($user->savedPosts()->where('post_id', $post->id)->exists()) {
             $user->savedPosts()->detach($post->id);
-            $message = 'Post removido dos guardados.';
+            $message = 'Publicação removida dos guardados.';
             $saved = false;
         } else {
             $user->savedPosts()->attach($post->id);
-            $message = 'Post guardado no teu perfil.';
+            $message = 'Publicação guardada no teu perfil.';
             $saved = true;
         }
 
         return response()->json(['message' => $message, 'saved' => $saved]);
     }
 
+    /**
+     * Reage a um comentário específico.
+     */
     public function reactToComment(Request $request, Comment $comment)
     {
         $request->validate(['type' => 'required|in:hug,heart,muscle']);
@@ -346,7 +385,9 @@ class ForumController extends Controller
         return response()->json(['action' => $action]);
     }
 
-    // --- NOVA: MARCAR COMO ÚTIL ---
+    /**
+     * Marca um comentário como particularmente útil pelo autor do tópico.
+     */
     public function markHelpful(Comment $comment)
     {
         if (Auth::id() !== $comment->post->user_id) abort(403);
@@ -354,7 +395,9 @@ class ForumController extends Controller
         return back();
     }
 
-    // --- NOVO: SUBSCREVER POST ---
+    /**
+     * Ativa ou desativa a receção de notificações para uma publicação.
+     */
     public function toggleSubscription(Post $post)
     {
         $user = Auth::user();
@@ -363,7 +406,7 @@ class ForumController extends Controller
         
         return response()->json([
             'subscribed' => $subscribed,
-            'message' => $subscribed ? 'Notificações ativadas para este post.' : 'Notificações desativadas.'
+            'message' => $subscribed ? 'Notificações ativadas para esta publicação.' : 'Notificações desativadas.'
         ]);
     }
 }

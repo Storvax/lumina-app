@@ -25,6 +25,8 @@ Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
+
+    Route::post('/users/{user}/oferecer-apoio', [\App\Http\Controllers\GamificationController::class, 'sendGentleChallenge'])->name('users.challenge');
     Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::patch('/perfil/notificacoes', [\App\Http\Controllers\ProfileController::class, 'updateNotificationPrefs'])->name('profile.notifications');
 

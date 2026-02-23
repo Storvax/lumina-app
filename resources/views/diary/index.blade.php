@@ -188,8 +188,19 @@
                             <button type="button" onclick="this.parentElement.classList.add('hidden')" class="absolute top-3 right-3 text-amber-400 hover:text-amber-600 w-6 h-6 flex items-center justify-center rounded-full hover:bg-amber-100 transition-colors"><i class="ri-close-line"></i></button>
                         </div>
 
-                        <div class="flex-1 relative">
-                            <textarea name="note" id="journal-area"
+                        <div class="flex-1 relative flex flex-col" x-data="voiceDictation()">
+                            <div class="flex justify-end mb-2">
+                                <button type="button" 
+                                        @click="toggleDictation()" 
+                                        class="flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full border transition-colors focus:ring-2 focus:ring-indigo-500"
+                                        :class="isRecording ? 'bg-rose-100 text-rose-600 border-rose-200 animate-pulse' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'"
+                                        title="Ditar por voz">
+                                    <i class="ri-mic-line text-sm" :class="isRecording ? 'ri-mic-fill' : 'ri-mic-line'"></i>
+                                    <span x-text="isRecording ? 'A ouvir...' : 'Ditar'"></span>
+                                </button>
+                            </div>
+                            
+                            <textarea name="note" id="journal-area" x-ref="diaryTextarea"
                                 class="journal-paper w-full h-full min-h-[400px] bg-transparent border-none focus:ring-0 text-slate-700 text-lg resize-none p-0 placeholder:text-slate-300 placeholder:italic"
                                 placeholder="Clica para começar a escrever...">{{ $todayLog->note ?? '' }}</textarea>
                         </div>
@@ -260,6 +271,61 @@
             text.textContent = randomPrompt;
             box.classList.remove('hidden');
         }
+
+        /**
+         * Inicializa o componente Alpine para reconhecimento de voz via Web Speech API.
+         */
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('voiceDictation', () => ({
+                isRecording: false,
+                recognition: null,
+
+                init() {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    
+                    if (SpeechRecognition) {
+                        this.recognition = new SpeechRecognition();
+                        this.recognition.lang = 'pt-PT'; 
+                        this.recognition.interimResults = false; 
+                        this.recognition.continuous = false; 
+                        
+                        this.recognition.onresult = (event) => {
+                            let transcript = event.results[0][0].transcript;
+                            const currentVal = this.$refs.diaryTextarea.value;
+                            
+                            // Adiciona o texto falado preservando o que já foi escrito
+                            this.$refs.diaryTextarea.value = currentVal + (currentVal.length > 0 ? ' ' : '') + transcript + '.';
+                            
+                            // Dispara evento para reatividade do browser
+                            this.$refs.diaryTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                        };
+
+                        this.recognition.onend = () => {
+                            this.isRecording = false;
+                        };
+
+                        this.recognition.onerror = (event) => {
+                            console.error("Erro no reconhecimento de voz:", event.error);
+                            this.isRecording = false;
+                        };
+                    }
+                },
+
+                toggleDictation() {
+                    if (!this.recognition) {
+                        alert('O teu navegador não suporta a função de ditado por voz. Experimenta usar o Chrome ou Safari.');
+                        return;
+                    }
+
+                    if (this.isRecording) {
+                        this.recognition.stop();
+                    } else {
+                        this.recognition.start();
+                        this.isRecording = true;
+                    }
+                }
+            }));
+        });
     </script>
 
 </x-lumina-layout>

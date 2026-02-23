@@ -4,122 +4,123 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Achievement;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Gere o progresso do utilizador de forma terapêutica e não punitiva.
+ * Integra a lógica de missões diárias sem pressionar o utilizador.
+ */
 class GamificationService
 {
-    /**
-     * Processa uma ação do utilizador e atribui recompensas.
-     */
-    public function trackAction(User $user, string $actionType)
-    {
-        // 1. Atualizar Streak (apenas uma vez por dia)
-        $this->checkDailyStreak($user);
+    private const REWARDS = [
+        'daily_log' => 10,
+        'reaction' => 2,
+        'reply' => 5,
+        'breathe' => 5,
+        'first_post' => 20,
+    ];
 
-        // 1.2. Progredir Missões Diárias
+    /**
+     * Processa uma ação do utilizador, atribui chamas, atualiza a consistência
+     * terapêutica e progride as missões ativas.
+     */
+    public function trackAction(User $user, string $actionType): void
+    {
+        // 1. Atualizar Progresso das Missões Diárias
         $this->updateMissionProgress($user, $actionType);
 
-        // 2. Processar ação específica
-        switch ($actionType) {
-            case 'daily_log':
-                $this->addFlames($user, 5); // 5 chamas por registo
-                $this->checkCountAchievement($user, 'App\Models\DailyLog', 1, 'first-journal');
-                $this->checkCountAchievement($user, 'App\Models\DailyLog', 7, 'journal-week');
-                break;
-
-            case 'first_post':
-                $this->addFlames($user, 10); // 10 chamas por criar tópico
-                $this->unlockAchievement($user, 'voice-found');
-                break;
-
-            case 'reply':
-                $this->addFlames($user, 5); // 5 chamas por ajudar (comentário)
-                $this->checkCountAchievement($user, 'App\Models\Comment', 1, 'first-help');
-                break;
-                
-            case 'breathe':
-                $this->addFlames($user, 5); // 5 chamas por respirar
-                // Lógica para badge de respiração se quisermos adicionar depois
-                break;
+        // 2. Recompensas fixas (ação genérica)
+        if (array_key_exists($actionType, self::REWARDS)) {
+            $this->awardFlames($user, self::REWARDS[$actionType]);
+            
+            // O Diário dita o ritmo da Fogueira (Streak)
+            if ($actionType === 'daily_log') {
+                $this->updateGentleStreak($user);
+            }
         }
+
+        // 3. Verificar marcos de longo prazo e conquistas
+        $this->checkMilestones($user);
     }
 
     /**
-     * Adiciona chamas e notifica (flash session para o frontend).
+     * Adiciona chamas de forma silenciosa ou via flash session.
      */
-    private function addFlames(User $user, int $amount)
+    private function awardFlames(User $user, int $amount): void
     {
         $user->increment('flames', $amount);
         session()->flash('gamification.flames', $amount);
     }
 
     /**
-     * Verifica e atualiza o streak diário.
+     * Atualiza os dias seguidos de forma terapêutica.
+     * Se falhou um dia, recomeça sem culpa e sem alertas a vermelho.
      */
-    private function checkDailyStreak(User $user)
+    private function updateGentleStreak(User $user): void
     {
-        $now = now();
-        
-        if (!$user->last_activity_at) {
-            $user->update(['current_streak' => 1, 'last_activity_at' => $now]);
-            return;
+        $lastActivity = $user->last_activity_at ? Carbon::parse($user->last_activity_at) : null;
+        $today = Carbon::today();
+
+        if (!$lastActivity) {
+            $user->current_streak = 1;
+        } elseif ($lastActivity->isYesterday()) {
+            $user->current_streak += 1;
+        } elseif (!$lastActivity->isToday()) {
+            // Recomeço sem culpa: a vida acontece.
+            $user->current_streak = 1;
         }
 
-        // Se a última atividade foi ontem, aumenta streak
-        if ($user->last_activity_at->isYesterday()) {
-            $user->increment('current_streak');
-            
-            // Badges de Consistência
-            if($user->current_streak == 3) $this->unlockAchievement($user, 'consistency-3');
-            if($user->current_streak == 7) $this->unlockAchievement($user, 'consistency-7');
-        } 
-        // Se foi antes de ontem (quebrou streak), reseta, a menos que seja hoje
-        elseif (!$user->last_activity_at->isToday()) {
-            $user->update(['current_streak' => 1]);
-        }
-
-        $user->update(['last_activity_at' => $now]);
+        $user->last_activity_at = now();
+        $user->save();
     }
 
     /**
-     * Desbloqueia um badge específico.
+     * Verifica e desbloqueia conquistas contextuais baseadas em tempo/presença.
      */
-    private function unlockAchievement(User $user, string $slug)
+    private function checkMilestones(User $user): void
     {
-        $achievement = Achievement::where('slug', $slug)->first();
+        // Exemplo: Desbloqueia conquista "Guardião da Chama" aos 100 pontos
+        if ($user->flames >= 100) {
+            $this->unlockAchievement($user, 'guardian_flame'); 
+        }
+
+        // Exemplo: 7 dias de autocuidado contínuo
+        if ($user->current_streak === 7) {
+            $this->unlockAchievement($user, 'seven_days_peace');
+        }
+    }
+
+    /**
+     * Desbloqueia um badge específico e notifica a UI.
+     */
+    private function unlockAchievement(User $user, string $slug): void
+    {
+        // Verifica por 'slug' ou 'code' consoante a estrutura da tua BD
+        $achievement = Achievement::where('slug', $slug)->orWhere('code', $slug)->first();
 
         if ($achievement && !$user->achievements()->where('achievement_id', $achievement->id)->exists()) {
             $user->achievements()->attach($achievement->id, ['unlocked_at' => now()]);
             
             // Bónus de chamas do badge
-            $user->increment('flames', $achievement->flames_reward);
+            if ($achievement->flames_reward) {
+                $user->increment('flames', $achievement->flames_reward);
+            }
             
-            // Notificação visual
+            // Notificação visual para o Front-end
             session()->flash('gamification.badge', [
                 'name' => $achievement->name,
                 'icon' => $achievement->icon,
-                'image' => $achievement->image ?? null, // Opcional
+                'image' => $achievement->image ?? null,
             ]);
         }
     }
 
     /**
-     * Helper para verificar contagens (ex: 10º post).
-     */
-    private function checkCountAchievement(User $user, string $modelClass, int $targetCount, string $badgeSlug)
-    {
-        // Conta quantos registos o user tem neste modelo
-        $count = $modelClass::where('user_id', $user->id)->count();
-        
-        if ($count >= $targetCount) {
-            $this->unlockAchievement($user, $badgeSlug);
-        }
-    }
-
-    /**
      * Atribui 3 missões diárias ao utilizador, se ainda não as tiver hoje.
+     * Utilizado pelo DashboardController.
      */
-    public function assignDailyMissions(\App\Models\User $user)
+    public function assignDailyMissions(User $user): void
     {
         $today = now()->toDateString();
         $hasMissions = $user->missions()->wherePivot('assigned_date', $today)->exists();
@@ -139,9 +140,9 @@ class GamificationService
     }
 
     /**
-     * Atualiza o progresso das missões ativas baseadas na ação.
+     * Atualiza o progresso das missões ativas baseadas na ação realizada.
      */
-    private function updateMissionProgress(\App\Models\User $user, string $actionType)
+    private function updateMissionProgress(User $user, string $actionType): void
     {
         $today = now()->toDateString();
 
@@ -162,8 +163,8 @@ class GamificationService
             if ($newProgress >= $mission->target_count) {
                 $user->missions()->updateExistingPivot($mission->id, ['completed_at' => now()]);
                 
-                // Dá a recompensa
-                $this->addFlames($user, $mission->flames_reward);
+                // Dá a recompensa da missão
+                $this->awardFlames($user, $mission->flames_reward);
                 
                 // Dispara o Toast de "Missão Concluída"
                 session()->flash('gamification.mission', $mission->title);

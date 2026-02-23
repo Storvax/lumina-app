@@ -224,41 +224,44 @@
                         </a>
                     </div>
 
-                    <div class="glass-card rounded-[2rem] p-6 md:p-8 mt-6 mb-6">
+                    <div class="glass-card rounded-[2rem] p-6 md:p-8 mt-6 mb-6 border border-slate-100 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50">
                         <div class="flex justify-between items-center mb-6">
                             <div>
-                                <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                    <i class="ri-line-chart-line text-indigo-500"></i> Ondas de Humor
+                                <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2 text-lg">
+                                    <i class="ri-donut-chart-line text-indigo-500"></i> Espiral de Humor
                                 </h3>
-                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Os teus últimos 30 dias.</p>
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Cada dia é um ponto novo. Vê como a tua perspetiva evolui.</p>
                             </div>
                         </div>
                         
-                        <div class="h-64 w-full relative">
-                            @if(isset($chartData) && count($chartData) > 2)
-                                <canvas id="moodChart"></canvas>
+                        <div class="w-full relative flex justify-center py-4">
+                            @if(isset($spiralData) && count($spiralData) > 0)
+                                <x-mood-spiral :data="$spiralData" />
                             @else
-                                <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
-                                    <i class="ri-bar-chart-2-line text-4xl mb-2 opacity-50"></i>
-                                    <p class="text-sm">Precisamos de pelo menos 3 registos para gerar o gráfico.</p>
+                                <div class="flex flex-col items-center justify-center text-slate-400 py-12">
+                                    <i class="ri-leaf-line text-5xl mb-3 opacity-30"></i>
+                                    <p class="text-sm">Regista as tuas emoções no diário para começares a desenhar a tua espiral.</p>
                                 </div>
                             @endif
                         </div>
                     </div>
-
                     <div class="grid grid-cols-7 gap-2 md:gap-3">
-                        @foreach($garden as $plot)
-                            @if($plot['type'] === 'plant')
-                                <div class="aspect-square bg-emerald-50/50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800 flex flex-col items-center justify-center relative group transition-all hover:bg-emerald-100 dark:hover:bg-emerald-900/40" title="Humor: {{ $plot['mood'] }}/5">
-                                    <div class="text-2xl md:text-3xl plant-grow drop-shadow-sm">{{ $plot['icon'] }}</div>
-                                    <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ $plot['date'] }}</span>
-                                </div>
-                            @else
-                                <div class="aspect-square bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center opacity-60">
-                                    <span class="text-[9px] font-bold text-slate-400">{{ $plot['date'] }}</span>
-                                </div>
-                            @endif
-                        @endforeach
+                        @if(isset($garden) && is_array($garden) && count($garden) > 0)
+                            @foreach($garden as $plot)
+                                @if($plot['type'] === 'plant')
+                                    <div class="aspect-square bg-emerald-50/50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800 flex flex-col items-center justify-center relative group transition-all hover:bg-emerald-100 dark:hover:bg-emerald-900/40" title="Humor: {{ $plot['mood'] }}/5">
+                                        <div class="text-2xl md:text-3xl plant-grow drop-shadow-sm">{{ $plot['icon'] }}</div>
+                                        <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ $plot['date'] }}</span>
+                                    </div>
+                                @else
+                                    <div class="aspect-square bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center opacity-60">
+                                        <span class="text-[9px] font-bold text-slate-400">{{ $plot['date'] }}</span>
+                                    </div>
+                                @endif
+                            @endforeach
+                        @else
+                            <div class="col-span-7 flex justify-center py-4 text-slate-400 text-sm">O teu jardim ainda não tem registos recentes.</div>
+                        @endif
                     </div>
                 </div>
 
@@ -362,7 +365,7 @@
         <div class="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl animate-fade-up">
             <h3 class="text-xl font-bold mb-6 dark:text-white">Novo Marco</h3>
             
-            <form action="{{ route('profile.milestones.store') }}" method="POST">
+            <form action="{{ route('profile.milestones.store') ?? '#' }}" method="POST">
                 @csrf
                 <div class="space-y-4 mb-6">
                     <div>
@@ -388,86 +391,6 @@
             </form>
         </div>
     </div>
-
-    @if(isset($chartData) && count($chartData) > 2)
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const ctx = document.getElementById('moodChart').getContext('2d');
-            
-            const rawData = @json($chartData);
-            const labels = rawData.map(item => item.date);
-            const dataPoints = rawData.map(item => item.mood);
-    
-            let gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)');
-            gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)');
-    
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Humor',
-                        data: dataPoints,
-                        borderColor: '#4f46e5',
-                        backgroundColor: gradient,
-                        borderWidth: 3,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: '#4f46e5',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#1e293b',
-                            padding: 12,
-                            titleFont: { size: 13, family: "'Plus Jakarta Sans', sans-serif" },
-                            bodyFont: { size: 14, weight: 'bold' },
-                            displayColors: false,
-                            callbacks: {
-                                label: function(context) {
-                                    const moods = ['', '1 - Muito Difícil', '2 - Difícil', '3 - Neutro', '4 - Bom', '5 - Excelente'];
-                                    return moods[context.raw];
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            min: 1,
-                            max: 5,
-                            ticks: {
-                                stepSize: 1,
-                                callback: function(value) {
-                                    const emojis = ['', '🥀', '🌱', '🌿', '🌷', '🌻'];
-                                    return emojis[value];
-                                }
-                            },
-                            grid: { borderDash: [4, 4], color: '#e2e8f0', drawBorder: false }
-                        },
-                        x: {
-                            grid: { display: false, drawBorder: false },
-                            ticks: { color: '#64748b', font: { size: 10 } }
-                        }
-                    },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index',
-                    },
-                }
-            });
-        });
-    </script>
-    @endif
 
     <script>
         // Limita checkboxes a 3 no modal de tags

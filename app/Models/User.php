@@ -7,14 +7,12 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Carbon\Carbon;
 
 class User extends Authenticatable implements FilamentUser
 {
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'name',
         'email',
@@ -30,20 +28,18 @@ class User extends Authenticatable implements FilamentUser
         'last_activity_at',
         'wants_weekly_summary', 
         'quiet_hours_start', 
-        'quiet_hours_end'
+        'quiet_hours_end',
+        'diary_retention_days', // Novo campo
+        'a11y_dyslexic_font',
+        'a11y_reduced_motion',
+        'a11y_text_size'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     */
     protected function casts(): array
     {
         return [
@@ -55,16 +51,27 @@ class User extends Authenticatable implements FilamentUser
             'last_activity_at' => 'datetime',
             'emotional_tags' => 'array',
             'hibernated_at' => 'datetime',
+            'a11y_dyslexic_font' => 'boolean',
+            'a11y_reduced_motion' => 'boolean',
         ];
     }
 
-    // --- LÓGICA DE ACESSO AO FILAMENT (ADMIN) ---
+    /**
+     * Gera um pseudónimo consistente e irreversível baseado no ID do utilizador.
+     * Útil para o Fórum, garantindo continuidade nas interações sem expor a identidade.
+     */
+    public function getPseudonymAttribute(): string
+    {
+        $salt = config('app.key');
+        $hash = substr(hash('sha256', $this->id . $salt), 0, 6);
+        return 'Lumina-' . strtoupper($hash);
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->isAdmin() || $this->isModerator();
     }
 
-    // --- MÉTODOS DE PAPÉIS (ROLES) ---
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
@@ -75,25 +82,15 @@ class User extends Authenticatable implements FilamentUser
         return in_array($this->role, ['admin', 'moderator']);
     }
 
-    // --- MÉTODOS DE BANIMENTO E SEGURANÇA ---
-    
-    /**
-     * Verifica se o utilizador está banido permanentemente.
-     */
     public function isBanned(): bool
     {
         return $this->banned_at !== null;
     }
 
-    /**
-     * Verifica se o utilizador está em shadowban (invisível para outros).
-     */
     public function isShadowbanned()
     {
         return $this->shadowbanned_until && $this->shadowbanned_until->isFuture();
     }
-
-    // --- RELAÇÕES ---
 
     public function posts()
     {
@@ -115,7 +112,6 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(PresenceSubscription::class);
     }
 
-    // Relação com Conquistas
     public function achievements()
     {
         return $this->belongsToMany(Achievement::class, 'user_achievements')
@@ -123,20 +119,17 @@ class User extends Authenticatable implements FilamentUser
             ->orderBy('pivot_unlocked_at', 'desc');
     }
 
-    // Helper para adicionar chamas
     public function addFlames(int $amount)
     {
         $this->increment('flames', $amount);
     }
     
-    // Nível da Fogueira (Metáfora Visual)
-    // Nível 1: Faísca (0-50), Nível 2: Chama (50-200), Nível 3: Fogueira (200+)
     public function getBonfireLevelAttribute()
     {
         if ($this->flames < 50) return 'spark';
         if ($this->flames < 200) return 'flame';
         if ($this->flames < 500) return 'bonfire';
-        return 'beacon'; // Farol
+        return 'beacon'; 
     }
 
     public function buddySessions()
@@ -154,9 +147,6 @@ class User extends Authenticatable implements FilamentUser
         return !is_null($this->hibernated_at);
     }
 
-    /**
-     * Missões diárias atribuídas ao utilizador (Gamificação)
-     */
     public function missions()
     {
         return $this->belongsToMany(\App\Models\Mission::class)
@@ -164,16 +154,20 @@ class User extends Authenticatable implements FilamentUser
                     ->withTimestamps();
     }
 
-    // Adiciona o método para verificar se está na hora de silêncio
+    public function dailyLogs()
+    {
+        return $this->hasMany(DailyLog::class);
+    }
+
     public function isInQuietHours(): bool
     {
         if (!$this->quiet_hours_start || !$this->quiet_hours_end) return false;
 
         $now = now()->format('H:i');
-        $start = \Carbon\Carbon::parse($this->quiet_hours_start)->format('H:i');
-        $end = \Carbon\Carbon::parse($this->quiet_hours_end)->format('H:i');
+        $start = Carbon::parse($this->quiet_hours_start)->format('H:i');
+        $end = Carbon::parse($this->quiet_hours_end)->format('H:i');
 
-        if ($start > $end) { // Ex: 22:00 às 08:00 (cruza a meia-noite)
+        if ($start > $end) { 
             return $now >= $start || $now <= $end;
         }
 
