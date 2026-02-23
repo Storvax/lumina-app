@@ -10,36 +10,28 @@ use App\Models\Report;
 use App\Models\ModerationLog; 
 use App\Notifications\ForumInteraction;
 use App\Services\GamificationService;
+use App\Services\CBTAnalysisService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Notification;
 
+/**
+ * Gere o Mural da Esperança (Fórum).
+ * Integra processamento de NLP para deteção de crise e moderação assistida.
+ */
 class ForumController extends Controller
 {
     protected GamificationService $gamification;
+    protected CBTAnalysisService $nlpService;
 
-    public function __construct(GamificationService $gamification)
+    public function __construct(GamificationService $gamification, CBTAnalysisService $nlpService)
     {
         $this->gamification = $gamification;
+        $this->nlpService = $nlpService;
     }
 
     /**
-     * Verifica automaticamente a presença de palavras-chave sensíveis.
-     */
-    private function detectSensitiveContent(string $text): bool
-    {
-        $triggers = ['suicidio', 'suicídio', 'morte', 'sangue', 'cortar', 'abuso', 'violencia', 'matar', 'morrer'];
-        foreach ($triggers as $word) {
-            if (Str::contains(Str::lower($text), $word)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Lista as publicações do mural com suporte a filtros e paginação.
+     * Lista as publicações do mural com suporte a filtros e pesquisa.
      */
     public function index(Request $request)
     {
@@ -69,7 +61,7 @@ class ForumController extends Controller
     }
 
     /**
-     * Exibe os detalhes de uma publicação específica.
+     * Exibe os detalhes de uma publicação específica e os respetivos comentários.
      */
     public function show(Post $post)
     {
@@ -83,13 +75,15 @@ class ForumController extends Controller
 
         $relatedPosts = Post::where('tag', $post->tag)
                             ->where('id', '!=', $post->id)
-                            ->latest()->take(3)->get();
+                            ->latest()
+                            ->take(3)
+                            ->get();
 
         return view('forum.show', compact('post', 'relatedPosts'));
     }
 
     /**
-     * Regista uma nova publicação no mural.
+     * Regista uma nova publicação aplicando a triagem IA multicamada.
      */
     public function store(Request $request)
     {
@@ -100,27 +94,32 @@ class ForumController extends Controller
             'is_sensitive' => 'sometimes|accepted'
         ]);
 
-        $autoSensitive = $this->detectSensitiveContent($validated['title'] . ' ' . $validated['content']);
+        $fullText = $validated['title'] . ' ' . $validated['content'];
+        $analysis = $this->nlpService->analyzeForumPost($fullText);
 
         $post = Post::create([
             'user_id' => Auth::id(),
             'title' => $validated['title'],
             'content' => $validated['content'],
             'tag' => $validated['tag'],
-            'is_sensitive' => $request->has('is_sensitive') || $autoSensitive,
+            'is_sensitive' => $request->has('is_sensitive') || $analysis['is_sensitive'],
+            'risk_level' => $analysis['risk_level'],
+            'sentiment' => $analysis['sentiment'],
         ]);
 
         $this->gamification->trackAction(Auth::user(), 'first_post');
 
-        return response()->json(['message' => 'Post criado!']);
+        return response()->json(['message' => 'Post criado com sucesso!']);
     }
 
     /**
-     * Atualiza uma publicação existente.
+     * Atualiza uma publicação e reavalia o risco clínico (NLP).
      */
     public function update(Request $request, Post $post)
     {
-        if (Auth::id() !== $post->user_id) abort(403);
+        if (Auth::id() !== $post->user_id) {
+            abort(403, 'Acesso não autorizado.');
+        }
 
         $validated = $request->validate([
             'title' => 'required|max:100',
@@ -129,16 +128,19 @@ class ForumController extends Controller
             'is_sensitive' => 'sometimes|accepted'
         ]);
 
-        $autoSensitive = $this->detectSensitiveContent($validated['title'] . ' ' . $validated['content']);
+        $fullText = $validated['title'] . ' ' . $validated['content'];
+        $analysis = $this->nlpService->analyzeForumPost($fullText);
 
         $post->update([
             'title' => $validated['title'],
             'content' => $validated['content'],
             'tag' => $validated['tag'],
-            'is_sensitive' => $request->has('is_sensitive') || $autoSensitive,
+            'is_sensitive' => $request->has('is_sensitive') || $analysis['is_sensitive'],
+            'risk_level' => $analysis['risk_level'],
+            'sentiment' => $analysis['sentiment'],
         ]);
 
-        return response()->json(['message' => 'Post atualizado!']);
+        return response()->json(['message' => 'Post atualizado com sucesso!']);
     }
 
     /**
@@ -168,7 +170,7 @@ class ForumController extends Controller
     }
 
     /**
-     * Processa reações emocionais a uma publicação e notifica o autor.
+     * Processa reações emocionais a uma publicação e notifica o autor (respeitando o shadowban).
      */
     public function react(Request $request, Post $post)
     {
@@ -202,15 +204,17 @@ class ForumController extends Controller
             if ($post->user_id !== $user->id) {
                 $this->gamification->trackAction($user, 'reaction');
 
-                // Geração do copywriting emocional baseado na reação escolhida
-                $customMessage = match($request->type) {
-                    'hug' => 'Alguém deixou-te um abraço apertado na tua história.',
-                    'candle' => 'Alguém acendeu uma vela de esperança por ti.',
-                    'ear' => 'Alguém está aqui para te ouvir, em silêncio.',
-                    default => 'Alguém interagiu com a tua história.',
-                };
+                // Previne fugas de shadowban (O utilizador bloqueado interage e ninguém vê o alerta)
+                if (!$user->isShadowbanned()) {
+                    $customMessage = match($request->type) {
+                        'hug' => 'Alguém deixou-te um abraço apertado na tua história.',
+                        'candle' => 'Alguém acendeu uma vela de esperança por ti.',
+                        'ear' => 'Alguém está aqui para te ouvir, em silêncio.',
+                        default => 'Alguém interagiu com a tua história.',
+                    };
 
-                $post->user->notify(new ForumInteraction($post, $user, 'reaction', $customMessage));
+                    $post->user->notify(new ForumInteraction($post, $user, 'reaction', $customMessage));
+                }
             }
         }
 
@@ -225,7 +229,7 @@ class ForumController extends Controller
     }
 
     /**
-     * Adiciona um comentário ou resposta.
+     * Adiciona um comentário ou resposta a uma publicação.
      */
     public function comment(Request $request, Post $post)
     {
@@ -264,7 +268,8 @@ class ForumController extends Controller
 
         $uniqueRecipients = $recipients->unique('id');
         
-        if ($uniqueRecipients->count() > 0) {
+        // Bloqueio de alerta se o remetente for um fantasma
+        if ($uniqueRecipients->count() > 0 && !Auth::user()->isShadowbanned()) {
             $customMessage = $request->parent_id 
                 ? 'Alguém respondeu diretamente ao teu comentário.' 
                 : 'Alguém partilhou palavras de conforto na tua publicação.';
@@ -283,7 +288,9 @@ class ForumController extends Controller
      */
     public function togglePin(Post $post)
     {
-        if (!Auth::user()->isModerator()) abort(403);
+        if (!Auth::user()->isModerator()) {
+            abort(403, 'Acesso não autorizado.');
+        }
         $post->update(['is_pinned' => !$post->is_pinned]);
         return back();
     }
@@ -293,7 +300,9 @@ class ForumController extends Controller
      */
     public function toggleLock(Post $post)
     {
-        if (!Auth::user()->isModerator()) abort(403);
+        if (!Auth::user()->isModerator()) {
+            abort(403, 'Acesso não autorizado.');
+        }
         $post->update(['is_locked' => !$post->is_locked]);
         return back();
     }
@@ -303,7 +312,9 @@ class ForumController extends Controller
      */
     public function shadowbanUser(Request $request, User $user)
     {
-        if (!Auth::user()->isModerator()) abort(403);
+        if (!Auth::user()->isModerator()) {
+            abort(403, 'Acesso não autorizado.');
+        }
         
         $user->update(['shadowbanned_until' => now()->addDays(7)]);
 
@@ -382,6 +393,7 @@ class ForumController extends Controller
             );
             $action = 'added';
         }
+
         return response()->json(['action' => $action]);
     }
 
@@ -390,7 +402,9 @@ class ForumController extends Controller
      */
     public function markHelpful(Comment $comment)
     {
-        if (Auth::id() !== $comment->post->user_id) abort(403);
+        if (Auth::id() !== $comment->post->user_id) {
+            abort(403, 'Acesso não autorizado.');
+        }
         $comment->update(['is_helpful' => !$comment->is_helpful]);
         return back();
     }

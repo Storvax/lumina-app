@@ -84,8 +84,8 @@
 
                         @if($stats['bonfire_level'] === 'spark')
                             <div class="flex flex-col items-center gap-2 animate-bounce">
-                                <i class="ri-flashlight-fill text-6xl text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]"></i>
-                                <span class="text-xs font-bold text-yellow-200 uppercase tracking-widest bg-black/20 px-3 py-1 rounded-full">Faísca Inicial</span>
+                                <i class="ri-sparkling-fill text-6xl text-amber-300 drop-shadow-[0_0_15px_rgba(252,211,77,0.8)]"></i>
+                                <span class="text-xs font-bold text-amber-200 uppercase tracking-widest bg-black/20 px-3 py-1 rounded-full">Faísca de Esperança</span>
                             </div>
                         @elseif($stats['bonfire_level'] === 'flame')
                             <div class="flex flex-col items-center">
@@ -102,8 +102,11 @@
                             </div>
                         @else
                             <div class="flex flex-col items-center">
-                                <i class="ri-sun-fill text-9xl text-yellow-300 animate-[spin_12s_linear_infinite] drop-shadow-[0_0_30px_rgba(253,224,71,0.6)]"></i>
-                                <span class="text-xs font-bold text-yellow-100 uppercase tracking-widest bg-black/20 px-3 py-1 rounded-full mt-4">Farol de Esperança</span>
+                                <div class="relative">
+                                    <i class="ri-fire-fill text-9xl text-amber-500 absolute inset-0 animate-pulse opacity-100 blur-md"></i>
+                                    <i class="ri-fire-fill text-9xl text-white relative z-10 drop-shadow-2xl"></i>
+                                </div>
+                                <span class="text-xs font-bold text-amber-100 uppercase tracking-widest bg-black/20 px-3 py-1 rounded-full mt-4 relative z-20">Chama Eterna</span>
                             </div>
                         @endif
                     </div>
@@ -158,46 +161,41 @@
                     </div>
                 </div>
 
-                @php
-                    // Mapeamento manual de conquistas para garantir que aparecem sempre
-                    $allBadges = [
-                        ['id' => 1, 'name' => 'Primeiro Passo', 'description' => 'Escreveste o teu primeiro diário', 'icon' => 'ri-footprint-line', 'color' => 'blue'],
-                        ['id' => 2, 'name' => 'Guardião da Chama', 'description' => 'Alcançaste 100 chamas', 'icon' => 'ri-fire-fill', 'color' => 'orange'],
-                        ['id' => 3, 'name' => 'Ouvinte Atento', 'description' => 'Ajudaste alguém no mural', 'icon' => 'ri-ear-line', 'color' => 'emerald'],
-                        ['id' => 4, 'name' => 'Mestre Zen', 'description' => 'Usaste a zona calma 5 vezes', 'icon' => 'ri-leaf-line', 'color' => 'teal'],
-                        ['id' => 5, 'name' => 'Voz da Esperança', 'description' => 'Recebeste 50 reações', 'icon' => 'ri-megaphone-line', 'color' => 'indigo'],
-                        ['id' => 6, 'name' => 'Sobrevivente', 'description' => 'Usaste o plano SOS', 'icon' => 'ri-shield-star-line', 'color' => 'rose'],
-                    ];
-                @endphp
                 <div class="glass-card rounded-[2rem] p-6 md:p-8">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
                             <i class="ri-medal-line text-yellow-500"></i> Coleção de Conquistas
                         </h3>
                         <span class="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-3 py-1 rounded-full">
-                            {{ $stats['badges_count'] ?? 0 }} / 6
+                            {{ $stats['badges_count'] ?? 0 }}
                         </span>
                     </div>
 
                     <div class="grid grid-cols-3 gap-3">
-                        @foreach($allBadges as $badge)
-                            @php $isUnlocked = isset($unlockedIds) && in_array($badge['id'], $unlockedIds); @endphp
+                        @foreach($allAchievements as $badge)
+                            @php 
+                                $isUnlocked = isset($unlockedIds) && in_array($badge->id, $unlockedIds); 
+                                $color = $badge->color ?? 'orange';
+                                $icon = $badge->icon ?? 'ri-medal-line';
+                                $name = $badge->name ?? 'Conquista';
+                                $description = $badge->description ?? '';
+                            @endphp
                             
                             <div class="relative group">
                                 <div class="aspect-square rounded-2xl flex flex-col items-center justify-center p-2 border transition-all duration-300 cursor-default
                                     {{ $isUnlocked 
-                                        ? 'bg-'.$badge['color'].'-50 dark:bg-'.$badge['color'].'-900/20 border-'.$badge['color'].'-100 dark:border-'.$badge['color'].'-800' 
+                                        ? 'bg-'.$color.'-50 dark:bg-'.$color.'-900/20 border-'.$color.'-100 dark:border-'.$color.'-800' 
                                         : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700 grayscale opacity-40 hover:opacity-70' 
                                     }}">
-                                    <i class="{{ $badge['icon'] }} text-2xl md:text-3xl mb-1 {{ $isUnlocked ? 'text-'.$badge['color'].'-500 drop-shadow-sm' : 'text-slate-400' }}"></i>
+                                    <i class="{{ $icon }} text-2xl md:text-3xl mb-1 {{ $isUnlocked ? 'text-'.$color.'-500 drop-shadow-sm' : 'text-slate-400' }}"></i>
                                     <p class="text-[9px] font-bold text-center leading-tight {{ $isUnlocked ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400' }}">
-                                        {{ $badge['name'] }}
+                                        {{ $name }}
                                     </p>
                                 </div>
                                 
                                 <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-40 bg-slate-900 text-white text-xs p-3 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-xl">
-                                    <p class="font-bold mb-1">{{ $badge['name'] }}</p>
-                                    <p class="opacity-80 text-[10px]">{{ $badge['description'] }}</p>
+                                    <p class="font-bold mb-1">{{ $name }}</p>
+                                    <p class="opacity-80 text-[10px]">{{ $description }}</p>
                                     <div class="mt-2 pt-2 border-t border-white/10 text-[10px] font-bold {{ $isUnlocked ? 'text-green-400' : 'text-slate-400' }}">
                                         @if($isUnlocked) <i class="ri-check-line"></i> Conquistado! @else <i class="ri-lock-line"></i> Bloqueado @endif
                                     </div>
@@ -393,7 +391,6 @@
     </div>
 
     <script>
-        // Limita checkboxes a 3 no modal de tags
         function checkMaxTags(checkbox) {
             const checked = document.querySelectorAll('input[name="tags[]"]:checked');
             if (checked.length > 3) {

@@ -184,7 +184,7 @@ class ProfileController extends Controller
     /**
      * Inicia o processo de eliminação da conta (Direito ao Esquecimento).
      */
-    public function destroy(Request $request): \Illuminate\Http\RedirectResponse
+    public function destroy(Request $request): RedirectResponse
     {
         $request->validateWithBag('userDeletion', [
             'password' => ['required', 'current_password']
@@ -194,7 +194,10 @@ class ProfileController extends Controller
         
         Auth::logout();
 
-        // Em vez de apagar imediatamente de forma síncrona, despachamos para a Queue
+        // Soft Delete the user BEFORE dispatching the job so withTrashed() can find it
+        $user->delete();
+
+        // Dispatch the GDPR job
         \App\Jobs\ProcessGdprDeletion::dispatch($user);
 
         $request->session()->invalidate();

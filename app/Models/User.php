@@ -5,13 +5,14 @@ namespace App\Models;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Carbon\Carbon;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -29,7 +30,7 @@ class User extends Authenticatable implements FilamentUser
         'wants_weekly_summary', 
         'quiet_hours_start', 
         'quiet_hours_end',
-        'diary_retention_days', // Novo campo
+        'diary_retention_days',
         'a11y_dyslexic_font',
         'a11y_reduced_motion',
         'a11y_text_size'
