@@ -11,12 +11,14 @@ class Room extends Model
 
     protected $fillable = [
         'name', 'slug', 'description', 'icon', 'color', 'is_active',
+        'is_private',     // Salas privadas (ex: buddy sessions)
         'pinned_message', // Essencial para Mensagem Fixada
         'is_crisis_mode'  // Essencial para Modo Crise
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_private' => 'boolean',
         'is_crisis_mode' => 'boolean',
     ];
 

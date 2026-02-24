@@ -14,7 +14,11 @@ class BuddyController extends Controller
     public function dashboard()
     {
         $user = Auth::user();
-        if (!$user->is_buddy) abort(403, 'Acesso restrito a Ouvintes.');
+
+        // Apenas utilizadores com estatuto de Ouvinte aprovado podem aceder ao painel.
+        if (!$user->is_buddy) {
+            abort(403, 'Acesso restrito a Ouvintes.');
+        }
 
         $activeSessions = BuddySession::where('buddy_id', $user->id)
             ->where('status', 'active')
@@ -34,37 +38,52 @@ class BuddyController extends Controller
     // --- 2. PEDIR AJUDA (Utilizador normal) ---
     public function requestBuddy()
     {
-        // Evita spam de pedidos
+        // Evita pedidos duplicados: só é permitido um pedido pendente ou ativo por utilizador.
         $existing = BuddySession::where('user_id', Auth::id())
             ->whereIn('status', ['pending', 'active'])
             ->exists();
 
-        if ($existing) return back()->with('error', 'Já tens um pedido ativo.');
+        if ($existing) {
+            return back()->with('error', 'Já tens um pedido ativo.');
+        }
 
         BuddySession::create([
             'user_id' => Auth::id(),
             'status' => 'pending'
         ]);
 
-        return back()->with('success', 'Pedido enviado. Um Ouvinte irá responder em breve.');
+        return redirect()->back()->with('success', 'Pedido enviado. Um Ouvinte irá responder em breve.');
     }
 
     // --- 3. ACEITAR SESSÃO (Buddy) ---
     public function acceptSession(BuddySession $session)
     {
-        if ($session->status !== 'pending') return back()->with('error', 'Sessão já não está disponível.');
+        $user = Auth::user();
 
-        // 1. Cria uma sala privada temporal para esta conversa
+        // Apenas Ouvintes aprovados podem aceitar sessões.
+        if (!$user->is_buddy) {
+            abort(403, 'Apenas Ouvintes aprovados podem aceitar sessões.');
+        }
+
+        // Um Ouvinte não pode aceitar o seu próprio pedido de ajuda.
+        if ($session->user_id === $user->id) {
+            abort(403, 'Não podes aceitar o teu próprio pedido.');
+        }
+
+        if ($session->status !== 'pending') {
+            return back()->with('error', 'Sessão já não está disponível.');
+        }
+
+        // Cria uma sala privada temporal para esta conversa de apoio.
         $room = Room::create([
             'name' => 'Sessão Confidencial #' . $session->id,
             'slug' => 'buddy-session-' . uniqid(),
             'description' => 'Sala de apoio 1-para-1',
-            'is_private' => true, // Assumindo que a tua Room table tem este campo (ou podes filtrar no index)
+            'is_private' => true,
         ]);
 
-        // 2. Atualiza a sessão
         $session->update([
-            'buddy_id' => Auth::id(),
+            'buddy_id' => $user->id,
             'room_id' => $room->id,
             'status' => 'active',
             'started_at' => now()
@@ -76,11 +95,21 @@ class BuddyController extends Controller
     // --- 4. ESCALAR PARA MODERADOR (Crise) ---
     public function escalate(BuddySession $session)
     {
-        // Se a conversa entrar em risco de suicídio/crise
+        $user = Auth::user();
+
+        // Apenas o Ouvinte atribuído à sessão pode escalá-la.
+        if ($session->buddy_id !== $user->id) {
+            abort(403, 'Não tens permissão para escalar esta sessão.');
+        }
+
+        // A sessão tem de estar ativa para poder ser escalada.
+        if ($session->status !== 'active') {
+            return back()->with('error', 'Apenas sessões ativas podem ser escaladas.');
+        }
+
         $session->update(['status' => 'escalated']);
-        
-        // Aqui enviarias uma notificação urgente aos Admins/Moderadores via Email/Slack/Telegram
-        // App\Models\User::where('role', 'admin')->first()->notify(...);
+
+        // TODO: Enviar notificação urgente aos Admins/Moderadores (Email, Slack ou Telegram).
 
         return back()->with('success', 'A equipa clínica foi alertada e irá intervir imediatamente.');
     }
@@ -88,6 +117,18 @@ class BuddyController extends Controller
     // --- 5. AVALIAÇÃO PÓS-SESSÃO (Utilizador) ---
     public function evaluate(Request $request, BuddySession $session)
     {
+        $user = Auth::user();
+
+        // Apenas o utilizador que pediu ajuda pode avaliar a sessão.
+        if ($session->user_id !== $user->id) {
+            abort(403, 'Não tens permissão para avaliar esta sessão.');
+        }
+
+        // A sessão tem de estar ativa ou escalada para ser avaliada — evita avaliações duplicadas.
+        if (!in_array($session->status, ['active', 'escalated'])) {
+            return back()->with('error', 'Esta sessão já foi avaliada ou não está disponível para avaliação.');
+        }
+
         $request->validate(['rating' => 'required|integer|min:1|max:3']);
 
         $session->update([
@@ -96,20 +137,39 @@ class BuddyController extends Controller
             'completed_at' => now()
         ]);
 
-        // Dá chamas ao Buddy pelo trabalho
-        $session->buddy->increment('flames', 10);
+        // Recompensa o Ouvinte com chamas pelo trabalho prestado.
+        if ($session->buddy) {
+            $session->buddy->increment('flames', 10);
+        }
 
         return redirect()->route('dashboard')->with('success', 'Obrigado pelo teu feedback. Esperamos que te sintas melhor.');
     }
 
-    // --- 6. CANDIDATAR-SE ---
+    // --- 6. CANDIDATAR-SE A OUVINTE ---
     public function apply(Request $request)
     {
+        $user = Auth::user();
+
+        // Impede candidaturas duplicadas de utilizadores que já são Ouvintes ou já têm candidatura pendente.
+        if ($user->is_buddy) {
+            return back()->with('error', 'Já és um Ouvinte aprovado.');
+        }
+
+        $existingApplication = BuddyApplication::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($existingApplication) {
+            return back()->with('error', 'Já tens uma candidatura pendente.');
+        }
+
         $request->validate(['motivation' => 'required|string|min:50']);
+
         BuddyApplication::create([
-            'user_id' => Auth::id(),
+            'user_id' => $user->id,
             'motivation' => $request->motivation
         ]);
+
         return back()->with('success', 'Candidatura submetida! A nossa equipa irá analisar.');
     }
 }

@@ -26,7 +26,9 @@ Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
 Route::middleware(['auth', 'verified'])->group(function () {
 
 
-    Route::post('/users/{user}/oferecer-apoio', [\App\Http\Controllers\GamificationController::class, 'sendGentleChallenge'])->name('users.challenge');
+    Route::post('/users/{user}/oferecer-apoio', [\App\Http\Controllers\GamificationController::class, 'sendGentleChallenge'])
+        ->middleware('throttle:gamification')
+        ->name('users.challenge');
     Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::patch('/perfil/notificacoes', [\App\Http\Controllers\ProfileController::class, 'updateNotificationPrefs'])->name('profile.notifications');
 
@@ -37,15 +39,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     */
     Route::controller(ForumController::class)->prefix('mural')->name('forum.')->group(function () {
         Route::get('/', 'index')->name('index');
-        Route::post('/criar', 'store')->name('store');
+        Route::post('/criar', 'store')->middleware('throttle:content-creation')->name('store');
         
         Route::prefix('{post}')->group(function () {
             Route::get('/', 'show')->name('show');
             Route::patch('/', 'update')->name('update');
             Route::delete('/', 'destroy')->name('destroy');
             Route::post('/reagir', 'react')->name('react');
-            Route::post('/comentar', 'comment')->name('comment');
-            Route::post('/report', 'report')->name('report');
+            Route::post('/comentar', 'comment')->middleware('throttle:content-creation')->name('comment');
+            Route::post('/report', 'report')->middleware('throttle:reports')->name('report');
             Route::post('/save', 'toggleSave')->name('save');
             Route::post('/subscrever', 'toggleSubscription')->name('subscribe');
             Route::patch('/pin', 'togglePin')->name('pin');
@@ -53,7 +55,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
     });
 
-    Route::post('/users/{user}/shadowban', [ForumController::class, 'shadowbanUser'])->name('users.shadowban');
+    Route::post('/users/{user}/shadowban', [ForumController::class, 'shadowbanUser'])
+        ->middleware('throttle:reports')
+        ->name('users.shadowban');
     
     Route::controller(ForumController::class)->prefix('comentarios/{comment}')->name('comments.')->group(function () {
         Route::post('/reagir', 'reactToComment')->name('react');
@@ -76,7 +80,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             
             Route::post('/{room}/message/{message}/react', 'react')->name('react');
             Route::delete('/messages/{message}', 'destroyMessage')->name('delete');
-            Route::post('/messages/{message}/report', 'reportMessage')->name('report');
+            Route::post('/messages/{message}/report', 'reportMessage')->middleware('throttle:reports')->name('report');
             
             Route::post('/{room}/mute/{targetUser}', 'muteUser')->name('mute');
             Route::post('/{room}/pin', 'pinMessage')->name('pin');
@@ -92,9 +96,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     */
     Route::controller(LibraryController::class)->prefix('biblioteca')->name('library.')->group(function () {
         Route::get('/', 'index')->name('index');
-        Route::post('/sugerir', 'store')->name('store');
-        Route::post('/{resource}/votar', 'toggleVote')->name('vote');
-        Route::post('/biblioteca', [LibraryController::class, 'store'])->name('library.store')->middleware('auth');
+        Route::post('/sugerir', 'store')->middleware('throttle:suggestions')->name('store');
+        Route::post('/{resource}/votar', 'toggleVote')->middleware('throttle:suggestions')->name('vote');
     });
 
     /*
@@ -114,8 +117,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     */
     Route::controller(BuddyController::class)->prefix('ouvinte')->name('buddy.')->group(function () {
         Route::get('/dashboard', 'dashboard')->name('dashboard');
-        Route::post('/pedir', 'requestBuddy')->name('request');
-        Route::post('/candidatura', 'apply')->name('apply');
+        Route::post('/pedir', 'requestBuddy')->middleware('throttle:buddy-actions')->name('request');
+        Route::post('/candidatura', 'apply')->middleware('throttle:buddy-actions')->name('apply');
         Route::post('/{session}/aceitar', 'acceptSession')->name('accept');
         Route::post('/{session}/escalar', 'escalate')->name('escalate');
         Route::post('/{session}/avaliar', 'evaluate')->name('evaluate');
@@ -158,8 +161,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     */
     Route::controller(PrivacyController::class)->prefix('privacidade')->name('privacy.')->group(function () {
         Route::get('/', 'index')->name('index');
-        Route::post('/exportar', 'exportData')->name('export');
-        Route::post('/hibernar', 'hibernate')->name('hibernate');
+        Route::post('/exportar', 'exportData')->middleware('throttle:privacy-actions')->name('export');
+        Route::post('/hibernar', 'hibernate')->middleware('throttle:privacy-actions')->name('hibernate');
     });
 
     /*
@@ -172,8 +175,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/grounding', 'grounding')->name('grounding');
         Route::get('/crise', 'crisis')->name('crisis');
         
-        Route::post('/playlist/sugerir', 'suggestSong')->name('playlist.suggest');
-        Route::post('/playlist/{song}/votar', 'voteSong')->name('playlist.vote');
+        Route::post('/playlist/sugerir', 'suggestSong')->middleware('throttle:suggestions')->name('playlist.suggest');
+        Route::post('/playlist/{song}/votar', 'voteSong')->middleware('throttle:suggestions')->name('playlist.vote');
         Route::delete('/playlist/{song}', 'deleteSong')->name('playlist.delete');
     });
 });

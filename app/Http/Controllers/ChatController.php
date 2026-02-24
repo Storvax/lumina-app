@@ -8,6 +8,7 @@ use App\Events\MessageDeleted;
 use App\Events\MessageUpdated;
 use App\Events\MessageRead;
 use App\Events\RoomStatusUpdated;
+use App\Models\BuddySession;
 use App\Models\Message;
 use App\Models\MessageReaction;
 use App\Models\Room;
@@ -25,6 +26,22 @@ class ChatController extends Controller
      */
     public function show(Room $room)
     {
+        // Controlo de acesso para salas privadas (ex: buddy sessions).
+        // Apenas os participantes da sessão e moderadores podem aceder.
+        if ($room->is_private) {
+            $user = Auth::user();
+            $isParticipant = BuddySession::where('room_id', $room->id)
+                ->where(function ($query) use ($user) {
+                    $query->where('user_id', $user->id)
+                          ->orWhere('buddy_id', $user->id);
+                })
+                ->exists();
+
+            if (!$isParticipant && !$user->isModerator()) {
+                abort(403, 'Não tens acesso a esta sala privada.');
+            }
+        }
+
         // 1. Registo de Visita (Boas-vindas e Presença)
         $visit = DB::table('room_visits')
             ->where('room_id', $room->id)
@@ -87,7 +104,8 @@ class ChatController extends Controller
                 ->get();
         }
 
-        $allRooms = Cache::remember('all_rooms', 300, fn() => Room::all());
+        // Sidebar: apenas salas públicas (exclui salas privadas de buddy sessions).
+        $allRooms = Cache::remember('public_rooms', 300, fn() => Room::where('is_private', false)->get());
 
         return view('chat.show', compact('room', 'messages', 'allRooms', 'followingIds', 'modStats', 'modLogs'));
     }
