@@ -177,7 +177,7 @@
 
     <div class="fixed top-0 left-0 w-full h-full mesh-gradient opacity-60 -z-10 pointer-events-none"></div>
     
-    <main class="flex-1 w-full pt-32 pb-24 md:pb-12">
+    <main class="flex-1 w-full pt-28 pb-24 md:pb-12">
         {{ $slot }}
     </main>
 

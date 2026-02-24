@@ -25,13 +25,13 @@ class ChatController extends Controller
      */
     public function show(Room $room)
     {
-        // 1. Registo de Visita (Boas-vindas)
-        $isFirstVisit = !DB::table('room_visits')
+        // 1. Registo de Visita (Boas-vindas e Presença)
+        $visit = DB::table('room_visits')
             ->where('room_id', $room->id)
             ->where('user_id', Auth::id())
-            ->exists();
+            ->first();
 
-        if ($isFirstVisit) {
+        if (!$visit) {
             DB::table('room_visits')->insert([
                 'room_id' => $room->id,
                 'user_id' => Auth::id(),
@@ -39,6 +39,12 @@ class ChatController extends Controller
                 'updated_at' => now()
             ]);
             session()->flash('first_visit', true);
+        } else {
+            // BUG CORRIGIDO: Se já visitou antes, atualiza a timestamp para marcar que está online AGORA
+            DB::table('room_visits')
+                ->where('room_id', $room->id)
+                ->where('user_id', Auth::id())
+                ->update(['updated_at' => now()]);
         }
 
         // 2. Lista de Seguidores (Alertas de Presença)
