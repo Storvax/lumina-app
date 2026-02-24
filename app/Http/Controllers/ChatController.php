@@ -87,7 +87,7 @@ class ChatController extends Controller
                 ->get();
         }
 
-        $allRooms = Room::all(); 
+        $allRooms = Cache::remember('all_rooms', 300, fn() => Room::all());
 
         return view('chat.show', compact('room', 'messages', 'allRooms', 'followingIds', 'modStats', 'modLogs'));
     }
@@ -184,6 +184,7 @@ class ChatController extends Controller
 
         $ids = Message::where('room_id', $room->id)
             ->where('user_id', '!=', $user->id)
+            ->where('created_at', '>=', now()->subHours(24))
             ->whereDoesntHave('reads', fn($q) => $q->where('user_id', $user->id))
             ->pluck('id');
 
