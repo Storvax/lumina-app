@@ -263,7 +263,7 @@
         }
         const bgColor = color === 'amber' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200';
         bar.className = `flex items-center justify-between ${bgColor} border-t border-l border-r rounded-t-xl px-4 py-2 mb-[-5px] mx-2 relative z-0 text-xs transition-all`;
-        bar.innerHTML = `<div class="flex items-center gap-2 border-l-2 ${color === 'amber' ? 'border-amber-500' : 'border-indigo-500'} pl-2"><i class="${iconClass}"></i><div><span class="font-bold ${color === 'amber' ? 'text-amber-700' : 'text-indigo-600'}">${title}</span>${subtitle ? `<p class="text-slate-500 truncate max-w-[200px]">${subtitle}</p>` : ''}</div></div><button onclick="cancelReplyOrEdit()" class="text-slate-400 hover:text-rose-500"><i class="ri-close-circle-fill text-lg"></i></button>`;
+        bar.innerHTML = `<div class="flex items-center gap-2 border-l-2 ${color === 'amber' ? 'border-amber-500' : 'border-indigo-500'} pl-2"><i class="${escapeHtml(iconClass)}"></i><div><span class="font-bold ${color === 'amber' ? 'text-amber-700' : 'text-indigo-600'}">${escapeHtml(title)}</span>${subtitle ? `<p class="text-slate-500 truncate max-w-[200px]">${escapeHtml(subtitle)}</p>` : ''}</div></div><button onclick="cancelReplyOrEdit()" class="text-slate-400 hover:text-rose-500"><i class="ri-close-circle-fill text-lg"></i></button>`;
         document.getElementById('messageInput').focus();
     }
 
@@ -273,6 +273,13 @@
         if(bar) bar.remove();
         document.getElementById('messageInput').value = '';
     };
+
+    // --- Escape HTML para prevenir XSS ---
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = String(text ?? '');
+        return div.innerHTML;
+    }
 
     // --- Geração de HTML Dinâmico (Append) ---
     function appendMessage(data) {
@@ -284,12 +291,13 @@
 
         let replyHtml = '';
         if (data.reply_to) {
-            const replyName = data.reply_to.user_id === currentUserId ? 'Ti' : (data.reply_to.user?.name || 'Alguém');
-            replyHtml = `<div class="mb-1 text-xs border-l-2 ${isMe ? 'border-indigo-300 bg-indigo-700/30 text-indigo-100' : 'border-indigo-500 bg-slate-100 text-slate-500'} pl-2 py-1 rounded-r opacity-80 cursor-pointer" onclick="document.getElementById('msg-${data.reply_to_id}').scrollIntoView({behavior: 'smooth', block: 'center'})"><span class="font-bold block text-[10px]">${replyName}</span><span class="truncate block max-w-[150px]">${data.reply_to.content}</span></div>`;
+            const replyName = data.reply_to.user_id === currentUserId ? 'Ti' : escapeHtml(data.reply_to.user?.name || 'Alguém');
+            const replyContent = escapeHtml(data.reply_to.content);
+            replyHtml = `<div class="mb-1 text-xs border-l-2 ${isMe ? 'border-indigo-300 bg-indigo-700/30 text-indigo-100' : 'border-indigo-500 bg-slate-100 text-slate-500'} pl-2 py-1 rounded-r opacity-80 cursor-pointer" onclick="document.getElementById('msg-${data.reply_to_id}').scrollIntoView({behavior: 'smooth', block: 'center'})"><span class="font-bold block text-[10px]">${replyName}</span><span class="truncate block max-w-[150px]">${replyContent}</span></div>`;
         }
 
-        const senderName = isMe ? 'ti mesmo' : (data.is_anonymous ? 'Anónimo' : (data.user?.name || 'Alguém'));
-        let menuHtml = `<button onclick="startReply(${data.id}, '${senderName}')" class="w-full text-left px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2"><i class="ri-reply-line"></i> Responder</button>`;
+        const senderName = isMe ? 'ti mesmo' : (data.is_anonymous ? 'Anónimo' : escapeHtml(data.user?.name || 'Alguém'));
+        let menuHtml = `<button onclick="startReply(${data.id}, ${JSON.stringify(senderName)})" class="w-full text-left px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2"><i class="ri-reply-line"></i> Responder</button>`;
         
         if (isModerator || isMe) {
             menuHtml += `<button onclick="startEdit(${data.id})" class="w-full text-left px-3 py-2 text-xs font-bold text-indigo-600 hover:bg-indigo-50 flex items-center gap-2"><i class="ri-pencil-line"></i> Editar</button>`;
@@ -309,8 +317,11 @@
             return `<button onclick="react(${data.id}, '${type}', this)" class="reaction-btn hover:bg-slate-50 rounded-full px-1.5 py-0.5 text-xs transition-all flex items-center gap-1 bg-white border border-slate-100 text-slate-400 shadow-sm"><span>${emoji}</span><span class="count hidden font-bold text-[10px]">0</span></button>`;
         }).join('');
 
+        const escapedContent = escapeHtml(data.content).replace(/\n/g, '<br>');
+        const displayName = data.is_anonymous ? 'Anónimo' : escapeHtml(data.user?.name || 'Alguém');
+
         // HTML final compatível com modo compacto (classes bubble-content e message-wrapper)
-        div.innerHTML = `<div class="message-body max-w-[85%] md:max-w-[65%] flex flex-col ${isMe ? 'items-end' : 'items-start'}"><div class="relative group/bubble"><div class="bubble-content ${isMe ? 'bg-indigo-600 text-white rounded-tr-none shadow-indigo-100' : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'} rounded-2xl shadow-sm px-4 py-3 text-[15px] md:text-base leading-relaxed ${blurClass}">${replyHtml}<span class="message-text">${data.content}</span></div><div class="absolute ${isMe ? '-left-8' : '-right-8'} top-2 opacity-0 group-hover/bubble:opacity-100 transition-opacity" x-data="{ open: false }"><button @click="open = !open" class="text-slate-300 hover:text-slate-500 p-1"><i class="ri-more-2-fill"></i></button><div x-show="open" @click.outside="open = false" style="display: none;" class="absolute ${isMe ? 'right-0' : 'left-0'} top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-100 z-50 w-32 overflow-hidden py-1">${menuHtml}</div></div>${overlay}</div><div class="message-meta-container flex items-center gap-2 mt-1 px-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">${!isMe ? `<span class="text-[10px] font-bold text-slate-400">${data.is_anonymous ? 'Anónimo' : (data.user?.name || 'Alguém')}</span>` : ''}<span class="text-[10px] text-slate-300 flex items-center message-meta">Agora ${readStatusHtml}</span><div class="flex items-center gap-1 ml-1 scale-90 md:scale-100 origin-${isMe ? 'right' : 'left'}">${reactionBtns}</div></div></div>`;
+        div.innerHTML = `<div class="message-body max-w-[85%] md:max-w-[65%] flex flex-col ${isMe ? 'items-end' : 'items-start'}"><div class="relative group/bubble"><div class="bubble-content ${isMe ? 'bg-indigo-600 text-white rounded-tr-none shadow-indigo-100' : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'} rounded-2xl shadow-sm px-4 py-3 text-[15px] md:text-base leading-relaxed ${blurClass}">${replyHtml}<span class="message-text">${escapedContent}</span></div><div class="absolute ${isMe ? '-left-8' : '-right-8'} top-2 opacity-0 group-hover/bubble:opacity-100 transition-opacity" x-data="{ open: false }"><button @click="open = !open" class="text-slate-300 hover:text-slate-500 p-1"><i class="ri-more-2-fill"></i></button><div x-show="open" @click.outside="open = false" style="display: none;" class="absolute ${isMe ? 'right-0' : 'left-0'} top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-100 z-50 w-32 overflow-hidden py-1">${menuHtml}</div></div>${overlay}</div><div class="message-meta-container flex items-center gap-2 mt-1 px-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">${!isMe ? `<span class="text-[10px] font-bold text-slate-400">${displayName}</span>` : ''}<span class="text-[10px] text-slate-300 flex items-center message-meta">Agora ${readStatusHtml}</span><div class="flex items-center gap-1 ml-1 scale-90 md:scale-100 origin-${isMe ? 'right' : 'left'}">${reactionBtns}</div></div></div>`;
         document.getElementById('chat-messages').appendChild(div);
     }
 
@@ -319,7 +330,7 @@
         const msgEl = document.getElementById(`msg-${message.id}`);
         if(!msgEl) return;
         const textEl = msgEl.querySelector('.message-text');
-        if(textEl) textEl.innerHTML = message.content.replace(/\n/g, '<br>');
+        if(textEl) textEl.innerHTML = escapeHtml(message.content).replace(/\n/g, '<br>');
         const metaEl = msgEl.querySelector('.message-meta');
         if(metaEl && !metaEl.innerText.includes('(editado)')) metaEl.innerHTML = `(editado) ` + metaEl.innerHTML;
     }

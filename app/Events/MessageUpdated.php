@@ -2,15 +2,14 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use App\Models\Message;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class MessageUpdated implements ShouldBroadcast
+class MessageUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -21,8 +20,10 @@ class MessageUpdated implements ShouldBroadcast
         $this->message = $message->load('replyTo'); // Carregar a resposta se existir
     }
 
-    public function broadcastOn()
+    public function broadcastOn(): array
     {
-        return new Channel('chat.' . $this->message->room_id);
+        return [
+            new PresenceChannel('chat.' . $this->message->room_id),
+        ];
     }
 }

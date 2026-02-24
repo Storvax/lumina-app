@@ -248,6 +248,7 @@ class ChatController extends Controller
     {
         if (!Auth::user()->isModerator()) abort(403);
         
+        $request->validate(['message' => 'nullable|string|max:500']);
         $room->update(['pinned_message' => $request->input('message')]);
         $this->logAction($room->id, 'pin', null, 'Atualizou mensagem fixada.');
         
@@ -256,7 +257,7 @@ class ChatController extends Controller
 
     public function reportMessage(Request $request, Message $message)
     {
-        $request->validate(['reason' => 'required']);
+        $request->validate(['reason' => 'required|string|max:500']);
         
         // Verifica duplicados antes de inserir
         if (!DB::table('message_reports')->where('message_id', $message->id)->where('reporter_id', Auth::id())->exists()) {
@@ -275,7 +276,7 @@ class ChatController extends Controller
 
     public function react(Request $request, Room $room, Message $message)
     {
-        $request->validate(['type' => 'required']);
+        $request->validate(['type' => 'required|in:hug,candle,ear']);
         $existing = MessageReaction::where('message_id', $message->id)
             ->where('user_id', Auth::id())
             ->where('type', $request->type)

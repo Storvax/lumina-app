@@ -3,27 +3,34 @@
 namespace App\Events;
 
 use App\Models\Room;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Broadcasting\PresenceChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class RoomStatusUpdated implements ShouldBroadcast
+class RoomStatusUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $room;
     public $status; // 'normal' ou 'crisis'
+    private $roomId;
 
     public function __construct(Room $room)
     {
-        $this->room = $room;
+        $this->roomId = $room->id;
         $this->status = $room->is_crisis_mode ? 'crisis' : 'normal';
     }
 
-    public function broadcastOn()
+    public function broadcastOn(): array
     {
-        return new Channel('chat.' . $this->room->id);
+        return [
+            new PresenceChannel('chat.' . $this->roomId),
+        ];
+    }
+
+    public function broadcastWith(): array
+    {
+        return ['status' => $this->status];
     }
 }
