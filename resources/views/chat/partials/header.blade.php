@@ -29,6 +29,10 @@
         </div>
     </div>
 
-    @if($room->pinned_message || Auth::user()->isModerator())
-        @endif
+    @if($room->pinned_message)
+        <div class="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800">
+            <i class="ri-pushpin-fill text-amber-500 shrink-0 mt-0.5"></i>
+            <span class="line-clamp-2 leading-relaxed">{{ $room->pinned_message }}</span>
+        </div>
+    @endif
 </header>

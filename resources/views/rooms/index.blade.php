@@ -5,12 +5,8 @@
         <div class="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-rose-300/20 dark:bg-rose-900/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-lighten animate-pulse" style="animation-duration: 10s;"></div>
     </div>
 
-    <div class="pt-12 pb-24 min-h-screen relative z-10" 
-         x-data="liveRooms({
-            @foreach($rooms as $r)
-                '{{ $r->id }}': {{ \Illuminate\Support\Facades\DB::table('room_visits')->where('room_id', $r->id)->where('updated_at', '>=', now()->subMinutes(15))->count() }}@if(!$loop->last),@endif
-            @endforeach
-         })" 
+    <div class="pt-12 pb-24 min-h-screen relative z-10"
+         x-data="liveRooms(@json($rooms->mapWithKeys(fn($r) => [(string) $r->id => $initialStats->get($r->id, 0)])))"
          x-init="initPolling()">
         
         <div class="max-w-7xl mx-auto px-6 mb-16 text-center animate-fade-up">
@@ -129,7 +125,7 @@
                         } catch (error) {
                             console.error('Falha silenciosa ao atualizar utilizadores ativos.');
                         }
-                    }, 5000); // 5000 ms = 5 segundos
+                    }, 15000); // 15 segundos
                 }
             }));
         });

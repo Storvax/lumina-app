@@ -28,6 +28,13 @@ class RoomController extends Controller
             return response()->json($stats);
         }
         
-        return view('rooms.index', compact('rooms'));
+        $initialStats = DB::table('room_visits')
+            ->whereIn('room_id', $rooms->pluck('id'))
+            ->where('updated_at', '>=', now()->subMinutes(15))
+            ->groupBy('room_id')
+            ->select('room_id', DB::raw('count(*) as total'))
+            ->pluck('total', 'room_id');
+
+        return view('rooms.index', compact('rooms', 'initialStats'));
     }
 }
