@@ -14,16 +14,27 @@ class RoomController extends Controller
 
         // Endpoint invisível para o "Live Polling" do Frontend
         if ($request->ajax() || $request->wantsJson()) {
-            $stats = [];
-            foreach ($rooms as $room) {
-                $stats[$room->id] = DB::table('room_visits')
-                    ->where('room_id', $room->id)
-                    ->where('updated_at', '>=', now()->subMinutes(15))
-                    ->count();
-            }
+            $counts = DB::table('room_visits')
+                ->whereIn('room_id', $rooms->pluck('id'))
+                ->where('updated_at', '>=', now()->subMinutes(15))
+                ->groupBy('room_id')
+                ->select('room_id', DB::raw('count(*) as total'))
+                ->pluck('total', 'room_id');
+
+            $stats = $rooms->pluck('id')->mapWithKeys(
+                fn($id) => [$id => $counts->get($id, 0)]
+            );
+
             return response()->json($stats);
         }
         
-        return view('rooms.index', compact('rooms'));
+        $initialStats = DB::table('room_visits')
+            ->whereIn('room_id', $rooms->pluck('id'))
+            ->where('updated_at', '>=', now()->subMinutes(15))
+            ->groupBy('room_id')
+            ->select('room_id', DB::raw('count(*) as total'))
+            ->pluck('total', 'room_id');
+
+        return view('rooms.index', compact('rooms', 'initialStats'));
     }
 }
