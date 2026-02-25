@@ -11,7 +11,8 @@ export default defineConfig({
     server: {
         host: '0.0.0.0',
         cors: true,
-        // Sem hmr.host explícito: o Vite client usa automaticamente
-        // window.location.hostname — funciona com localhost, IP LAN, ou qualquer host.
+        hmr: {
+            host: 'localhost',
+        },
     },
 });
