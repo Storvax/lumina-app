@@ -1,4 +1,4 @@
-<section id="inicio" class="relative pt-40 pb-24 overflow-hidden">
+<section id="inicio" class="relative pt-28 sm:pt-36 md:pt-40 pb-16 sm:pb-24 overflow-hidden">
     <div class="absolute top-0 left-0 w-full h-full mesh-gradient opacity-60 -z-10"></div>
     
     <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
@@ -32,40 +32,38 @@
                 Um porto seguro digital. Entra em salas anónimas, desabafa com ouvintes treinados ou usa o nosso diário inteligente. Sem julgamentos.
             </p>
 
-            <div class="bg-white/40 p-1 rounded-2xl border border-white/50 inline-block backdrop-blur-sm">
-                <div class="glass-card p-5 rounded-xl flex flex-col gap-4">
+            <div class="bg-white/40 p-1 rounded-2xl border border-white/50 w-full max-w-sm backdrop-blur-sm">
+                <div class="glass-card p-4 sm:p-5 rounded-xl flex flex-col gap-4">
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Como te sentes hoje?</span>
-                    <div class="flex gap-2 sm:gap-3 justify-center flex-wrap sm:flex-nowrap">
-                        
-                        <a href="{{ route('rooms.index') }}" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-amber-200 transition-all duration-300">
-                            <i class="ri-thunderstorms-line text-2xl text-slate-400 group-hover:text-amber-500 transition-colors mb-1 sm:mb-0"></i>
-                            <span class="text-[10px] font-bold text-amber-500 lg:absolute lg:-bottom-6 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">Ansioso</span>
+                    {{-- Grid de 4 colunas garante alinhamento igual em qualquer tamanho de écran --}}
+                    <div class="grid grid-cols-4 gap-2">
+                        <a href="{{ route('rooms.index') }}" class="group flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-amber-200 hover:-translate-y-0.5 transition-all duration-200">
+                            <i class="ri-thunderstorms-line text-xl text-slate-400 group-hover:text-amber-500 transition-colors"></i>
+                            <span class="text-[10px] font-bold text-slate-500 mt-1.5 group-hover:text-amber-500 transition-colors">Ansioso</span>
                         </a>
-                        
-                        <a href="{{ route('rooms.index') }}" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-slate-400 transition-all duration-300">
-                            <i class="ri-cloud-off-line text-2xl text-slate-400 group-hover:text-slate-600 transition-colors mb-1 sm:mb-0"></i>
-                            <span class="text-[10px] font-bold text-slate-600 lg:absolute lg:-bottom-6 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">Triste</span>
+                        <a href="{{ route('rooms.index') }}" class="group flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-slate-300 hover:-translate-y-0.5 transition-all duration-200">
+                            <i class="ri-cloud-off-line text-xl text-slate-400 group-hover:text-slate-600 transition-colors"></i>
+                            <span class="text-[10px] font-bold text-slate-500 mt-1.5 group-hover:text-slate-600 transition-colors">Triste</span>
                         </a>
-
-                        <a href="{{ route('rooms.index') }}" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-rose-300 transition-all duration-300">
-                            <i class="ri-fire-line text-2xl text-slate-400 group-hover:text-rose-500 transition-colors mb-1 sm:mb-0"></i>
-                            <span class="text-[10px] font-bold text-rose-500 lg:absolute lg:-bottom-6 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">Irritado</span>
+                        <a href="{{ route('rooms.index') }}" class="group flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-rose-200 hover:-translate-y-0.5 transition-all duration-200">
+                            <i class="ri-fire-line text-xl text-slate-400 group-hover:text-rose-500 transition-colors"></i>
+                            <span class="text-[10px] font-bold text-slate-500 mt-1.5 group-hover:text-rose-500 transition-colors">Irritado</span>
                         </a>
-                        
-                        <a href="{{ route('rooms.index') }}" class="group relative flex flex-col items-center justify-center w-20 h-20 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-teal-300 transition-all duration-300">
-                            <i class="ri-sun-line text-2xl text-slate-400 group-hover:text-teal-500 transition-colors mb-1 sm:mb-0"></i>
-                            <span class="text-[10px] font-bold text-teal-500 lg:absolute lg:-bottom-6 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">Bem</span>
+                        <a href="{{ route('rooms.index') }}" class="group flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-teal-200 hover:-translate-y-0.5 transition-all duration-200">
+                            <i class="ri-sun-line text-xl text-slate-400 group-hover:text-teal-500 transition-colors"></i>
+                            <span class="text-[10px] font-bold text-slate-500 mt-1.5 group-hover:text-teal-500 transition-colors">Bem</span>
                         </a>
                     </div>
                 </div>
             </div>
 
-            <div class="flex items-center gap-4 pt-2">
-                <a href="{{ route('rooms.index') }}" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-500 to-indigo-500 text-white font-semibold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:-translate-y-0.5 transition-all">
+            {{-- CTAs: coluna em mobile, linha em tablet+ --}}
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2 w-full max-w-sm sm:max-w-none">
+                <a href="{{ route('rooms.index') }}" class="flex items-center justify-center px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-500 to-indigo-500 text-white font-semibold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all text-center">
                     Entrar na Comunidade
                 </a>
-                <a href="#calma" class="px-6 py-4 rounded-2xl text-slate-600 font-medium hover:bg-white/50 transition-colors">
-                    <i class="ri-play-circle-line align-bottom text-xl mr-1"></i> Ver vídeo
+                <a href="{{ route('login') }}" class="flex items-center justify-center px-6 py-4 rounded-2xl text-slate-600 font-medium hover:bg-white/60 transition-colors border border-transparent hover:border-slate-200 text-center">
+                    <i class="ri-login-box-line text-xl mr-2"></i> Iniciar sessão
                 </a>
             </div>
         </div>

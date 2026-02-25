@@ -427,22 +427,36 @@
         </div>
     </div>
 
-    @if(in_array($post->tag, ['vent', 'anxiety']))
-        <div id="emotional-checkin" class="fixed bottom-6 right-6 z-[70] hidden animate-fade-up no-print">
-            <div class="bg-white border border-indigo-100 shadow-2xl rounded-2xl p-5 max-w-sm relative overflow-hidden">
+    @if(in_array($post->tag, ['vent', 'anxiety']) || $post->is_sensitive)
+        <div id="emotional-checkin" class="fixed bottom-6 right-4 left-4 sm:left-auto sm:right-6 z-[70] hidden animate-fade-up no-print max-w-sm sm:max-w-xs md:max-w-sm">
+            <div class="bg-white border border-indigo-100 shadow-2xl rounded-2xl p-5 relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 to-violet-400"></div>
-                <div class="flex items-start gap-4">
-                    <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl shrink-0"><i class="ri-heart-pulse-line"></i></div>
-                    <div>
+                <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg shrink-0 mt-0.5">
+                        <i class="ri-heart-pulse-line"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
                         <h4 class="font-bold text-slate-800 text-sm mb-1">Como te sentes depois de ler?</h4>
-                        <p class="text-xs text-slate-500 mb-3 leading-relaxed">Este conteúdo foi intenso. Queremos garantir que estás bem.</p>
-                        <div class="flex flex-wrap gap-2">
-                            <button onclick="closeCheckin()" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition-colors">Estou bem 👍</button>
-                            <button onclick="triggerBreathingFromCheckin()" class="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-bold hover:bg-indigo-100 transition-colors">Pausa 🍃</button>
-                            <button id="sosBtnTriggerCheckin" class="px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600 text-xs font-bold hover:bg-rose-50 transition-colors">Ajuda 🆘</button>
+                        <p class="text-xs text-slate-500 mb-3 leading-relaxed">Este conteúdo pode ter sido intenso. Estamos aqui.</p>
+
+                        {{-- Estado inicial: escolha de emoção --}}
+                        <div id="checkin-emotions" class="flex flex-wrap gap-2">
+                            <button onclick="sendCheckin('empathy')"   class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors active:scale-95">Senti empatia 🤍</button>
+                            <button onclick="sendCheckin('sadness')"   class="px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold hover:bg-blue-100 transition-colors active:scale-95">Fiquei triste 😔</button>
+                            <button onclick="sendCheckin('strength')"  class="px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-100 text-teal-700 text-xs font-bold hover:bg-teal-100 transition-colors active:scale-95">Senti força 🌱</button>
+                            <button onclick="triggerBreathingFromCheckin()" class="px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-bold hover:bg-indigo-100 transition-colors active:scale-95">Pausa 🍃</button>
+                            <button id="sosBtnTriggerCheckin" class="px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600 text-xs font-bold hover:bg-rose-50 transition-colors active:scale-95">Ajuda 🆘</button>
+                        </div>
+
+                        {{-- Sugestão mostrada se o utilizador reportar tristeza --}}
+                        <div id="checkin-suggestion" class="hidden mt-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                            <p class="text-xs text-indigo-700 leading-relaxed mb-2" id="checkin-suggestion-msg"></p>
+                            <a id="checkin-suggestion-link" href="#" class="text-xs font-bold text-indigo-600 hover:underline" id="checkin-suggestion-label"></a>
                         </div>
                     </div>
-                    <button onclick="closeCheckin()" class="text-slate-300 hover:text-slate-500"><i class="ri-close-line"></i></button>
+                    <button onclick="closeCheckin()" class="text-slate-300 hover:text-slate-500 shrink-0 focus-visible:outline-none" aria-label="Fechar">
+                        <i class="ri-close-line text-lg"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -498,22 +512,46 @@
                     observer.observe(postBody);
                 }
 
-                // Segurança: se o utilizador fechar ou interagir
-                window.closeCheckin = () => { 
-                    checkin.classList.add('opacity-0', 'translate-y-4'); 
-                    setTimeout(() => checkin.remove(), 500); 
+                window.closeCheckin = () => {
+                    checkin.classList.add('opacity-0', 'translate-y-4', 'transition-all', 'duration-300');
+                    setTimeout(() => checkin.classList.add('hidden'), 310);
                 };
-                
-                window.triggerBreathingFromCheckin = () => { 
-                    closeCheckin(); 
-                    document.getElementById('breathe-widget').scrollIntoView({behavior: 'smooth', block: 'center'}); 
-                    setTimeout(toggleBreathing, 1000); 
+
+                // Envia a emoção ao servidor e reage à resposta
+                window.sendCheckin = async (emotion) => {
+                    try {
+                        const res = await axios.post('{{ route('forum.checkin', $post) }}', { emotion });
+
+                        // Substitui os botões por confirmação
+                        document.getElementById('checkin-emotions').innerHTML =
+                            '<p class="text-xs text-slate-500 flex items-center gap-1.5"><i class="ri-checkbox-circle-fill text-teal-500 text-base"></i> Obrigado por partilhares como te sentes.</p>';
+
+                        // Se houver sugestão (ex: tristeza → Zona Calma)
+                        if (res.data.suggestion) {
+                            const sug = res.data.suggestion;
+                            document.getElementById('checkin-suggestion-msg').textContent = sug.message;
+                            const link = document.getElementById('checkin-suggestion-link');
+                            link.href = sug.url;
+                            link.textContent = sug.label;
+                            document.getElementById('checkin-suggestion').classList.remove('hidden');
+                        } else {
+                            setTimeout(closeCheckin, 2500);
+                        }
+                    } catch {
+                        closeCheckin();
+                    }
                 };
-                
+
+                window.triggerBreathingFromCheckin = () => {
+                    closeCheckin();
+                    document.getElementById('breathe-widget')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(toggleBreathing, 1000);
+                };
+
                 const sosBtn = document.getElementById('sosBtnTriggerCheckin');
-                if(sosBtn) sosBtn.addEventListener('click', () => { 
-                    closeCheckin(); 
-                    document.getElementById('sosModal').classList.remove('hidden'); 
+                if (sosBtn) sosBtn.addEventListener('click', () => {
+                    closeCheckin();
+                    document.getElementById('sosModal')?.classList.remove('hidden');
                 });
             });
             
