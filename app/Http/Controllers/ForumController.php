@@ -7,7 +7,8 @@ use App\Models\User;
 use App\Models\PostReaction;
 use App\Models\Comment;
 use App\Models\Report;
-use App\Models\ModerationLog; 
+use App\Models\ModerationLog;
+use Illuminate\Support\Facades\DB;
 use App\Notifications\ForumInteraction;
 use App\Services\GamificationService;
 use App\Services\CBTAnalysisService;
@@ -410,6 +411,36 @@ class ForumController extends Controller
         }
         $comment->update(['is_helpful' => !$comment->is_helpful]);
         return back();
+    }
+
+    /**
+     * Regista como o utilizador se sentiu após ler uma publicação sensível.
+     * Se reportar tristeza, a resposta inclui uma sugestão para a Zona Calma.
+     */
+    public function postCheckin(Request $request, Post $post): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'emotion' => 'required|in:empathy,sadness,strength,neutral',
+        ]);
+
+        // updateOrInsert para lidar silenciosamente com check-ins repetidos
+        DB::table('post_checkins')->updateOrInsert(
+            ['post_id' => $post->id, 'user_id' => Auth::id()],
+            ['emotion' => $request->emotion, 'created_at' => now()]
+        );
+
+        $response = ['status' => 'ok'];
+
+        // Se o leitor se sentiu triste, sugerimos a Zona Calma em vez de deixá-lo sem apoio
+        if ($request->emotion === 'sadness') {
+            $response['suggestion'] = [
+                'message' => 'É normal sentires isso. A Zona Calma tem recursos que podem ajudar.',
+                'label'   => 'Ir para a Zona Calma',
+                'url'     => route('calm.index'),
+            ];
+        }
+
+        return response()->json($response);
     }
 
     /**

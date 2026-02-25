@@ -22,35 +22,50 @@
                 <i id="theme-toggle-light-icon" class="ri-sun-line hidden text-lg text-amber-400"></i>
             </button>
 
-            @auth
-                <a href="{{ url('/dashboard') }}" class="hidden md:flex text-sm font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-slate-800 px-4 py-2 rounded-full transition-colors">Minha Conta</a>
-            @else
-                <a href="{{ route('login') }}" class="hidden md:flex text-sm font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-slate-800 px-4 py-2 rounded-full transition-colors">Login Anónimo</a>
-            @endauth
+            {{-- Utilizadores autenticados são redirecionados para o dashboard pelo HomeController --}}
+            @guest
+                <a href="{{ route('login') }}" class="hidden md:flex text-sm font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-slate-800 px-4 py-2 rounded-full transition-colors">Iniciar sessão</a>
+                <a href="{{ route('register') }}" class="hidden md:flex text-sm font-bold bg-primary-500 hover:bg-primary-600 text-white px-5 py-2 rounded-full transition-colors shadow-sm">Criar conta</a>
+            @endguest
 
-            <button class="bg-white dark:bg-slate-800 border border-rose-100 dark:border-rose-900/30 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:border-rose-200 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all shadow-sm" onclick="document.getElementById('sosModal').classList.remove('hidden')">
-                <span class="relative flex h-2 w-2">
+            <button class="bg-white dark:bg-slate-800 border border-rose-100 dark:border-rose-900/30 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:border-rose-200 px-3 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all shadow-sm" onclick="document.getElementById('sosModal').classList.remove('hidden')">
+                <span class="relative flex h-2 w-2 shrink-0">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                 </span>
-                SOS
+                <span class="hidden xs:inline">SOS</span>
+                <span class="xs:hidden">SOS</span>
             </button>
-            
-            <button id="mobileMenuBtn" class="md:hidden text-slate-600 dark:text-slate-300 p-2 focus:outline-none"><i class="ri-menu-line text-2xl"></i></button>
+
+            <button id="mobileMenuBtn"
+                    class="md:hidden text-slate-600 dark:text-slate-300 p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg"
+                    aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenu">
+                <i class="ri-menu-line text-2xl"></i>
+            </button>
         </div>
     </div>
 
-    <div id="mobileMenu" class="hidden absolute top-24 left-4 right-4 bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-6 flex flex-col gap-4 animate-fade-up md:hidden">
-        <a href="#inicio" class="mobile-link text-lg font-medium text-slate-600 dark:text-slate-300 hover:text-primary-600">Início</a>
-        <a href="#calma" class="mobile-link text-lg font-medium text-slate-600 dark:text-slate-300 hover:text-primary-600">Zona Calma</a>
-        <a href="#comunidade" class="mobile-link text-lg font-medium text-slate-600 dark:text-slate-300 hover:text-primary-600">Comunidade</a>
-        <a href="#forum" class="mobile-link text-lg font-medium text-slate-600 dark:text-slate-300 hover:text-primary-600">Fórum</a>
-        <a href="#biblioteca" class="mobile-link text-lg font-medium text-slate-600 dark:text-slate-300 hover:text-primary-600">Biblioteca</a>
-        <hr class="border-slate-100 dark:border-slate-800">
-        @auth
-            <a href="{{ url('/dashboard') }}" class="text-center w-full py-3 rounded-xl bg-primary-50 dark:bg-slate-800 text-primary-600 dark:text-primary-400 font-bold">Minha Conta</a>
-        @else
-            <a href="{{ route('login') }}" class="text-center w-full py-3 rounded-xl bg-primary-50 dark:bg-slate-800 text-primary-600 dark:text-primary-400 font-bold">Login Anónimo</a>
-        @endauth
+    {{-- Menu Mobile: usa display:block quando visível (JS remove 'hidden') --}}
+    <div id="mobileMenu"
+         class="hidden absolute top-20 left-3 right-3 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 p-6 z-40 md:hidden"
+         role="dialog" aria-label="Menu de navegação">
+        <div class="flex flex-col gap-1">
+            <a href="#inicio"     class="mobile-link py-3 px-4 rounded-xl text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Início</a>
+            <a href="#calma"      class="mobile-link py-3 px-4 rounded-xl text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Zona Calma</a>
+            <a href="#comunidade" class="mobile-link py-3 px-4 rounded-xl text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Comunidade</a>
+            <a href="#forum"      class="mobile-link py-3 px-4 rounded-xl text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Fórum</a>
+            <a href="#biblioteca" class="mobile-link py-3 px-4 rounded-xl text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Biblioteca</a>
+        </div>
+        <hr class="border-slate-100 dark:border-slate-800 my-4">
+        @guest
+            <div class="flex flex-col gap-3">
+                <a href="{{ route('register') }}" class="text-center w-full py-3 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold transition-colors">
+                    Criar conta gratuita
+                </a>
+                <a href="{{ route('login') }}" class="text-center w-full py-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-100 transition-colors">
+                    Iniciar sessão
+                </a>
+            </div>
+        @endguest
     </div>
 </nav>
