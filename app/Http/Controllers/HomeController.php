@@ -15,11 +15,6 @@ class HomeController extends Controller
 {
     public function index()
     {
-        // Utilizadores autenticados têm o dashboard como ponto de entrada — a landing é para novos visitantes
-        if (Auth::check()) {
-            return redirect()->route('dashboard');
-        }
-
         // 1. PULSO DA COMUNIDADE (Cache de 5 minutos)
         $communityStats = Cache::remember('community_pulse', 300, function () {
             
