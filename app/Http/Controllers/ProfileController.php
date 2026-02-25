@@ -220,21 +220,28 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the user's crisis safety plan.
+     * Atualiza o plano de segurança pessoal do utilizador.
+     * Persiste os 6 campos estruturados como JSON, permitindo exibição organizada na página de crise.
      */
     public function updateSafetyPlan(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'safety_plan' => 'nullable', 
-            'triggers' => 'nullable|string', 
+        $validated = $request->validate([
+            'warning_signs'         => 'nullable|string|max:1000',
+            'coping_strategies'     => 'nullable|string|max:1000',
+            'reasons_to_live'       => 'nullable|string|max:1000',
+            'support_contacts'      => 'nullable|string|max:1000',
+            'professional_contacts' => 'nullable|string|max:1000',
+            'environment_safety'    => 'nullable|string|max:1000',
         ]);
 
-        // Support for both simple strings and structured JSON safety plans
-        $planContent = is_array($data) ? json_encode($data) : $request->input('safety_plan');
-        
-        $request->user()->forceFill(['safety_plan' => $planContent])->save();
+        // Remove campos vazios para não guardar ruído no JSON
+        $plan = array_filter($validated, fn($v) => !is_null($v) && $v !== '');
 
-        return back()->with('success', 'Plano de segurança atualizado.');
+        $request->user()->forceFill([
+            'safety_plan' => !empty($plan) ? json_encode($plan) : null,
+        ])->save();
+
+        return back()->with('success', 'safety-plan-updated');
     }
 
     /**

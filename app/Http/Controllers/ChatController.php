@@ -13,14 +13,18 @@ use App\Models\Message;
 use App\Models\MessageReaction;
 use App\Models\Room;
 use App\Models\User;
+use App\Notifications\ModeratorCrisisAlert;
+use App\Services\CBTAnalysisService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Notification;
 
 class ChatController extends Controller
 {
+    public function __construct(private CBTAnalysisService $cbtService) {}
+
     /**
      * Apresenta a sala de chat, histórico e o Painel de Moderação.
      */
@@ -143,15 +147,15 @@ class ChatController extends Controller
             'reply_to_id' => 'nullable|exists:messages,id'
         ]);
 
-        // 3. Deteção de Crise
-        $hasCrisisKeywords = Str::contains(Str::lower($request->input('content')), ['suicidio', 'morrer', 'acabar com tudo', 'matar-me']);
+        // 3. Deteção de Crise Multicamada (Camadas 1 + 2)
+        $crisisResult = $this->cbtService->detectCrisis($request->input('content'));
 
         // 4. Criação
         $message = Message::create([
-            'user_id' => $user->id,
-            'room_id' => $room->id,
-            'content' => $request->input('content'),
-            'is_sensitive' => $request->boolean('is_sensitive'),
+            'user_id'     => $user->id,
+            'room_id'     => $room->id,
+            'content'     => $request->input('content'),
+            'is_sensitive' => $request->boolean('is_sensitive') || $crisisResult['detected'],
             'is_anonymous' => $request->boolean('is_anonymous'),
             'reply_to_id' => $request->input('reply_to_id'),
         ]);
@@ -160,12 +164,20 @@ class ChatController extends Controller
         // Isto previne erros de JavaScript "undefined" na função appendMessage
         $message->load(['user', 'replyTo.user', 'reactions', 'reads']);
 
+        // 5. Alerta automático a moderadores quando crise é detetada
+        if ($crisisResult['detected']) {
+            $moderators = User::whereIn('role', ['admin', 'moderator'])->get();
+            if ($moderators->isNotEmpty()) {
+                Notification::send($moderators, new ModeratorCrisisAlert($message, $room, $crisisResult));
+            }
+        }
+
         broadcast(new MessageSent($message))->toOthers();
 
         return response()->json([
-            'status' => 'Message Sent!',
-            'message' => $message,
-            'crisis_detected' => $hasCrisisKeywords
+            'status'          => 'Message Sent!',
+            'message'         => $message,
+            'crisis_detected' => $crisisResult['detected'],
         ]);
     }
 
