@@ -122,47 +122,12 @@
                 </div>
 
                 <div x-cloak x-show="currentTab === 'safety'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
-                    <form method="post" action="{{ route('profile.safety') }}" class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-xl shadow-rose-100/50 border border-white relative overflow-hidden">
-                        @csrf
+                    <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-xl shadow-rose-100/50 border border-white relative overflow-hidden">
                         <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-rose-400 to-rose-600"></div>
-
-                        <div class="mb-8 mt-2">
-                            <h3 class="font-bold text-xl text-slate-800 flex items-center gap-2">
-                                <i class="ri-shield-heart-fill text-rose-500"></i> Plano de Segurança
-                            </h3>
-                            <p class="text-sm text-slate-500 mt-1">Estas informações ajudam-te em momentos difíceis. Serão mostradas no Modo Crise.</p>
+                        <div class="mt-2">
+                            @include('profile.partials.safety-plan-form')
                         </div>
-
-                        <div class="space-y-6">
-                            @php 
-                                $plan = is_array($user->safety_plan) ? $user->safety_plan : json_decode($user->safety_plan, true) ?? []; 
-                            @endphp
-
-                            <div class="bg-rose-50/50 p-5 sm:p-6 rounded-2xl border border-rose-100">
-                                <label class="block text-sm font-bold text-rose-900 mb-2">1. Sinais de Aviso (Gatilhos)</label>
-                                <p class="text-xs text-rose-700/70 mb-3">O que acontece antes de uma crise? (ex: deixar de dormir, isolamento)</p>
-                                <textarea name="safety_plan[triggers]" rows="3" class="w-full border-none rounded-xl bg-white focus:ring-2 focus:ring-rose-200 text-slate-700" placeholder="Escreve aqui...">{{ $plan['triggers'] ?? '' }}</textarea>
-                            </div>
-
-                            <div class="bg-indigo-50/50 p-5 sm:p-6 rounded-2xl border border-indigo-100">
-                                <label class="block text-sm font-bold text-indigo-900 mb-2">2. Estratégias de Coping</label>
-                                <p class="text-xs text-indigo-700/70 mb-3">O que podes fazer para te acalmar? (ex: ouvir música X, banho frio)</p>
-                                <textarea name="safety_plan[coping]" rows="3" class="w-full border-none rounded-xl bg-white focus:ring-2 focus:ring-indigo-200 text-slate-700" placeholder="Escreve aqui...">{{ $plan['coping'] ?? '' }}</textarea>
-                            </div>
-
-                            <div class="bg-emerald-50/50 p-5 sm:p-6 rounded-2xl border border-emerald-100">
-                                <label class="block text-sm font-bold text-emerald-900 mb-2">3. Contactos de Confiança</label>
-                                <p class="text-xs text-emerald-700/70 mb-3">Quem podes contactar e números de emergência.</p>
-                                <textarea name="safety_plan[contacts]" rows="3" class="w-full border-none rounded-xl bg-white focus:ring-2 focus:ring-emerald-200 text-slate-700" placeholder="Escreve aqui...">{{ $plan['contacts'] ?? '' }}</textarea>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-end mt-8">
-                            <button type="submit" class="bg-rose-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/20">
-                                Guardar Plano
-                            </button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
 
                 <div x-cloak x-show="currentTab === 'privacy'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">

@@ -9,34 +9,86 @@ use Illuminate\Support\Str;
 /**
  * Motor Central de Inteligência Emocional.
  * Integra-se com LLMs para análise semântica, priorização de moderação e psicoeducação.
+ *
+ * Arquitetura de deteção de crise em três camadas:
+ *   - Camada 1 (Keywords): Termos diretos de crise — zero latência.
+ *   - Camada 2 (Intent): Frases que expressam intenção sem keywords explícitas.
+ *   - Camada 3 (NLP): Análise semântica via LLM para casos ambíguos.
  */
 class CBTAnalysisService
 {
-    /** @var array Camada 1: Deteção rápida (Zero-latency). */
-    private const CRISIS_KEYWORDS = ['suicidio', 'suicídio', 'morte', 'sangue', 'cortar', 'abuso', 'violencia', 'matar', 'morrer'];
+    /** @var array Camada 1: Termos diretos de deteção rápida (zero latência). */
+    private const CRISIS_KEYWORDS = [
+        'suicidio', 'suicídio', 'morte', 'sangue', 'cortar', 'abuso', 'violencia', 'matar', 'morrer',
+    ];
 
     /**
-     * Analisa publicações do fórum através de um modelo multicamada (Keywords + NLP).
+     * Camada 2: Padrões de intenção — frases que indicam crise sem keywords diretas.
+     * Inclui variantes com e sem acentuação para maior cobertura.
+     *
+     * @var array
+     */
+    private const INTENT_PATTERNS = [
+        'nao aguento mais', 'não aguento mais',
+        'quero desaparecer',
+        'ninguem se importa', 'ninguém se importa',
+        'seria melhor sem mim',
+        'nao vale a pena', 'não vale a pena',
+        'cansado de viver', 'cansada de viver',
+        'nao consigo continuar', 'não consigo continuar',
+        'quero acabar com isto',
+        'nao vejo saida', 'não vejo saída',
+        'ja nao faz sentido', 'já não faz sentido',
+        'estou a mais',
+        'nao tenho forca', 'não tenho força',
+        'quem me dera nao acordar', 'quem me dera não acordar',
+        'desistir de tudo',
+    ];
+
+    /**
+     * Motor de deteção de crise unificado (Camadas 1 + 2).
+     * Método reutilizável em qualquer ponto da aplicação (Fórum, Chat, Diário).
+     *
+     * @return array{detected: bool, level: string, type: string|null}
+     */
+    public function detectCrisis(string $text): array
+    {
+        $lower = Str::lower($text);
+        $hasKeywords = Str::contains($lower, self::CRISIS_KEYWORDS);
+        $hasIntent   = Str::contains($lower, self::INTENT_PATTERNS);
+
+        return [
+            'detected' => $hasKeywords || $hasIntent,
+            'level'    => $hasKeywords ? 'critical' : ($hasIntent ? 'high' : 'none'),
+            'type'     => $hasKeywords ? 'keyword' : ($hasIntent ? 'intent' : null),
+        ];
+    }
+
+    /**
+     * Analisa publicações do fórum através de um modelo multicamada (Keywords + Intent + NLP).
      * Retorna um dicionário com estado de sensibilidade, risco e sentimento.
      */
     public function analyzeForumPost(string $text): array
     {
-        $hasKeywords = Str::contains(Str::lower($text), self::CRISIS_KEYWORDS);
+        $lower          = Str::lower($text);
+        $hasKeywords    = Str::contains($lower, self::CRISIS_KEYWORDS);
+        $hasIntentPattern = Str::contains($lower, self::INTENT_PATTERNS);
 
+        // Resposta local (Camadas 1+2) usada como fallback e como âncora de segurança
         $defaultResponse = [
-            'is_sensitive' => $hasKeywords,
-            'risk_level' => $hasKeywords ? 'high' : 'low',
-            'sentiment' => 'neutral'
+            'is_sensitive' => $hasKeywords || $hasIntentPattern,
+            'risk_level'   => ($hasKeywords || $hasIntentPattern) ? 'high' : 'low',
+            'sentiment'    => 'neutral',
         ];
 
         $apiKey = config('services.openai.key') ?? env('OPENAI_API_KEY');
-        
+
         if (!$apiKey) {
             return $defaultResponse;
         }
 
         try {
-            // Timeout de 3s garante que a UX não sofre se a API da OpenAI estiver lenta
+            // Timeout de 3s garante que a UX não sofre se a API estiver lenta
             $response = Http::withToken($apiKey)
                 ->timeout(3)
                 ->post('https://api.openai.com/v1/chat/completions', [
@@ -44,22 +96,23 @@ class CBTAnalysisService
                     'response_format' => ['type' => 'json_object'],
                     'messages' => [
                         [
-                            'role' => 'system',
-                            'content' => "És um algoritmo de triagem clínica. Analisa a intenção e o sentimento do texto. Devolve EXATAMENTE este JSON: {\"is_sensitive\": boolean (true se houver intenção de dano, crise ou abuso), \"risk_level\": \"low|medium|high\", \"sentiment\": \"positive|neutral|distress\"}."
+                            'role'    => 'system',
+                            'content' => "És um algoritmo de triagem clínica. Analisa a intenção e o sentimento do texto. Devolve EXATAMENTE este JSON: {\"is_sensitive\": boolean (true se houver intenção de dano, crise ou abuso), \"risk_level\": \"low|medium|high\", \"sentiment\": \"positive|neutral|distress\"}.",
                         ],
-                        ['role' => 'user', 'content' => $text]
-                    ]
+                        ['role' => 'user', 'content' => $text],
+                    ],
                 ]);
 
             if ($response->successful()) {
                 $aiData = json_decode($response->json('choices.0.message.content'), true);
-                
-                // Camada de Segurança: A regra local (Keywords) sobrepõe-se à IA caso a IA falhe a identificação
-                $aiData['is_sensitive'] = $aiData['is_sensitive'] || $hasKeywords;
-                if ($hasKeywords && $aiData['risk_level'] === 'low') {
+
+                // Camada de Segurança: as regras locais sobrepõem-se à IA para garantir que
+                // casos detetados pelas camadas 1 e 2 nunca são revertidos pela camada 3.
+                $aiData['is_sensitive'] = $aiData['is_sensitive'] || $hasKeywords || $hasIntentPattern;
+                if (($hasKeywords || $hasIntentPattern) && $aiData['risk_level'] === 'low') {
                     $aiData['risk_level'] = 'high';
                 }
-                
+
                 return $aiData;
             }
         } catch (\Exception $e) {

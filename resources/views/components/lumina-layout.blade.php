@@ -41,6 +41,12 @@
         .wave-effect.active::after { animation: expandWave 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
         @keyframes expandWave { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.3; } 100% { transform: translate(-50%, -50%) scale(4); opacity: 0; } }
 
+        /* Modo Madrugada (00h–05h): ajustes visuais subtis para acompanhar o utilizador */
+        body.madrugada-mode { font-size: 105%; }
+        body.madrugada-mode * { scroll-behavior: smooth; }
+        /* O filtro de cor já é reforçado via JavaScript; esta regra serve de fallback de CSS */
+        body.madrugada-mode #night-mode-filter { opacity: 0.12 !important; }
+
         {{ $css ?? '' }}
     </style>
 </head>
@@ -163,6 +169,18 @@
                         <a href="{{ route('login') }}" class="text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-full transition-colors">Entrar</a>
                     @endauth
 
+                    @auth
+                        @if(Auth::user()->safety_plan)
+                            {{-- Acesso rápido ao plano de segurança pessoal, visível apenas quando o plano existe --}}
+                            <a href="{{ route('calm.crisis') }}"
+                               title="Ver o meu plano de segurança"
+                               class="hidden md:flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-100 px-3 py-2 rounded-full text-xs font-bold transition-all">
+                                <i class="ri-shield-heart-line text-base"></i>
+                                <span>O meu plano</span>
+                            </a>
+                        @endif
+                    @endauth
+
                     <button type="button" id="sosBtnTrigger" class="bg-white border border-rose-100 text-rose-500 hover:bg-rose-50 hover:border-rose-200 px-3 md:px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all shadow-sm">
                         <span class="relative flex h-2 w-2">
                           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
@@ -267,7 +285,68 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const hour = new Date().getHours();
-            if (hour >= 21 || hour < 6) { document.getElementById('night-mode-filter').style.opacity = '0.07'; }
+            const isMadrugada = hour >= 0 && hour < 5;
+            const isNight     = hour >= 21 || hour < 6;
+
+            if (isMadrugada) {
+                // Madrugada (00h–05h): filtro mais intenso e banner de apoio
+                document.getElementById('night-mode-filter').style.opacity = '0.12';
+                document.body.classList.add('madrugada-mode');
+                _showMadrugadaBanner();
+            } else if (isNight) {
+                // Noite normal (21h–00h e 05h–06h): filtro suave
+                document.getElementById('night-mode-filter').style.opacity = '0.07';
+            }
+
+            function _showMadrugadaBanner() {
+                // Verifica se o utilizador já fechou o banner nesta sessão
+                if (sessionStorage.getItem('madrugada-banner-dismissed')) return;
+
+                const banner = document.createElement('div');
+                banner.id = 'madrugada-banner';
+                banner.setAttribute('role', 'complementary');
+                banner.setAttribute('aria-label', 'Apoio nocturno');
+                banner.className = [
+                    'fixed bottom-20 md:bottom-6 left-4 right-4',
+                    'md:left-auto md:right-6 md:max-w-sm',
+                    'z-40 bg-indigo-950/95 backdrop-blur-xl',
+                    'text-white rounded-2xl p-5',
+                    'border border-indigo-700/50 shadow-2xl',
+                    'animate-fade-up'
+                ].join(' ');
+
+                banner.innerHTML = [
+                    '<div class="flex items-start gap-3">',
+                        '<i class="ri-moon-foggy-line text-2xl text-indigo-300 shrink-0 mt-0.5" aria-hidden="true"></i>',
+                        '<div class="flex-1 min-w-0">',
+                            '<p class="font-bold text-sm text-indigo-100 leading-snug">É tarde. O teu cérebro está mais vulnerável a esta hora.</p>',
+                            '<p class="text-xs text-indigo-300 mt-1 leading-relaxed">Estamos aqui contigo. Respira fundo.</p>',
+                            '<div class="flex flex-wrap gap-2 mt-3">',
+                                '<a href="/zona-calma/crise"',
+                                '   class="text-xs font-bold bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">',
+                                '    Zona de Crise',
+                                '</a>',
+                                '<a href="/zona-calma/grounding"',
+                                '   class="text-xs font-bold bg-indigo-800/60 hover:bg-indigo-700 text-indigo-200 px-3 py-1.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">',
+                                '    Grounding',
+                                '</a>',
+                                '<button id="madrugada-dismiss"',
+                                '        class="text-xs text-indigo-400 hover:text-indigo-200 px-2 py-1.5 transition-colors ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded"',
+                                '        aria-label="Fechar aviso nocturno">',
+                                '    Fechar',
+                                '</button>',
+                            '</div>',
+                        '</div>',
+                    '</div>',
+                ].join('');
+
+                document.body.appendChild(banner);
+
+                document.getElementById('madrugada-dismiss').addEventListener('click', function () {
+                    sessionStorage.setItem('madrugada-banner-dismissed', '1');
+                    banner.remove();
+                });
+            }
 
             const announcer = document.createElement('div');
             announcer.setAttribute('aria-live', 'polite');

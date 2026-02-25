@@ -31,16 +31,76 @@
             <div class="text-indigo-400/50 mt-4 text-sm font-bold tracking-[0.2em] uppercase">Acompanha o círculo</div>
         </div>
 
-        <div class="bg-white/5 border border-white/10 backdrop-blur-xl rounded-[2rem] p-8 md:p-10 shadow-2xl">
-            <h2 class="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-6"><i class="ri-shield-heart-line"></i> A Tua Âncora</h2>
-            
-            @if($user->safety_plan)
-                <p class="text-lg md:text-xl font-medium text-slate-100 leading-relaxed italic whitespace-pre-line">
-                    "{{ is_array(json_decode($user->safety_plan)) ? 'Consulta os teus apontamentos nas definições.' : $user->safety_plan }}"
+        <div class="bg-white/5 border border-white/10 backdrop-blur-xl rounded-[2rem] p-8 md:p-10 shadow-2xl text-left">
+            <h2 class="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-6 text-center">
+                <i class="ri-shield-heart-line"></i> A Tua Âncora
+            </h2>
+
+            @php
+                $safetyPlan = [];
+                if ($user->safety_plan) {
+                    $decoded = json_decode($user->safety_plan, true);
+                    $safetyPlan = is_array($decoded) ? $decoded : [];
+                }
+
+                $planSections = [
+                    'warning_signs'         => ['label' => 'Os teus sinais de alerta',    'icon' => 'ri-radar-line'],
+                    'coping_strategies'     => ['label' => 'O que te ajuda a acalmar',    'icon' => 'ri-leaf-line'],
+                    'reasons_to_live'       => ['label' => 'As tuas razões para continuar', 'icon' => 'ri-heart-line'],
+                    'support_contacts'      => ['label' => 'Pessoas de confiança',         'icon' => 'ri-group-line'],
+                    'professional_contacts' => ['label' => 'Profissionais de saúde',       'icon' => 'ri-stethoscope-line'],
+                    'environment_safety'    => ['label' => 'O teu ambiente seguro',        'icon' => 'ri-shield-check-line'],
+                ];
+
+                // Compatibilidade retroativa: plano guardado como texto simples (formato antigo)
+                $isLegacyPlan = $user->safety_plan && empty($safetyPlan) && !is_null($user->safety_plan);
+            @endphp
+
+            @if(!empty($safetyPlan))
+                <div class="space-y-5">
+                    @foreach($planSections as $key => $meta)
+                        @if(!empty($safetyPlan[$key]))
+                            <div class="border-l-2 border-indigo-400/40 pl-4">
+                                <p class="text-xs font-bold text-indigo-300/70 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                    <i class="{{ $meta['icon'] }}"></i>
+                                    {{ $meta['label'] }}
+                                </p>
+                                <p class="text-slate-100 text-sm leading-relaxed whitespace-pre-line">
+                                    {{ $safetyPlan[$key] }}
+                                </p>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+                <p class="text-xs text-indigo-300/50 mt-8 text-center">
+                    Escreveste isto para ti num momento de clareza. Confia em ti mesmo(a).
                 </p>
-                <p class="text-xs text-indigo-300/60 mt-6">Este é o plano que escreveste para ti num dia bom.</p>
+            @elseif($isLegacyPlan)
+                {{-- Compatibilidade com planos guardados antes do formato estruturado --}}
+                <p class="text-lg font-medium text-slate-100 leading-relaxed italic whitespace-pre-line text-center">
+                    "{{ $user->safety_plan }}"
+                </p>
+                <p class="text-xs text-indigo-300/60 mt-6 text-center">
+                    Este é o plano que escreveste para ti num dia bom.
+                </p>
+                <div class="mt-4 text-center">
+                    <a href="{{ route('profile.edit') }}"
+                       class="text-xs text-indigo-400 hover:text-indigo-200 underline transition-colors">
+                        Atualizar para o formato estruturado
+                    </a>
+                </div>
             @else
-                <p class="text-slate-300">Ainda não definiste o teu plano de segurança. Tenta focar-te na tua respiração por agora.</p>
+                <div class="text-center space-y-4">
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        Ainda não tens um plano de segurança definido. Num momento mais tranquilo, podes criá-lo
+                        no teu perfil — será o teu guia nos momentos difíceis.
+                    </p>
+                    <p class="text-slate-400 text-sm">Por agora, foca-te na respiração. Estamos aqui contigo.</p>
+                    <a href="{{ route('profile.edit') }}"
+                       class="inline-block mt-2 text-xs bg-indigo-700/50 hover:bg-indigo-700/80 text-indigo-200 px-4 py-2 rounded-full transition-colors">
+                        Criar o meu plano de segurança
+                    </a>
+                </div>
             @endif
         </div>
 
