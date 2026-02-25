@@ -14,6 +14,7 @@ use App\Http\Controllers\CalmZoneController;
 use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\SelfAssessmentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -177,6 +178,18 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/exportar', 'exportData')->middleware('throttle:privacy-actions')->name('export');
         Route::post('/hibernar', 'hibernate')->middleware('throttle:privacy-actions')->name('hibernate');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Auto-avaliação (PHQ-9 / GAD-7)
+    |--------------------------------------------------------------------------
+    */
+    Route::controller(SelfAssessmentController::class)->prefix('auto-avaliacao')->name('assessment.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/resultado/{assessment}', 'show')->name('result');
+        Route::get('/{type}', 'create')->name('create');
+        Route::post('/{type}', 'store')->name('store');
     });
 
     /*
