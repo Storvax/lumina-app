@@ -13,6 +13,7 @@ use App\Http\Controllers\BuddyController;
 use App\Http\Controllers\CalmZoneController;
 use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\OnboardingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,7 +24,19 @@ use App\Http\Controllers\DashboardController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
 
+/*
+|--------------------------------------------------------------------------
+| Onboarding — acessível a utilizadores autenticados que ainda não completaram o processo
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::controller(OnboardingController::class)->prefix('bem-vindo')->name('onboarding.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+    });
+});
+
+Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
 
 
     Route::post('/users/{user}/oferecer-apoio', [\App\Http\Controllers\GamificationController::class, 'sendGentleChallenge'])
@@ -50,6 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/report', 'report')->middleware('throttle:reports')->name('report');
             Route::post('/save', 'toggleSave')->name('save');
             Route::post('/subscrever', 'toggleSubscription')->name('subscribe');
+            Route::post('/checkin', 'postCheckin')->name('checkin');
             Route::patch('/pin', 'togglePin')->name('pin');
             Route::patch('/lock', 'toggleLock')->name('lock');
         });
