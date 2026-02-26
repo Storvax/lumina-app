@@ -8,8 +8,8 @@
         const darkIcon = document.getElementById('theme-toggle-dark-icon');
         const lightIcon = document.getElementById('theme-toggle-light-icon');
 
-        // Verificar preferência inicial (localStorage ou Sistema)
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        // Verificar preferência inicial (apenas localStorage — light é o default)
+        if (localStorage.getItem('color-theme') === 'dark') {
             document.documentElement.classList.add('dark');
             lightIcon.classList.remove('hidden');
         } else {
