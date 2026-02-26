@@ -12,7 +12,7 @@
                     </div>
                 </div>
                 <div>
-                    <p class="text-2xl font-black text-slate-800 leading-none">{{ $communityStats['online'] + 24 }}</p> {{-- Fake +24 para demo, remove em prod --}}
+                    <p class="text-2xl font-black text-slate-800 leading-none">{{ $communityStats['online'] }}</p>
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Pessoas nas Salas</p>
                 </div>
             </div>
