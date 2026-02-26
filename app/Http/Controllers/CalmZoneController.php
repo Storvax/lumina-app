@@ -59,9 +59,14 @@ class CalmZoneController extends Controller
         if (!empty($validated['spotify_url']) && str_contains($validated['spotify_url'], 'spotify.com')) {
             try {
                 $url = $spotifyEndpoint . urlencode($validated['spotify_url']);
-                
-                // withoutVerifying() resolve o problema de certificados no PC local
-                $response = Http::withoutVerifying()->timeout(5)->get($url);
+
+                // Em desenvolvimento local, permite conexões sem verificação de certificado
+                // Em produção, verifica o certificado (segurança MITM)
+                $httpClient = app()->environment('local', 'testing')
+                    ? Http::withoutVerifying()
+                    : Http::asJson();
+
+                $response = $httpClient->timeout(5)->get($url);
                 
                 if ($response->successful()) {
                     $coverUrl = $response->json('thumbnail_url');
@@ -84,8 +89,14 @@ class CalmZoneController extends Controller
             try {
                 $term = urlencode($title . ' ' . $artist);
                 $url = $itunesEndpoint . $term;
-                
-                $response = Http::withoutVerifying()->timeout(5)->get($url);
+
+                // Em desenvolvimento local, permite conexões sem verificação de certificado
+                // Em produção, verifica o certificado (segurança MITM)
+                $httpClient = app()->environment('local', 'testing')
+                    ? Http::withoutVerifying()
+                    : Http::asJson();
+
+                $response = $httpClient->timeout(5)->get($url);
                 
                 if ($response->successful() && $response->json('resultCount') > 0) {
                     $results = $response->json('results');
