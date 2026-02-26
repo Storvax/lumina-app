@@ -6,12 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class DailyLog extends Model
 {
-    protected $fillable = ['user_id', 'mood_level', 'tags', 'note', 'log_date'];
+    protected $fillable = ['user_id', 'mood_level', 'tags', 'note', 'log_date', 'cbt_insight'];
 
     // O Laravel converte automaticamente o JSON para Array e vice-versa
     protected $casts = [
-        'tags' => 'array',
-        'log_date' => 'date',
+        'tags'        => 'array',
+        'cbt_insight' => 'array',
+        'log_date'    => 'date',
     ];
 
     public function user()

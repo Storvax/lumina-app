@@ -26,10 +26,14 @@ export default {
             colors: {
                 // As tuas cores personalizadas
                 primary: {
-                    50: '#f5f3ff', // Aproximação ao teu oklch
+                    50:  '#f5f3ff',
                     100: '#ede9fe',
+                    300: '#a5b4fc',
+                    400: '#818cf8', // dark mode hover
                     500: '#6366f1', // Indigo vibrante
                     600: '#4f46e5',
+                    700: '#4338ca',
+                    900: '#312e81',
                 },
                 calm: {
                     50: '#f0fdfa',

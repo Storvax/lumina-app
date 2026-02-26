@@ -61,14 +61,14 @@ class DailyLogController extends Controller
 
         $log = DailyLog::updateOrCreate(
             [
-                'user_id' => Auth::id(),
+                'user_id'  => Auth::id(),
                 'log_date' => Carbon::today(),
             ],
             [
-                'mood_level' => $request->mood_level,
-                'tags' => $request->tags ? json_encode($request->tags) : null,
-                'note' => $request->note,
-                'cbt_insight' => $insight ? json_encode($insight) : null,
+                'mood_level'  => $request->mood_level,
+                'tags'        => $request->tags ?? [],
+                'note'        => $request->note,
+                'cbt_insight' => $insight,
             ]
         );
 
