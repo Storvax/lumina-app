@@ -131,7 +131,7 @@
         });
     </script>
 
-    <a href="{{ config('app.quick_exit_url', 'https://www.google.pt') }}" class="fixed bottom-6 right-6 z-[60] bg-rose-600 hover:bg-rose-700 text-white font-bold py-3.5 px-6 rounded-full shadow-xl shadow-rose-600/20 flex items-center gap-2 transition-transform hover:scale-105 border-[3px] border-white dark:border-slate-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-500" title="Sair rapidamente" target="_blank">
+    <a href="https://www.google.pt" class="fixed bottom-6 right-6 z-[60] bg-rose-600 hover:bg-rose-700 text-white font-bold py-3.5 px-6 rounded-full shadow-xl shadow-rose-600/20 flex items-center gap-2 transition-transform hover:scale-105 border-[3px] border-white dark:border-slate-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-500" title="Sair rapidamente para o Google">
         <i class="ri-eye-off-line text-xl"></i> <span class="hidden md:inline">Saída Rápida (Esc 2x)</span>
     </a>
 

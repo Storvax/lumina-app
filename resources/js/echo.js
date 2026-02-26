@@ -6,26 +6,21 @@ const reverbKey = import.meta.env.VITE_REVERB_APP_KEY;
 if (reverbKey) {
     window.Pusher = Pusher;
 
-    // Detecta se está em HTTPS (produção) ou HTTP (local)
-    const isProduction = window.location.protocol === 'https:';
-    const wsScheme = isProduction ? 'wss' : 'ws';
-    const port = isProduction ? 443 : 8080;
-
     window.Echo = new Echo({
         broadcaster: 'reverb',
         key: reverbKey,
+
+        // Usa o hostname atual (seja localhost ou 192.168.x.x)
         wsHost: window.location.hostname,
-        wsPort: port,
-        wssPort: port,
 
-        // Em produção (HTTPS), força TLS (WSS)
-        // Em desenvolvimento (HTTP), desativa TLS (WS)
-        forceTLS: isProduction,
+        wsPort: 8080,
+        wssPort: 8080,
+
+        // As tuas regras de ouro para local:
+        forceTLS: false,
         disableStats: true,
-
-        // Em produção, usa WSS; em dev, usa WS
-        enabledTransports: isProduction ? ['wss'] : ['ws'],
+        enabledTransports: ['ws'], // Força WS
     });
 
-    console.log(`Echo conectando a ${wsScheme}://${window.location.hostname}:${port}`);
+    console.log('Echo a ligar a:', window.location.hostname + ':8080');
 }

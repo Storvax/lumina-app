@@ -74,16 +74,16 @@ return [
         'apps' => [
             [
                 'key' => env('REVERB_APP_KEY'),
-                'secret' => env('REVERB_APP_SECRET'),
-                'app_id' => env('REVERB_APP_ID'),
-                'options' => [
-                    'host' => env('REVERB_HOST'),
-                    // Em produção usa 443 (HTTPS); em dev usa 8080 (HTTP)
-                    'port' => env('REVERB_PORT', app()->environment('production') ? 443 : 8080),
-                    // Em produção usa https; em dev usa http
-                    'scheme' => env('REVERB_SCHEME', app()->environment('production') ? 'https' : 'http'),
-                    // useTLS depende do scheme
-                    'useTLS' => env('REVERB_SCHEME', app()->environment('production') ? 'https' : 'http') === 'https',
+            'secret' => env('REVERB_APP_SECRET'),
+            'app_id' => env('REVERB_APP_ID'),
+            'options' => [
+                'host' => env('REVERB_HOST'),
+                // MUDA DE 443 PARA 8080
+                'port' => env('REVERB_PORT', 8080), 
+                // MUDA DE 'https' PARA 'http'
+                'scheme' => env('REVERB_SCHEME', 'http'), 
+                // GARANTE QUE useTLS É FALSE SE FOR http
+                'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
                 ],
                 'allowed_origins' => ['*'],
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),

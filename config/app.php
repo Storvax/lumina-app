@@ -123,17 +123,4 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Quick Exit URL (Privacy/Safety Feature)
-    |--------------------------------------------------------------------------
-    |
-    | URL to redirect to when user clicks the "Saída Rápida" button.
-    | This is a privacy feature for users who need to quickly exit the app.
-    | Typically set to a local search engine URL.
-    |
-    */
-
-    'quick_exit_url' => env('QUICK_EXIT_URL', 'https://www.google.pt'),
-
 ];
