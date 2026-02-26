@@ -42,6 +42,7 @@ console_command = 'php /var/www/html/artisan tinker'
 [env]
   APP_ENV = 'production'
   APP_DEBUG = false
+  APP_URL = 'https://lumina-restless-sea-2853.fly.dev'
   DB_CONNECTION = "sqlite"
   DB_DATABASE = "/var/www/html/storage/database/database.sqlite"
   LOG_CHANNEL = 'stderr'
@@ -49,6 +50,11 @@ console_command = 'php /var/www/html/artisan tinker'
   LOG_STDERR_FORMATTER = 'Monolog\Formatter\JsonFormatter'
   SESSION_DRIVER = 'cookie'
   SESSION_SECURE_COOKIE = 'true'
+  REVERB_HOST = 'lumina-restless-sea-2853.fly.dev'
+  REVERB_PORT = 443
+  REVERB_SCHEME = 'https'
+  TRUSTED_PROXIES = '*'
+  BROADCAST_CONNECTION = 'reverb'
 
 [http_service]
   internal_port = 8080
