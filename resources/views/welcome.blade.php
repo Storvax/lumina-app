@@ -12,7 +12,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="antialiased text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 font-sans selection:bg-indigo-500 selection:text-white relative transition-colors duration-300">
+<body class="antialiased text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 font-sans selection:bg-indigo-500 selection:text-white relative transition-colors duration-300 overflow-x-hidden">
 
     @include('landing.modals')
 

@@ -55,6 +55,8 @@ console_command = 'php /var/www/html/artisan tinker'
   REVERB_SCHEME = 'https'
   TRUSTED_PROXIES = '*'
   BROADCAST_CONNECTION = 'reverb'
+  SESSION_DOMAIN = 'lumina-restless-sea-2853.fly.dev'
+  SESSION_SAME_SITE = 'lax'
 
 [http_service]
   internal_port = 8080

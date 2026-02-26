@@ -16,7 +16,7 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
-<body class="antialiased bg-slate-50 text-slate-700 min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+<body class="antialiased bg-slate-50 text-slate-700 min-h-screen flex flex-col items-center py-6 sm:py-10 sm:justify-center px-4 sm:px-6 relative overflow-x-hidden">
 
     {{-- Fundo decorativo --}}
     <div class="fixed inset-0 bg-gradient-to-br from-indigo-50 via-white to-teal-50/40 -z-10 pointer-events-none"></div>
@@ -35,7 +35,7 @@
          }">
 
         {{-- Cabeçalho / Logo --}}
-        <div class="text-center mb-8">
+        <div class="text-center mb-4 sm:mb-8">
             <div class="inline-flex items-center gap-2 mb-2">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-400 flex items-center justify-center text-white font-bold text-xl shadow-md">L</div>
                 <span class="text-2xl font-bold text-slate-800 tracking-tight">Lumina<span class="text-indigo-500">.</span></span>
@@ -44,7 +44,7 @@
         </div>
 
         {{-- Barra de progresso --}}
-        <div class="flex items-center justify-center gap-2 mb-8">
+        <div class="flex items-center justify-center gap-2 mb-4 sm:mb-8">
             <template x-for="i in 3" :key="i">
                 <div class="h-1.5 rounded-full transition-all duration-500"
                      :class="step >= i ? 'w-14 bg-indigo-500' : 'w-6 bg-slate-200'"></div>
@@ -71,7 +71,7 @@
                     <p class="text-sm text-slate-500">Não há respostas erradas.</p>
                 </div>
 
-                <div class="space-y-3">
+                <div class="space-y-2 sm:space-y-3">
                     @php
                         $intents = [
                             ['value' => 'crisis',  'icon' => 'ri-alarm-warning-line', 'label' => 'Estou em crise ou a passar mal'],
@@ -106,7 +106,7 @@
                 <button type="button"
                         @click="next('intent')"
                         :disabled="!intent"
-                        class="w-full mt-6 py-3.5 rounded-2xl font-bold text-white transition-all duration-200 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                        class="w-full mt-4 sm:mt-6 py-3 sm:py-3.5 rounded-2xl font-bold text-white transition-all duration-200 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                     Continuar
                 </button>
             </div>
