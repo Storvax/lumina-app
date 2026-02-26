@@ -1,11 +1,11 @@
+/* @import deve vir antes de qualquer outra regra CSS (PostCSS requirement) */
+@import url('https://fonts.cdnfonts.com/css/opendyslexic');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import url('https://fonts.cdnfonts.com/css/opendyslexic');
-
-/* Importar Fontes */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-@import url('https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css');
 
 /* Utilitários de Vidro */
 .glass {
