@@ -121,6 +121,10 @@
                     @endauth
                     <a href="{{ route('forum.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('forum.*') ? 'text-indigo-600 font-bold' : '' }}">Mural</a>
                     <a href="{{ route('rooms.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('rooms.*') ? 'text-indigo-600 font-bold' : '' }}">Fogueira</a>
+                    @auth
+                        <a href="{{ route('diary.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('diary.*') ? 'text-indigo-600 font-bold' : '' }}">Diário</a>
+                        <a href="{{ route('calm.index') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('calm.*') ? 'text-indigo-600 font-bold' : '' }}">Zona Calma</a>
+                    @endauth
                     <a href="{{ route('library.index') ?? url('/#biblioteca') }}" class="text-slate-600 hover:text-indigo-600 transition-colors {{ request()->routeIs('library.*') ? 'text-indigo-600 font-bold' : '' }}">Biblioteca</a>
                 </div>
 
@@ -213,24 +217,22 @@
                     <i class="ri-quill-pen-{{ request()->routeIs('forum.*') ? 'fill' : 'line' }} text-2xl"></i>
                     <span class="text-[9px] font-bold">Mural</span>
                 </a>
-                
+
+                {{-- Botão central — Zona Calma (prioritário se o utilizador tem ansiedade/sobrecarga) ou Fogueira --}}
                 @if($needsCalm)
                     <a href="{{ route('calm.index') }}" class="flex flex-col items-center justify-center w-14 h-14 -mt-8 bg-teal-500 text-white rounded-full shadow-lg shadow-teal-500/30 ring-4 ring-white animate-[pulse_4s_ease-in-out_infinite]">
                         <i class="ri-lungs-fill text-2xl"></i>
-                    </a>
-                    <a href="{{ route('rooms.index') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-orange-500 {{ request()->routeIs('rooms.*') ? 'text-orange-500' : '' }}">
-                        <i class="ri-fire-{{ request()->routeIs('rooms.*') ? 'fill' : 'line' }} text-2xl"></i>
-                        <span class="text-[9px] font-bold">Fogueira</span>
                     </a>
                 @else
                     <a href="{{ route('rooms.index') }}" class="flex flex-col items-center justify-center w-14 h-14 -mt-8 bg-orange-500 text-white rounded-full shadow-lg shadow-orange-500/30 ring-4 ring-white">
                         <i class="ri-fire-fill text-2xl"></i>
                     </a>
-                    <a href="{{ route('calm.index') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-teal-500 {{ request()->routeIs('calm.*') ? 'text-teal-500' : '' }}">
-                        <i class="ri-leaf-{{ request()->routeIs('calm.*') ? 'fill' : 'line' }} text-2xl"></i>
-                        <span class="text-[9px] font-bold">Calma</span>
-                    </a>
                 @endif
+
+                <a href="{{ route('diary.index') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-teal-600 {{ request()->routeIs('diary.*') ? 'text-teal-600' : '' }}">
+                    <i class="ri-book-read-{{ request()->routeIs('diary.*') ? 'fill' : 'line' }} text-2xl"></i>
+                    <span class="text-[9px] font-bold">Diário</span>
+                </a>
 
                 <a href="{{ route('profile.show') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-indigo-600 {{ request()->routeIs('profile.*') ? 'text-indigo-600' : '' }}">
                     <i class="ri-user-smile-{{ request()->routeIs('profile.*') ? 'fill' : 'line' }} text-2xl"></i>
@@ -240,40 +242,40 @@
         </div>
     @endauth
 
-    <footer class="bg-white border-t border-slate-100 pt-20 pb-28 md:pb-10">
+    <footer class="bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 pt-20 pb-28 md:pb-10 transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-6">
             <div class="grid md:grid-cols-4 gap-12 mb-16">
                 <div class="col-span-1 md:col-span-1 space-y-4">
-                    <a href="#" class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-lg">L</div>
-                        <span class="text-xl font-bold text-slate-900">Lumina.</span>
+                    <a href="{{ url('/') }}" class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 font-bold text-lg">L</div>
+                        <span class="text-xl font-bold text-slate-900 dark:text-white">Lumina.</span>
                     </a>
-                    <p class="text-sm text-slate-500 leading-relaxed">Democratizar o acesso ao bem-estar mental em Portugal, criando pontes entre pessoas e profissionais.</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Democratizar o acesso ao bem-estar mental em Portugal, criando pontes entre pessoas e profissionais.</p>
                 </div>
                 <div>
-                    <h4 class="font-bold text-slate-900 mb-6">Plataforma</h4>
-                    <ul class="space-y-3 text-sm text-slate-500">
-                        <li><a href="{{ route('rooms.index') }}" class="hover:text-indigo-600 transition-colors">A Fogueira</a></li>
-                        <li><a href="{{ route('forum.index') }}" class="hover:text-indigo-600 transition-colors">Mural</a></li>
-                        <li><a href="{{ route('calm.index') }}" class="hover:text-indigo-600 transition-colors">Zona Calma</a></li>
-                        <li><a href="{{ route('library.index') ?? url('/#biblioteca') }}" class="hover:text-indigo-600 transition-colors">Biblioteca</a></li>
+                    <h4 class="font-bold text-slate-900 dark:text-white mb-6">Plataforma</h4>
+                    <ul class="space-y-3 text-sm text-slate-500 dark:text-slate-400">
+                        <li><a href="{{ route('rooms.index') }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">A Fogueira</a></li>
+                        <li><a href="{{ route('forum.index') }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Mural</a></li>
+                        <li><a href="{{ route('calm.index') }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Zona Calma</a></li>
+                        <li><a href="{{ route('library.index') }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Biblioteca</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h4 class="font-bold text-slate-900 mb-6">Legal</h4>
-                    <ul class="space-y-3 text-sm text-slate-500">
-                        <li><a href="#" class="hover:text-indigo-600 transition-colors">Termos de Uso</a></li>
-                        <li><a href="{{ route('privacy.index') }}" class="hover:text-indigo-600 transition-colors">Privacidade e Dados</a></li>
+                    <h4 class="font-bold text-slate-900 dark:text-white mb-6">Legal</h4>
+                    <ul class="space-y-3 text-sm text-slate-500 dark:text-slate-400">
+                        <li><a href="#" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Termos de Uso</a></li>
+                        <li><a href="{{ route('privacy.index') }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Privacidade e Dados</a></li>
                     </ul>
                 </div>
                 <div>
-                    <div class="bg-amber-50 border border-amber-100 p-5 rounded-2xl">
-                        <p class="text-xs font-bold text-amber-700 uppercase mb-2 flex items-center gap-1"><i class="ri-alert-line"></i> Importante</p>
-                        <p class="text-xs text-amber-800/80 leading-relaxed">A Lumina não presta atos médicos. Em emergência liga <span class="font-bold">112</span> ou <span class="font-bold">SNS24 (808 24 24 24)</span>.</p>
+                    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/50 p-5 rounded-2xl">
+                        <p class="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase mb-2 flex items-center gap-1"><i class="ri-alert-line"></i> Importante</p>
+                        <p class="text-xs text-amber-800/80 dark:text-amber-200/80 leading-relaxed">A Lumina não presta atos médicos. Em emergência liga <span class="font-bold">112</span> ou <span class="font-bold">SNS24 (808 24 24 24)</span>.</p>
                     </div>
                 </div>
             </div>
-            <div class="border-t border-slate-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center">
+            <div class="border-t border-slate-100 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center">
                 <p class="text-xs text-slate-400">© {{ date('Y') }} Lumina Portugal. Todos os direitos reservados.</p>
                 <p class="text-xs text-slate-400 flex items-center gap-1">Feito com <i class="ri-heart-fill text-rose-400"></i> e empatia.</p>
             </div>

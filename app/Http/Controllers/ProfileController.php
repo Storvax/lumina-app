@@ -85,10 +85,15 @@ class ProfileController extends Controller
             ->reverse() // Reverses to chronological order: inside of the spiral is older
             ->values()
             ->map(function ($log) use ($colorMap) {
+                // Usa a nota pessoal no tooltip; fallback para sem registo
+                $notePreview = $log->note
+                    ? mb_strimwidth($log->note, 0, 60, '...')
+                    : 'Sem nota escrita';
+
                 return [
-                    'date' => Carbon::parse($log->log_date)->format('d/m'),
+                    'date'  => Carbon::parse($log->log_date)->format('d/m'),
                     'color' => $colorMap[$log->mood_level] ?? '#cbd5e1',
-                    'note' => $log->cbt_insight ?? 'Sem registo detalhado',
+                    'note'  => $notePreview,
                 ];
             });
 
