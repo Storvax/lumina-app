@@ -24,7 +24,7 @@
     </div>
 </div>
 
-<a href="https://www.google.pt" class="fixed bottom-6 right-6 z-[60] bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full shadow-xl flex items-center gap-2 transition-transform hover:scale-105 border-4 border-white ring-2 ring-red-100" title="Sair rapidamente para o Google">
+<a href="{{ config('app.quick_exit_url', 'https://www.google.pt') }}" class="fixed bottom-6 right-6 z-[60] bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full shadow-xl flex items-center gap-2 transition-transform hover:scale-105 border-4 border-white ring-2 ring-red-100" title="Sair rapidamente" target="_blank">
     <i class="ri-eye-off-line text-xl"></i> <span class="hidden md:inline">Saída Rápida</span>
 </a>
 
