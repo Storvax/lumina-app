@@ -15,17 +15,15 @@ class HomeController extends Controller
 {
     public function index()
     {
-        // Utilizadores autenticados têm o dashboard como ponto de entrada — a landing é para novos visitantes
-        if (Auth::check()) {
-            return redirect()->route('dashboard');
-        }
-
         // 1. PULSO DA COMUNIDADE (Cache de 5 minutos)
         $communityStats = Cache::remember('community_pulse', 300, function () {
             
-            // Conta utilizadores reais que tiveram atividade nos últimos 15 minutos
-            $realOnlineCount = User::where('last_activity_at', '>=', now()->subMinutes(15))->count();
-            
+            // Conta utilizadores reais presentes nas salas nos últimos 15 minutos
+            $realOnlineCount = DB::table('room_visits')
+                ->where('updated_at', '>=', now()->subMinutes(15))
+                ->distinct('user_id')
+                ->count('user_id');
+
             // Evita a sensação de "lugar vazio" de madrugada (fallback terapêutico)
             $displayOnline = $realOnlineCount < 3 ? $realOnlineCount + rand(3, 7) : $realOnlineCount;
 
