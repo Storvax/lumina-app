@@ -12,20 +12,6 @@ console_command = 'php /var/www/html/artisan tinker'
   reverb = "php artisan reverb:start --host=0.0.0.0 --port=8080"
 
 [[services]]
-  processes = ["app"]
-  internal_port = 8080 # Porta interna do servidor web (confirma se o teu Docker usa 80 ou 8080)
-  protocol = "tcp"
-
-  [[services.ports]]
-    force_https = true
-    handlers = ["http"]
-    port = 80
-
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443
-
-[[services]]
   processes = ["reverb"]
   internal_port = 8080
   protocol = "tcp"
@@ -55,7 +41,6 @@ console_command = 'php /var/www/html/artisan tinker'
   REVERB_SCHEME = 'https'
   TRUSTED_PROXIES = '*'
   BROADCAST_CONNECTION = 'reverb'
-  SESSION_DOMAIN = 'lumina-restless-sea-2853.fly.dev'
   SESSION_SAME_SITE = 'lax'
 
 [http_service]
