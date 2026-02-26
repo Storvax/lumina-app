@@ -12,13 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Proxies confiáveis definidos por ambiente. Em produção, definir TRUSTED_PROXIES
-        // com os IPs do load balancer/reverse proxy (ex: "10.0.0.1,10.0.0.2").
-        // O wildcard '*' só deve ser usado em desenvolvimento local.
+        // Proxies confiáveis — em produção o fly.toml define TRUSTED_PROXIES='*'
         $trustedProxies = env('TRUSTED_PROXIES', '127.0.0.1');
-        $middleware->trustProxies(at: '*');
-    })
-    ->withMiddleware(function (Middleware $middleware) {
+        $middleware->trustProxies(at: $trustedProxies);
+
         $middleware->web(append: [
             \App\Http\Middleware\CheckBanned::class,
         ]);
@@ -30,4 +27,3 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
-    
