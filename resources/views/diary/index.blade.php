@@ -51,7 +51,30 @@
     </div>
 
     <div class="max-w-7xl mx-auto px-6 py-10 pt-32">
-        
+
+        {{-- Banner de confirmação suave após submissão --}}
+        @if(session('success'))
+            <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 6000)"
+                 x-transition:enter="transition ease-out duration-500"
+                 x-transition:enter-start="opacity-0 -translate-y-2"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-300"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 -translate-y-2"
+                 class="mb-8 bg-emerald-50 border border-emerald-200 text-emerald-800 px-6 py-4 rounded-2xl flex items-center gap-3 shadow-sm">
+                <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                    <i class="ri-heart-pulse-line text-emerald-600 text-xl"></i>
+                </div>
+                <div>
+                    <p class="font-bold text-sm">O teu registo foi guardado com carinho.</p>
+                    <p class="text-xs text-emerald-600 mt-0.5">Obrigado por dedicares este momento a ti. Podes atualizar a qualquer momento.</p>
+                </div>
+                <button @click="show = false" class="ml-auto text-emerald-400 hover:text-emerald-600 transition-colors">
+                    <i class="ri-close-line text-lg"></i>
+                </button>
+            </div>
+        @endif
+
         <div class="flex flex-col lg:flex-row justify-between items-end gap-8 mb-12 animate-fade-up">
             
             <div class="w-full lg:w-1/2 text-left">
