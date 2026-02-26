@@ -1,5 +1,5 @@
 <nav class="fixed top-0 w-full z-50 transition-all duration-300 backdrop-blur-sm" id="main-nav">
-    <div class="glass max-w-6xl mx-auto mt-4 md:rounded-full rounded-2xl px-6 py-3 flex justify-between items-center shadow-lg shadow-black/5 mx-4 md:mx-auto border border-white/20 dark:border-slate-700/50 dark:bg-slate-900/80">
+    <div class="glass max-w-6xl mt-4 md:rounded-full rounded-2xl px-3 sm:px-6 py-3 flex justify-between items-center shadow-lg shadow-black/5 mx-3 sm:mx-4 md:mx-auto border border-white/20 dark:border-slate-700/50 dark:bg-slate-900/80">
         
         <a href="{{ url('/') }}" class="flex items-center gap-2 group">
             <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary-500 to-indigo-400 flex items-center justify-center text-white font-bold text-lg group-hover:rotate-12 transition-transform">L</div>
@@ -14,7 +14,7 @@
             <a href="#biblioteca" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Biblioteca</a>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1.5 sm:gap-3">
             <button id="theme-toggle" type="button" 
                 class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-sm p-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
                 aria-label="Alternar modo escuro">

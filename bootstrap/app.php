@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,8 +14,15 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Proxies confiáveis — em produção o fly.toml define TRUSTED_PROXIES='*'
-        $trustedProxies = env('TRUSTED_PROXIES', '127.0.0.1');
-        $middleware->trustProxies(at: $trustedProxies);
+        // Headers explícitos para o Fly.io detectar HTTPS correctamente
+        $middleware->trustProxies(
+            at: env('TRUSTED_PROXIES', '127.0.0.1'),
+            headers: Request::HEADER_X_FORWARDED_FOR |
+                     Request::HEADER_X_FORWARDED_HOST |
+                     Request::HEADER_X_FORWARDED_PORT |
+                     Request::HEADER_X_FORWARDED_PROTO |
+                     Request::HEADER_X_FORWARDED_PREFIX,
+        );
 
         $middleware->web(append: [
             \App\Http\Middleware\CheckBanned::class,
