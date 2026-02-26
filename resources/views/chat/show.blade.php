@@ -10,6 +10,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     
+    <!-- Reverb/WebSocket config (injetado do servidor para evitar dependência de VITE_ vars no build) -->
+    <script>
+        window.reverbConfig = {
+            key: "{{ config('broadcasting.connections.reverb.key') }}",
+            host: "{{ config('broadcasting.connections.reverb.options.host') }}",
+            port: {{ (int) config('broadcasting.connections.reverb.options.port', 8080) }},
+            scheme: "{{ config('broadcasting.connections.reverb.options.scheme', 'https') }}"
+        };
+    </script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>

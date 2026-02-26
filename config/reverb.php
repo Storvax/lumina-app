@@ -79,8 +79,7 @@ return [
                 'options' => [
                     'host'   => env('REVERB_HOST'),
                     // Defaults para dev local (http:8080).
-                    // Em produção, o fly.toml define REVERB_PORT=443 e REVERB_SCHEME=https.
-                    // NUNCA usar app()->environment() aqui — viola o bootstrap do Laravel.
+                    // Em produção, o fly.toml define REVERB_PORT=8080 e REVERB_SCHEME=https.
                     'port'   => env('REVERB_PORT', 8080),
                     'scheme' => env('REVERB_SCHEME', 'http'),
                     'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
