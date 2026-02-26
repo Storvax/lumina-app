@@ -9,104 +9,29 @@
                 <p class="text-slate-500 dark:text-slate-400 mt-2 text-base md:text-lg">Um espaço seguro para abrandar, respirar e voltar ao momento presente.</p>
             </div>
 
-            {{-- Tutorial progressivo — 3 passos, persistido via localStorage --}}
-            <div x-data="{
-                    show: !localStorage.getItem('tour_calm_zone'),
-                    step: 1,
-                    total: 3,
-                    dismiss() {
-                        this.show = false;
-                        localStorage.setItem('tour_calm_zone', '1');
-                    }
-                }"
-                x-show="show"
-                x-transition:enter="transition ease-out duration-500"
-                x-transition:enter-start="opacity-0 -translate-y-2"
-                x-transition:enter-end="opacity-100 translate-y-0"
-                x-transition:leave="transition ease-in duration-300"
-                x-transition:leave-start="opacity-100"
-                x-transition:leave-end="opacity-0"
+            <div x-data="{ showTour: !localStorage.getItem('tour_calm_zone') }" 
+                x-show="showTour" 
                 style="display: none;"
-                class="mb-8 max-w-2xl mx-auto md:mx-0">
-
-                <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white p-6 rounded-2xl shadow-xl shadow-indigo-500/20 relative">
-
-                    {{-- Fechar --}}
-                    <button @click="dismiss()" class="absolute top-4 right-4 text-white/40 hover:text-white transition-colors" title="Fechar tutorial">
-                        <i class="ri-close-line text-lg"></i>
-                    </button>
-
-                    {{-- Passo 1 --}}
-                    <div x-show="step === 1" x-transition.opacity.duration.300ms>
-                        <div class="flex items-center gap-3 mb-3">
-                            <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-                                <i class="ri-leaf-line text-xl"></i>
-                            </div>
-                            <h4 class="font-bold text-lg">Bem-vindo ao teu Santuário</h4>
-                        </div>
-                        <p class="text-indigo-100 text-sm leading-relaxed">
-                            Este espaço foi pensado para ti. Sempre que sentires a ansiedade a crescer ou precisares de um momento de pausa,
-                            a Zona Calma tem ferramentas que te ajudam a abrandar e a voltar ao presente.
-                        </p>
-                    </div>
-
-                    {{-- Passo 2 --}}
-                    <div x-show="step === 2" x-transition.opacity.duration.300ms>
-                        <div class="flex items-center gap-3 mb-3">
-                            <div class="w-10 h-10 bg-emerald-400/30 rounded-full flex items-center justify-center shrink-0">
-                                <i class="ri-focus-2-line text-xl"></i>
-                            </div>
-                            <h4 class="font-bold text-lg">Exercício de Grounding</h4>
-                        </div>
-                        <p class="text-indigo-100 text-sm leading-relaxed">
-                            A técnica <strong class="text-white">5-4-3-2-1</strong> ajuda-te a sair de uma espiral de pensamentos.
-                            Guia-te pelos 5 sentidos, passo a passo, para te ancorares ao momento presente.
-                            Leva apenas alguns minutos.
-                        </p>
-                    </div>
-
-                    {{-- Passo 3 --}}
-                    <div x-show="step === 3" x-transition.opacity.duration.300ms>
-                        <div class="flex items-center gap-3 mb-3">
-                            <div class="w-10 h-10 bg-rose-400/30 rounded-full flex items-center justify-center shrink-0">
-                                <i class="ri-shield-check-line text-xl"></i>
-                            </div>
-                            <h4 class="font-bold text-lg">Modo Crise</h4>
-                        </div>
-                        <p class="text-indigo-100 text-sm leading-relaxed">
-                            Se estiveres num momento mais difícil, o <strong class="text-white">Modo Crise</strong> ativa um ecrã sem distrações
-                            com o teu plano de segurança pessoal. É o teu porto seguro quando precisares.
-                        </p>
-                    </div>
-
-                    {{-- Navegação --}}
-                    <div class="flex items-center justify-between mt-5 pt-4 border-t border-white/15">
-                        {{-- Indicadores de passo --}}
-                        <div class="flex items-center gap-1.5">
-                            <template x-for="i in total" :key="i">
-                                <div class="h-1.5 rounded-full transition-all duration-300"
-                                     :class="i === step ? 'w-6 bg-white' : 'w-1.5 bg-white/30'"></div>
-                            </template>
-                            <span class="text-[10px] text-indigo-200 ml-2" x-text="step + '/' + total"></span>
-                        </div>
-
-                        {{-- Botões --}}
-                        <div class="flex items-center gap-2">
-                            <button x-show="step > 1" @click="step--"
-                                    class="text-indigo-200 hover:text-white text-xs font-medium transition-colors px-3 py-1.5 rounded-lg hover:bg-white/10">
-                                <i class="ri-arrow-left-s-line"></i> Anterior
-                            </button>
-                            <button x-show="step < total" @click="step++"
-                                    class="bg-white text-indigo-600 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-50 transition-colors">
-                                Seguinte <i class="ri-arrow-right-s-line"></i>
-                            </button>
-                            <button x-show="step === total" @click="dismiss()"
-                                    class="bg-white text-indigo-600 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-50 transition-colors">
-                                Começar <i class="ri-check-line"></i>
-                            </button>
-                        </div>
-                    </div>
+                x-transition.duration.500ms
+                class="mt-4 bg-indigo-600 text-white p-5 rounded-2xl shadow-xl shadow-indigo-500/30 flex gap-4 items-start relative max-w-xl">
+                
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl shrink-0">
+                    <i class="ri-lightbulb-flash-line"></i>
                 </div>
+                
+                <div>
+                    <h4 class="font-bold text-lg mb-1">Este é o teu Santuário 🍃</h4>
+                    <p class="text-indigo-100 text-sm leading-relaxed mb-3">
+                        Sempre que sentires a ansiedade a subir, podes vir aqui. Ouve uma música recomendada pela comunidade ou ativa o "Modo Crise" para obteres o teu plano de segurança.
+                    </p>
+                    <button @click="showTour = false; localStorage.setItem('tour_calm_zone', '1')" class="bg-white text-indigo-600 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-50 transition-colors">
+                        Percebi, obrigado!
+                    </button>
+                </div>
+
+                <button @click="showTour = false; localStorage.setItem('tour_calm_zone', '1')" class="absolute top-4 right-4 text-white/50 hover:text-white transition-colors">
+                    <i class="ri-close-line"></i>
+                </button>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-12">
