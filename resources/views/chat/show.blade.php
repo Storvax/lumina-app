@@ -10,6 +10,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     
+    <!-- Reverb/WebSocket config (público — o que o browser usa para ligar ao WebSocket) -->
+    <script>
+        window.reverbConfig = {
+            key: "{{ config('reverb.apps.apps.0.key') }}",
+            host: "{{ config('reverb.apps.apps.0.options.host') }}",
+            port: {{ (int) config('reverb.apps.apps.0.options.port', 443) }},
+            scheme: "{{ config('reverb.apps.apps.0.options.scheme', 'https') }}"
+        };
+    </script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>

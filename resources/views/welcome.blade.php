@@ -11,6 +11,13 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    {{-- Tema: aplicar dark class imediatamente para evitar flash de conteúdo. Default = light --}}
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark') {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
 </head>
 <body class="antialiased text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 font-sans selection:bg-indigo-500 selection:text-white relative transition-colors duration-300 overflow-x-hidden">
 

@@ -11,6 +11,16 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
+        <!-- Reverb/WebSocket config (público — o que o browser usa para ligar ao WebSocket) -->
+        <script>
+            window.reverbConfig = {
+                key: "{{ config('reverb.apps.apps.0.key') }}",
+                host: "{{ config('reverb.apps.apps.0.options.host') }}",
+                port: {{ (int) config('reverb.apps.apps.0.options.port', 443) }},
+                scheme: "{{ config('reverb.apps.apps.0.options.scheme', 'https') }}"
+            };
+        </script>
+
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
