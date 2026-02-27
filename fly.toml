@@ -44,6 +44,15 @@ console_command = 'php /var/www/html/artisan tinker'
   auto_start_machines = true
   min_machines_running = 0
 
+  # Health check com grace period longo para cold starts.
+  # O entrypoint corre config:cache + migrate antes de arrancar o Nginx (~10-15s).
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "15s"
+    method = "GET"
+    path = "/up"
+    timeout = "5s"
+
 [[vm]]
   memory = '1gb'
   cpu_kind = 'shared'
