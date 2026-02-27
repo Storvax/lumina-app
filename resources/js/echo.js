@@ -13,6 +13,9 @@ if (reverbKey) {
     const host = config.host || import.meta.env.VITE_REVERB_HOST || window.location.hostname;
     const port = config.port || parseInt(import.meta.env.VITE_REVERB_PORT) || 8080;
 
+    // CSRF token para autenticação de canais privados/presença (/broadcasting/auth)
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
     window.Echo = new Echo({
         broadcaster: 'reverb',
         key: reverbKey,
@@ -22,6 +25,11 @@ if (reverbKey) {
         forceTLS: isProduction,
         disableStats: true,
         enabledTransports: isProduction ? ['wss'] : ['ws'],
+        auth: {
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+            },
+        },
     });
 
     console.log(`Echo: ${isProduction ? 'wss' : 'ws'}://${host}:${port}`);
