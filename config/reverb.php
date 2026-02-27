@@ -29,8 +29,8 @@ return [
     'servers' => [
 
         'reverb' => [
-            'host' => env('REVERB_SERVER_HOST', '0.0.0.0'),
-            'port' => env('REVERB_SERVER_PORT', 8080),
+            'host' => env('REVERB_SERVER_HOST', '127.0.0.1'),
+            'port' => env('REVERB_SERVER_PORT', 6001),
             'path' => env('REVERB_SERVER_PATH', ''),
             'hostname' => env('REVERB_HOST'),
             'options' => [
@@ -78,8 +78,9 @@ return [
                 'app_id' => env('REVERB_APP_ID'),
                 'options' => [
                     'host'   => env('REVERB_HOST'),
-                    // Defaults para dev local (http:8080).
-                    // Em produção, o fly.toml define REVERB_PORT=8080 e REVERB_SCHEME=https.
+                    // Público: porta/esquema usados pelo browser.
+                    // Produção: 443/https (Fly proxy → Nginx → Reverb local).
+                    // Local: 8080/http.
                     'port'   => env('REVERB_PORT', 8080),
                     'scheme' => env('REVERB_SCHEME', 'http'),
                     'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
