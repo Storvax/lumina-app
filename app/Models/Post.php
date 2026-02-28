@@ -52,7 +52,11 @@ class Post extends Model
         static::addGlobalScope(new ShadowbanScope);
     }
 
-    // Relação: Quem subscreveu este post?
+    public function checkins(): HasMany
+    {
+        return $this->hasMany(PostCheckin::class);
+    }
+
     public function subscribers()
     {
         return $this->belongsToMany(User::class, 'post_subscriptions');
