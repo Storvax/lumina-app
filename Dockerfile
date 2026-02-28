@@ -32,27 +32,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Instalar Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Instalar Node.js 20 (18 está deprecated)
+# Instalar Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar configurações do Nginx
+# Copiar configurações
 COPY docker/nginx/default.conf /etc/nginx/sites-available/default
-
-# Copiar configuração do Supervisor
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Copiar entrypoint
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Definir directório de trabalho
 WORKDIR /var/www/html
 
 # Copiar código da aplicação
 COPY . .
+
+# Criar directórios necessários que o Laravel espera durante o build
+RUN mkdir -p bootstrap/cache storage/framework/sessions \
+        storage/framework/views storage/framework/cache \
+        storage/logs storage/database \
+    && chmod -R 775 bootstrap/cache storage
 
 # Instalar dependências PHP
 RUN composer install --optimize-autoloader --no-dev --no-interaction
@@ -60,7 +61,7 @@ RUN composer install --optimize-autoloader --no-dev --no-interaction
 # Compilar assets (Vite)
 RUN npm install && npm run build && rm -rf node_modules
 
-# Permissões
+# Permissões finais
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
