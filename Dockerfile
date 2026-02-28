@@ -64,7 +64,7 @@ RUN mkdir -p database \
     && chown -R www-data:www-data /var/www/html \
     && echo "MAILTO=\"\"\n* * * * * www-data /usr/bin/php /var/www/html/artisan schedule:run" > /etc/cron.d/laravel \
     && if [ -d .fly ]; then cp .fly/entrypoint.sh /entrypoint; chmod +x /entrypoint; fi;
-    
+
 # ==============================================================================
 # ESTÁGIO DE BUILD DO NODE (VITE)
 # ==============================================================================
@@ -98,4 +98,5 @@ RUN rsync -ar /var/www/html/public-npm/ /var/www/html/public/ \
 
 EXPOSE 8080
 
-ENTRYPOINT ["/entrypoint"]
+# ENTRYPOINT ["/entrypoint"]
+CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
