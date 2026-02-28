@@ -9,6 +9,7 @@ use App\Filament\Resources\Missions\Schemas\MissionForm;
 use App\Filament\Resources\Missions\Tables\MissionsTable;
 use App\Models\Mission;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -26,7 +27,7 @@ class MissionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Missoes';
 
-    protected static ?string $navigationGroup = 'Gamificacao';
+    protected static string|UnitEnum|null $navigationGroup = 'Gamificacao';
 
     public static function form(Schema $schema): Schema
     {

@@ -8,6 +8,7 @@ use App\Filament\Resources\Reports\Schemas\ReportForm;
 use App\Filament\Resources\Reports\Tables\ReportsTable;
 use App\Models\Report;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -25,7 +26,7 @@ class ReportResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Denuncias';
 
-    protected static ?string $navigationGroup = 'Moderacao';
+    protected static string|UnitEnum|null $navigationGroup = 'Moderacao';
 
     protected static ?int $navigationSort = 1;
 

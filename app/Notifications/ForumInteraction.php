@@ -4,6 +4,8 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 use App\Models\Post;
 use App\Models\User;
 
@@ -40,10 +42,33 @@ class ForumInteraction extends Notification
     public function via(object $notifiable): array
     {
         if (method_exists($notifiable, 'isInQuietHours') && $notifiable->isInQuietHours()) {
-            return ['database']; 
+            return ['database'];
         }
 
-        return ['database', 'broadcast'];
+        $channels = ['database', 'broadcast'];
+
+        if ($notifiable->pushSubscriptions()->exists()) {
+            $channels[] = WebPushChannel::class;
+        }
+
+        return $channels;
+    }
+
+    /**
+     * Payload enviado ao Service Worker do browser.
+     */
+    public function toWebPush(object $notifiable, Notification $notification): WebPushMessage
+    {
+        $message = $this->type === 'reaction'
+            ? 'Alguém deixou um abraço virtual na tua história.'
+            : 'Alguém tirou um momento para te ouvir e responder.';
+
+        return (new WebPushMessage)
+            ->title('Lumina — Mural')
+            ->body($this->customMessage ?? $message)
+            ->action('Ver', 'view')
+            ->tag('forum-' . $this->post->id)
+            ->data(['url' => route('forum.show', $this->post->id)]);
     }
 
     /**
