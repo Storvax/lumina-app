@@ -15,6 +15,7 @@ use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\SelfAssessmentController;
+use App\Http\Controllers\SearchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +24,7 @@ use App\Http\Controllers\SelfAssessmentController;
 */
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/pesquisar', [SearchController::class, 'index'])->name('search.index');
 Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
 
 /*
