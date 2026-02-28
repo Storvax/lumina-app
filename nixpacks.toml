@@ -5,7 +5,7 @@ nixPkgs = ["php84", "php84Extensions.pdo_sqlite", "php84Extensions.mbstring", "p
 cmds = ["composer install --optimize-autoloader --no-dev --no-interaction", "npm install", "npm run build", "rm -rf node_modules"]
 
 [phases.build]
-cmds = ["mkdir -p database && touch database/database.sqlite", "php artisan config:cache", "php artisan route:cache", "php artisan view:cache"]
+cmds = ["php artisan config:cache", "php artisan route:cache", "php artisan view:cache"]
 
 [start]
-cmd = "php artisan migrate --force && php artisan admin:create && php artisan serve --host=0.0.0.0 --port=$PORT"
+cmd = "mkdir -p database && touch database/database.sqlite && php artisan migrate --force && php artisan admin:create && php artisan serve --host=0.0.0.0 --port=$PORT"
