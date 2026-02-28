@@ -109,7 +109,7 @@ class ChatController extends Controller
         }
 
         // Sidebar: apenas salas públicas (exclui salas privadas de buddy sessions).
-        $allRooms = Cache::remember('public_rooms', 300, fn() => Room::where('is_private', false)->get());
+        $allRooms = Cache::remember('public_rooms', 300, fn() => Room::where('is_private', false)->where('is_active', true)->get());
 
         return view('chat.show', compact('room', 'messages', 'allRooms', 'followingIds', 'modStats', 'modLogs'));
     }
