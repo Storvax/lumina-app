@@ -55,13 +55,14 @@ COPY . /var/www/html
 WORKDIR /var/www/html
 
 # 4. Setup Backend dependencies 
-RUN composer install --optimize-autoloader --no-dev \
+RUN mkdir -p database \
+    && touch database/database.sqlite \
+    && composer install --optimize-autoloader --no-dev \
     && mkdir -p storage/logs \
     && php artisan optimize:clear \
     && chown -R www-data:www-data /var/www/html \
     && echo "MAILTO=\"\"\n* * * * * www-data /usr/bin/php /var/www/html/artisan schedule:run" > /etc/cron.d/laravel \
     && if [ -d .fly ]; then cp .fly/entrypoint.sh /entrypoint; chmod +x /entrypoint; fi;
-
 # ==============================================================================
 # ESTÁGIO DE BUILD DO NODE (VITE)
 # ==============================================================================
