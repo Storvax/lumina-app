@@ -129,6 +129,10 @@
                 </div>
 
                 <div class="flex items-center gap-3">
+                    <a href="{{ route('search.index') }}" class="hidden md:flex w-9 h-9 rounded-full bg-white border border-slate-200 items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm {{ request()->routeIs('search.*') ? 'text-indigo-600 border-indigo-200' : '' }}" title="Pesquisar">
+                        <i class="ri-search-line"></i>
+                    </a>
+
                     @auth
                         <div class="relative" x-data="{ open: false, count: {{ Auth::user()->unreadNotifications->count() }} }" x-on:new-notification.window="count++">
                             <button type="button" @click.prevent="open = !open; if(open) { axios.post('{{ route('notifications.read') }}'); count = 0; }" 
