@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libonig-dev \
     libxml2-dev \
     libzip-dev \
+    libicu-dev \
     && docker-php-ext-install \
         pdo \
         pdo_sqlite \
@@ -24,14 +25,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         bcmath \
         gd \
         zip \
+        intl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Instalar Node.js 18
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+# Instalar Node.js 20 (18 está deprecated)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
