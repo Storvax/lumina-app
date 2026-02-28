@@ -1,33 +1,31 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
-# ── Base de dados SQLite ──
-mkdir -p /var/www/html/storage/database
-if [ ! -f /var/www/html/storage/database/database.sqlite ]; then
-    touch /var/www/html/storage/database/database.sqlite
-fi
+echo "==> [1/6] A criar base de dados SQLite..."
+DB_PATH="${DB_DATABASE:-/var/www/html/database/database.sqlite}"
+mkdir -p "$(dirname "$DB_PATH")"
+touch "$DB_PATH"
+chown -R www-data:www-data "$(dirname "$DB_PATH")"
 
-# ── Permissões ──
-chown -R www-data:www-data /var/www/html/storage
+echo "==> [2/6] A corrigir permissões..."
+mkdir -p \
+    /var/www/html/storage/framework/sessions \
+    /var/www/html/storage/framework/views \
+    /var/www/html/storage/framework/cache \
+    /var/www/html/storage/logs
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# ── Caches do Laravel ──
-php /var/www/html/artisan config:cache
-php /var/www/html/artisan route:cache
-php /var/www/html/artisan view:cache
+echo "==> [3/6] Cache de configurações Laravel..."
+php artisan config:cache  || true
+php artisan route:cache   || true
+php artisan view:cache    || true
 
-# ── Migrações ──
-echo "[entrypoint] A correr migrations..."
-php /var/www/html/artisan migrate --force
+echo "==> [4/6] Migrações..."
+php artisan migrate --force || true
 
-# Corrigir ownership após migrate (SQLite WAL files)
-chown -R www-data:www-data /var/www/html/storage/database
+echo "==> [5/6] Permissões pós-migração..."
+chown -R www-data:www-data "$(dirname "$DB_PATH")"
 
-# ── Laravel Scheduler via cron ──
-echo "* * * * * www-data php /var/www/html/artisan schedule:run >> /dev/null 2>&1" \
-    > /etc/cron.d/laravel
-chmod 0644 /etc/cron.d/laravel
-crontab /etc/cron.d/laravel
-
-# ── Arrancar Supervisor (Nginx + PHP-FPM + Cron) ──
-exec supervisord -c /etc/supervisor/conf.d/supervisord.conf
+echo "==> [6/6] A iniciar supervisor..."
+exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf

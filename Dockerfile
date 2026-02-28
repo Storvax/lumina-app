@@ -1,10 +1,9 @@
 FROM php:8.4-fpm
 
-# Instalar dependências do sistema
+# Dependências do sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
-    cron \
     git \
     curl \
     zip \
@@ -29,36 +28,41 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar Composer
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Instalar Node.js 20
+# Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar configurações
+# Configurações
 COPY docker/nginx/default.conf /etc/nginx/sites-available/default
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Criar socket dir para php-fpm
+RUN mkdir -p /var/run/php && chown www-data:www-data /var/run/php
+
 WORKDIR /var/www/html
 
-# Copiar código da aplicação
 COPY . .
 
-# Criar directórios necessários que o Laravel espera durante o build
-RUN mkdir -p bootstrap/cache storage/framework/sessions \
-        storage/framework/views storage/framework/cache \
-        storage/logs storage/database \
+# Criar directorios necessários para o build
+RUN mkdir -p bootstrap/cache \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/framework/cache \
+        storage/logs \
+        database \
     && chmod -R 775 bootstrap/cache storage
 
 # Instalar dependências PHP
 RUN composer install --optimize-autoloader --no-dev --no-interaction
 
-# Compilar assets (Vite)
+# Compilar assets
 RUN npm install && npm run build && rm -rf node_modules
 
 # Permissões finais
