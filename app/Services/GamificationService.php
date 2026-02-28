@@ -15,10 +15,25 @@ class GamificationService
 {
     private const REWARDS = [
         'daily_log' => 10,
-        'reaction' => 2,
-        'reply' => 5,
-        'breathe' => 5,
+        'reaction'  => 2,
+        'reply'     => 5,
+        'breathe'   => 5,
         'first_post' => 20,
+    ];
+
+    /**
+     * Faz a ponte entre as strings de ação internas (usadas pelos controllers)
+     * e os valores do campo `type` da tabela `missions` (geridos pelo Filament).
+     *
+     * Acções sem tipo de missão correspondente mapeiam para null e são ignoradas
+     * no progresso de missões, mas continuam a atribuir chamas normalmente.
+     */
+    private const ACTION_TO_MISSION_TYPE = [
+        'daily_log'  => 'diary',
+        'reply'      => 'comment',
+        'reaction'   => 'reaction',
+        'first_post' => 'post',
+        'breathe'    => null,
     ];
 
     /**
@@ -118,55 +133,62 @@ class GamificationService
 
     /**
      * Atribui 3 missões diárias ao utilizador, se ainda não as tiver hoje.
-     * Utilizado pelo DashboardController.
+     * Filtra apenas missões dentro do período de disponibilidade configurado
+     * no painel de administração. Utilizado pelo DashboardController.
      */
     public function assignDailyMissions(User $user): void
     {
         $today = now()->toDateString();
         $hasMissions = $user->missions()->wherePivot('assigned_date', $today)->exists();
 
-        // Se já tem missões hoje, não faz nada
         if ($hasMissions) return;
 
-        // Se não tem, vai buscar 3 aleatórias e atribui
-        $missions = \App\Models\Mission::inRandomOrder()->limit(3)->get();
-        
+        $missions = \App\Models\Mission::whereDate('available_from', '<=', $today)
+            ->whereDate('available_until', '>=', $today)
+            ->inRandomOrder()
+            ->limit(3)
+            ->get();
+
         foreach ($missions as $mission) {
             $user->missions()->attach($mission->id, [
                 'assigned_date' => $today,
-                'progress' => 0
+                'progress'      => 0,
             ]);
         }
     }
 
     /**
      * Atualiza o progresso das missões ativas baseadas na ação realizada.
+     *
+     * A query filtra pelo campo `type` (coluna real na DB) através do mapeamento
+     * ACTION_TO_MISSION_TYPE, que isola os controllers do schema interno das missões.
      */
     private function updateMissionProgress(User $user, string $actionType): void
     {
+        $missionType = self::ACTION_TO_MISSION_TYPE[$actionType] ?? null;
+
+        // Acções sem tipo de missão correspondente (ex: 'breathe') não têm
+        // missões dedicadas — atribuem chamas mas não avançam progresso.
+        if ($missionType === null) {
+            return;
+        }
+
         $today = now()->toDateString();
 
-        // Vai buscar as missões de hoje que correspondem a esta ação e que ainda não estão concluídas
         $activeMissions = $user->missions()
             ->wherePivot('assigned_date', $today)
             ->whereNull('mission_user.completed_at')
-            ->where('action_type', $actionType)
+            ->where('type', $missionType)
             ->get();
 
         foreach ($activeMissions as $mission) {
             $newProgress = $mission->pivot->progress + 1;
-            
-            // Atualiza o progresso na Base de Dados
+
             $user->missions()->updateExistingPivot($mission->id, ['progress' => $newProgress]);
 
-            // Se atingiu o objetivo, conclui a missão
-            if ($newProgress >= $mission->target_count) {
+            if ($newProgress >= $mission->goal_count) {
                 $user->missions()->updateExistingPivot($mission->id, ['completed_at' => now()]);
-                
-                // Dá a recompensa da missão
                 $this->awardFlames($user, $mission->flames_reward);
-                
-                // Dispara o Toast de "Missão Concluída"
                 session()->flash('gamification.mission', $mission->title);
             }
         }
