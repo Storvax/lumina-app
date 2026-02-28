@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\PostCheckin;
 use App\Models\User;
 use App\Models\PostReaction;
 use App\Models\Comment;
@@ -423,15 +424,13 @@ class ForumController extends Controller
             'emotion' => 'required|in:empathy,sadness,strength,neutral',
         ]);
 
-        // updateOrInsert para lidar silenciosamente com check-ins repetidos
-        DB::table('post_checkins')->updateOrInsert(
+        PostCheckin::updateOrCreate(
             ['post_id' => $post->id, 'user_id' => Auth::id()],
             ['emotion' => $request->emotion, 'created_at' => now()]
         );
 
         $response = ['status' => 'ok'];
 
-        // Se o leitor se sentiu triste, sugerimos a Zona Calma em vez de deixá-lo sem apoio
         if ($request->emotion === 'sadness') {
             $response['suggestion'] = [
                 'message' => 'É normal sentires isso. A Zona Calma tem recursos que podem ajudar.',
