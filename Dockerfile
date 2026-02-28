@@ -49,18 +49,16 @@ COPY .fly/supervisor/ /etc/supervisor/
 COPY .fly/entrypoint.sh /entrypoint
 COPY .fly/start-nginx.sh /usr/local/bin/start-nginx
 RUN chmod 754 /usr/local/bin/start-nginx
-    
+
 # 3. Copy application code
 COPY . /var/www/html
 WORKDIR /var/www/html
 
-# 4. Setup Backend dependencies 
+# 4. Setup Backend dependencies
 RUN mkdir -p database \
     && touch database/database.sqlite \
     && composer install --optimize-autoloader --no-dev \
     && mkdir -p storage/logs \
-    && php artisan migrate --force \
-    && php artisan optimize:clear \
     && chown -R www-data:www-data /var/www/html \
     && echo "MAILTO=\"\"\n* * * * * www-data /usr/bin/php /var/www/html/artisan schedule:run" > /etc/cron.d/laravel \
     && if [ -d .fly ]; then cp .fly/entrypoint.sh /entrypoint; chmod +x /entrypoint; fi;
@@ -73,10 +71,8 @@ FROM node:${NODE_VERSION} as node_builder
 RUN mkdir /app
 WORKDIR /app
 COPY . .
-# Copiar vendor do composer para o Vite conseguir ler ficheiros se necessário (opcional)
 COPY --from=base /var/www/html/vendor /app/vendor
 
-# Instalar dependências e compilar (Vite build)
 RUN npm install
 RUN npm run build
 
@@ -93,11 +89,7 @@ RUN rsync -ar /var/www/html/public-npm/ /var/www/html/public/ \
     && rm -rf /var/www/html/public-npm \
     && chown -R www-data:www-data /var/www/html
 
-# NOTA: Removemos os comandos "npm install" e "npm run build" daqui
-# porque os assets já foram copiados acima!
+RUN chmod -R 775 storage bootstrap/cache
 
 EXPOSE 8080
-
-# ENTRYPOINT ["/entrypoint"]
-RUN chmod -R 775 storage bootstrap/cache
-CMD php artisan serve --host=0.0.0.0 --port=$PORT
+ENTRYPOINT ["/entrypoint"]
