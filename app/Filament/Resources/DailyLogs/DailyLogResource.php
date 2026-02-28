@@ -11,6 +11,7 @@ use App\Filament\Resources\DailyLogs\Schemas\DailyLogInfolist;
 use App\Filament\Resources\DailyLogs\Tables\DailyLogsTable;
 use App\Models\DailyLog;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -28,7 +29,7 @@ class DailyLogResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Registos Diarios';
 
-    protected static ?string $navigationGroup = 'Conteudo';
+    protected static string|UnitEnum|null $navigationGroup = 'Conteudo';
 
     protected static ?string $recordTitleAttribute = 'log_date';
 

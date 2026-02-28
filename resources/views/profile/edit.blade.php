@@ -202,6 +202,28 @@
                                     <p class="text-sm text-amber-800/70 mt-1">Recebe uma notificação ao Domingo a celebrar os teus progressos da semana (Quantas vezes respiraste, abraços recebidos, etc).</p>
                                 </div>
                             </div>
+
+                            {{-- Web Push Notifications --}}
+                            <div x-data="pushNotifications()" class="bg-violet-50/50 p-5 sm:p-6 rounded-2xl border border-violet-100">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-10 h-10 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center text-xl shrink-0"><i class="ri-notification-badge-fill"></i></div>
+                                    <div class="flex-1">
+                                        <div class="flex justify-between items-start">
+                                            <h4 class="font-bold text-violet-900">Notificações Push</h4>
+                                            <button type="button"
+                                                    @click="toggle()"
+                                                    :disabled="loading || denied"
+                                                    class="relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
+                                                    :class="subscribed ? 'bg-violet-500' : 'bg-slate-300'"
+                                                    :title="denied ? 'Permissão bloqueada no browser' : ''">
+                                                <span class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200"
+                                                      :class="subscribed ? 'translate-x-6' : 'translate-x-0'"></span>
+                                            </button>
+                                        </div>
+                                        <p class="text-sm text-violet-800/70 mt-1" x-text="statusText"></p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-slate-100">
@@ -303,5 +325,123 @@
             </div>
         </form>
     </x-modal>
+
+    <x-slot name="scripts">
+        <script>
+            /**
+             * Componente Alpine.js para gerir a subscrição Web Push.
+             *
+             * Regista o Service Worker, pede permissão ao utilizador e envia
+             * o PushSubscription ao servidor. Respeita browsers sem suporte e
+             * permissão previamente recusada.
+             */
+            function pushNotifications() {
+                return {
+                    subscribed: false,
+                    loading: false,
+                    denied: false,
+                    statusText: 'Recebe notificações mesmo quando não estás na Lumina.',
+
+                    init() {
+                        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                            this.statusText = 'O teu browser não suporta notificações push.';
+                            this.denied = true;
+                            return;
+                        }
+
+                        if (Notification.permission === 'denied') {
+                            this.denied = true;
+                            this.statusText = 'Permissão bloqueada. Altera nas definições do browser.';
+                            return;
+                        }
+
+                        // Verifica se já existe uma subscrição activa
+                        navigator.serviceWorker.ready.then(reg => {
+                            reg.pushManager.getSubscription().then(sub => {
+                                if (sub) {
+                                    this.subscribed = true;
+                                    this.statusText = 'Notificações push activas neste dispositivo.';
+                                }
+                            });
+                        });
+                    },
+
+                    async toggle() {
+                        this.loading = true;
+
+                        try {
+                            const registration = await navigator.serviceWorker.register('/sw.js');
+                            await navigator.serviceWorker.ready;
+
+                            if (this.subscribed) {
+                                await this.unsubscribe(registration);
+                            } else {
+                                await this.subscribe(registration);
+                            }
+                        } catch (err) {
+                            this.statusText = 'Ocorreu um erro. Tenta novamente.';
+                            console.error('[Push]', err);
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+
+                    async subscribe(registration) {
+                        const permission = await Notification.requestPermission();
+
+                        if (permission !== 'granted') {
+                            this.denied = true;
+                            this.statusText = 'Precisamos da tua permissão para enviar notificações.';
+                            return;
+                        }
+
+                        const subscription = await registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: this.urlBase64ToUint8Array('{{ config("webpush.vapid.public_key") }}')
+                        });
+
+                        const key = subscription.getKey('p256dh');
+                        const auth = subscription.getKey('auth');
+
+                        await axios.post('{{ route("push.subscribe") }}', {
+                            endpoint: subscription.endpoint,
+                            keys: {
+                                p256dh: btoa(String.fromCharCode.apply(null, new Uint8Array(key))),
+                                auth: btoa(String.fromCharCode.apply(null, new Uint8Array(auth)))
+                            }
+                        });
+
+                        this.subscribed = true;
+                        this.statusText = 'Notificações push activas neste dispositivo.';
+                    },
+
+                    async unsubscribe(registration) {
+                        const subscription = await registration.pushManager.getSubscription();
+
+                        if (subscription) {
+                            await axios.post('{{ route("push.unsubscribe") }}', {
+                                endpoint: subscription.endpoint
+                            });
+                            await subscription.unsubscribe();
+                        }
+
+                        this.subscribed = false;
+                        this.statusText = 'Notificações push desactivadas.';
+                    },
+
+                    urlBase64ToUint8Array(base64String) {
+                        var padding = '='.repeat((4 - base64String.length % 4) % 4);
+                        var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                        var raw = atob(base64);
+                        var output = new Uint8Array(raw.length);
+                        for (var i = 0; i < raw.length; ++i) {
+                            output[i] = raw.charCodeAt(i);
+                        }
+                        return output;
+                    }
+                };
+            }
+        </script>
+    </x-slot>
 
 </x-lumina-layout>

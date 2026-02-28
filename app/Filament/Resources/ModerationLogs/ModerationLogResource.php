@@ -6,6 +6,7 @@ use App\Filament\Resources\ModerationLogs\Pages\ListModerationLogs;
 use App\Filament\Resources\ModerationLogs\Tables\ModerationLogsTable;
 use App\Models\ModerationLog;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -23,7 +24,7 @@ class ModerationLogResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Logs de Moderacao';
 
-    protected static ?string $navigationGroup = 'Moderacao';
+    protected static string|UnitEnum|null $navigationGroup = 'Moderacao';
 
     protected static ?int $navigationSort = 2;
 

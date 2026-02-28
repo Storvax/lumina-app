@@ -9,6 +9,7 @@ use App\Filament\Resources\PlaylistSongs\Schemas\PlaylistSongForm;
 use App\Filament\Resources\PlaylistSongs\Tables\PlaylistSongsTable;
 use App\Models\PlaylistSong;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -26,7 +27,7 @@ class PlaylistSongResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Playlist';
 
-    protected static ?string $navigationGroup = 'Conteudo';
+    protected static string|UnitEnum|null $navigationGroup = 'Conteudo';
 
     public static function form(Schema $schema): Schema
     {

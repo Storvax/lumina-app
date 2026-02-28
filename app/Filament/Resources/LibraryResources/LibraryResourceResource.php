@@ -9,6 +9,7 @@ use App\Filament\Resources\LibraryResources\Schemas\LibraryResourceForm;
 use App\Filament\Resources\LibraryResources\Tables\LibraryResourcesTable;
 use App\Models\Resource;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource as FilamentResource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -26,7 +27,7 @@ class LibraryResourceResource extends FilamentResource
 
     protected static ?string $pluralModelLabel = 'Recursos';
 
-    protected static ?string $navigationGroup = 'Conteudo';
+    protected static string|UnitEnum|null $navigationGroup = 'Conteudo';
 
     protected static ?string $recordTitleAttribute = 'title';
 

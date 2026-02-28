@@ -6,6 +6,7 @@ use App\Filament\Resources\BuddySessions\Pages\ListBuddySessions;
 use App\Filament\Resources\BuddySessions\Tables\BuddySessionsTable;
 use App\Models\BuddySession;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
@@ -22,7 +23,7 @@ class BuddySessionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Sessoes Buddy';
 
-    protected static ?string $navigationGroup = 'Comunidade';
+    protected static string|UnitEnum|null $navigationGroup = 'Comunidade';
 
     public static function canCreate(): bool
     {
