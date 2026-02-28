@@ -36,14 +36,10 @@ return [
             'secret' => env('REVERB_APP_SECRET'),
             'app_id' => env('REVERB_APP_ID'),
             'options' => [
-                // Server-side broadcasting vai direto ao Reverb local (sem TLS, sem Nginx).
                 'host' => env('REVERB_SERVER_HOST', '127.0.0.1'),
                 'port' => env('REVERB_SERVER_PORT', 6001),
-                'scheme' => 'http',
-                'useTLS' => false,
-            ],
-            'client_options' => [
-                // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+                'scheme' => env('REVERB_SERVER_SCHEME', 'http'),  // ← era hardcoded 'http'
+                'useTLS' => env('REVERB_SERVER_SCHEME', 'http') === 'https',  // ← era hardcoded false
             ],
         ],
 
