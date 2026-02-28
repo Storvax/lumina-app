@@ -5,9 +5,11 @@ namespace App\Filament\Resources\Users\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Support\Enums\FontWeight;
 
 class UsersTable
@@ -16,13 +18,11 @@ class UsersTable
     {
         return $table
             ->columns([
-                // Avatar (DiceBear)
                 ImageColumn::make('avatar')
                     ->defaultImageUrl(fn ($record) => 'https://api.dicebear.com/7.x/notionists/svg?seed=' . $record->name)
                     ->circular()
-                    ->label('Foto'),
+                    ->label(''),
 
-                // Nome e Email
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable()
@@ -30,39 +30,82 @@ class UsersTable
                     ->description(fn ($record) => $record->email)
                     ->label('Utilizador'),
 
-                // BATERIA SOCIAL (Visualização de Risco)
-                TextColumn::make('energy_level')
-                    ->label('Estado Emocional')
+                TextColumn::make('role')
+                    ->label('Papel')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        '1', '2' => 'danger',  // Vermelho
-                        '3' => 'warning',      // Amarelo
-                        '4', '5' => 'success', // Verde
+                        'admin' => 'danger',
+                        'moderator' => 'warning',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state) => match ($state) {
-                        '1' => '🔴 Crítico',
-                        '2' => '🟠 Baixo',
-                        '3' => '🟡 Médio',
-                        '4' => '🔵 Estável',
-                        '5' => '🟢 Radiante',
+                        'admin' => 'Admin',
+                        'moderator' => 'Moderador',
+                        default => 'Utilizador',
+                    })
+                    ->sortable(),
+
+                TextColumn::make('energy_level')
+                    ->label('Energia')
+                    ->badge()
+                    ->color(fn ($state): string => match ((string) $state) {
+                        '1', '2' => 'danger',
+                        '3' => 'warning',
+                        '4', '5' => 'success',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn ($state) => match ((string) $state) {
+                        '1' => 'Critico',
+                        '2' => 'Baixo',
+                        '3' => 'Medio',
+                        '4' => 'Estavel',
+                        '5' => 'Radiante',
                         default => 'N/A',
                     }),
 
+                TextColumn::make('flames')
+                    ->label('Chamas')
+                    ->sortable()
+                    ->toggleable(),
+
+                IconColumn::make('banned_at')
+                    ->label('Banido')
+                    ->boolean()
+                    ->getStateUsing(fn ($record) => $record->banned_at !== null)
+                    ->trueIcon('heroicon-o-no-symbol')
+                    ->falseIcon('heroicon-o-check-circle')
+                    ->trueColor('danger')
+                    ->falseColor('success'),
+
                 TextColumn::make('created_at')
                     ->date('d/m/Y')
-                    ->label('Membro Desde')
+                    ->label('Registo')
                     ->sortable(),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
-                // Filtro para encontrar pessoas em risco
-                SelectFilter::make('energy_level')
-                    ->label('Risco / Energia')
+                SelectFilter::make('role')
+                    ->label('Papel')
                     ->options([
-                        '1' => '🔴 Crítico (Nível 1)',
-                        '2' => '🟠 Baixo (Nível 2)',
-                        '5' => '🟢 Estável (Nível 5)',
+                        'admin' => 'Admin',
+                        'moderator' => 'Moderador',
+                        'user' => 'Utilizador',
                     ]),
+                SelectFilter::make('energy_level')
+                    ->label('Energia')
+                    ->options([
+                        '1' => 'Critico (1)',
+                        '2' => 'Baixo (2)',
+                        '3' => 'Medio (3)',
+                        '4' => 'Estavel (4)',
+                        '5' => 'Radiante (5)',
+                    ]),
+                TernaryFilter::make('banned')
+                    ->label('Banido')
+                    ->queries(
+                        true: fn ($query) => $query->whereNotNull('banned_at'),
+                        false: fn ($query) => $query->whereNull('banned_at'),
+                    ),
             ])
             ->actions([
                 EditAction::make(),

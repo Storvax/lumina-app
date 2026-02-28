@@ -20,7 +20,15 @@ class DailyLogResource extends Resource
 {
     protected static ?string $model = DailyLog::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBookOpen;
+
+    protected static ?string $navigationLabel = 'Registos Diarios';
+
+    protected static ?string $modelLabel = 'Registo';
+
+    protected static ?string $pluralModelLabel = 'Registos Diarios';
+
+    protected static ?string $navigationGroup = 'Conteudo';
 
     protected static ?string $recordTitleAttribute = 'log_date';
 

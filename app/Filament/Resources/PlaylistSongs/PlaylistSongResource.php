@@ -18,7 +18,15 @@ class PlaylistSongResource extends Resource
 {
     protected static ?string $model = PlaylistSong::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMusicalNote;
+
+    protected static ?string $navigationLabel = 'Playlist';
+
+    protected static ?string $modelLabel = 'Musica';
+
+    protected static ?string $pluralModelLabel = 'Playlist';
+
+    protected static ?string $navigationGroup = 'Conteudo';
 
     public static function form(Schema $schema): Schema
     {
