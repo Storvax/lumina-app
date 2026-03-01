@@ -16,15 +16,19 @@ class ShadowbanScope implements Scope
             return;
         }
 
+        $table = $model->getTable();
+
         // Se for utilizador normal ou visitante:
+        // Qualifica user_id com o nome da tabela para evitar ambiguidade
+        // em queries com JOIN (ex: savedPosts via pivot saved_posts).
         $builder->whereHas('user', function ($query) {
             $query->whereNull('shadowbanned_until')
                   ->orWhere('shadowbanned_until', '<', now());
         });
 
-        // MAS: O próprio utilizador deve ver os seus posts (para achar que não foi banido)
+        // O próprio utilizador deve ver os seus posts (para achar que não foi banido)
         if (Auth::check()) {
-            $builder->orWhere('user_id', Auth::id());
+            $builder->orWhere("{$table}.user_id", Auth::id());
         }
     }
 }
