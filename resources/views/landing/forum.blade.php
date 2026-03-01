@@ -16,7 +16,7 @@
                     <div class="flex items-start justify-between">
                         <div class="flex gap-4">
                             @if($post->user->avatar)
-                                <img src="{{ asset('storage/' . $post->user->avatar) }}" class="w-10 h-10 shrink-0 rounded-full object-cover border border-slate-100 dark:border-slate-600">
+                                <img src="{{ asset('storage/' . $post->user->avatar) }}" class="w-10 h-10 shrink-0 rounded-full object-cover border border-slate-100 dark:border-slate-600" loading="lazy" alt="Avatar">
                             @else
                                 <div class="w-10 h-10 shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-100 dark:border-indigo-800">
                                     {{ substr($post->user->name, 0, 1) }}

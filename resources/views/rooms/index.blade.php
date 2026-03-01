@@ -87,10 +87,10 @@
                             <div class="flex items-center -space-x-3 group-hover:space-x-[-8px] transition-all duration-300">
                                 <template x-if="stats['{{ $room->id }}'] > 0">
                                     <div class="flex items-center -space-x-3 group-hover:space-x-[-8px] transition-all duration-300">
-                                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $seed }}1&backgroundColor=f8fafc" alt="Membro" class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm relative z-30">
+                                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $seed }}1&backgroundColor=f8fafc" alt="Membro" class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm relative z-30" loading="lazy">
                                         
                                         <template x-if="stats['{{ $room->id }}'] > 1">
-                                            <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $seed }}2&backgroundColor=f8fafc" alt="Membro" class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm relative z-20">
+                                            <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $seed }}2&backgroundColor=f8fafc" alt="Membro" class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm relative z-20" loading="lazy">
                                         </template>
                                         
                                         <div class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 shadow-sm relative z-10" x-text="'+' + stats['{{ $room->id }}']"></div>

@@ -57,14 +57,22 @@
                 </div>
             </div>
 
-            {{-- CTAs: coluna em mobile, linha em tablet+ --}}
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2 w-full max-w-sm sm:max-w-none">
-                <a href="{{ route('rooms.index') }}" class="flex items-center justify-center px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-500 to-indigo-500 text-white font-semibold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all text-center">
-                    Entrar na Comunidade
-                </a>
-                <a href="{{ route('login') }}" class="flex items-center justify-center px-6 py-4 rounded-2xl text-slate-600 font-medium hover:bg-white/60 transition-colors border border-transparent hover:border-slate-200 text-center">
-                    <i class="ri-login-box-line text-xl mr-2"></i> Iniciar sessão
-                </a>
+                @auth
+                    <a href="{{ route('dashboard') }}" class="flex items-center justify-center px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-500 to-indigo-500 text-white font-semibold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all text-center">
+                        <i class="ri-dashboard-line text-xl mr-2"></i> Ir para o Dashboard
+                    </a>
+                    <a href="{{ route('forum.index') }}" class="flex items-center justify-center px-6 py-4 rounded-2xl text-slate-600 font-medium hover:bg-white/60 transition-colors border border-transparent hover:border-slate-200 text-center">
+                        <i class="ri-quill-pen-line text-xl mr-2"></i> Ver o Mural
+                    </a>
+                @else
+                    <a href="{{ route('rooms.index') }}" class="flex items-center justify-center px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-500 to-indigo-500 text-white font-semibold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all text-center">
+                        Entrar na Comunidade
+                    </a>
+                    <a href="{{ route('login') }}" class="flex items-center justify-center px-6 py-4 rounded-2xl text-slate-600 font-medium hover:bg-white/60 transition-colors border border-transparent hover:border-slate-200 text-center">
+                        <i class="ri-login-box-line text-xl mr-2"></i> Iniciar sessão
+                    </a>
+                @endauth
             </div>
         </div>
 

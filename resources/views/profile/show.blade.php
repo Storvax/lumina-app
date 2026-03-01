@@ -40,7 +40,7 @@
                 <div class="flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
                     <div class="relative group">
                         <div class="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-white/10 border-4 border-white/20 flex items-center justify-center text-4xl font-bold backdrop-blur-sm">
-                            <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $user->name }}" class="w-full h-full rounded-full object-cover">
+                            <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $user->name }}" class="w-full h-full rounded-full object-cover" loading="lazy" alt="Avatar de {{ $user->name }}">
                         </div>
                         <a href="{{ route('profile.edit') }}" class="absolute -bottom-2 -right-2 bg-white text-indigo-600 p-2 rounded-xl shadow-lg hover:scale-110 transition-transform"><i class="ri-settings-3-fill"></i></a>
                     </div>

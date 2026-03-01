@@ -18,6 +18,7 @@ use App\Http\Controllers\SelfAssessmentController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\WallController;
+use App\Http\Controllers\CommunityReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,6 +28,7 @@ use App\Http\Controllers\WallController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/offline', fn () => view('offline'))->name('offline');
+Route::get('/comunidade/impacto', [CommunityReportController::class, 'index'])->name('community.report');
 Route::get('/pesquisar', [SearchController::class, 'index'])->name('search.index');
 Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
 
@@ -218,7 +220,8 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/grounding', 'grounding')->name('grounding');
         Route::get('/crise', 'crisis')->name('crisis');
-        
+        Route::get('/sons', fn () => view('calm.sounds'))->name('sounds');
+
         Route::post('/playlist/sugerir', 'suggestSong')->middleware('throttle:suggestions')->name('playlist.suggest');
         Route::post('/playlist/{song}/votar', 'voteSong')->middleware('throttle:suggestions')->name('playlist.vote');
         Route::delete('/playlist/{song}', 'deleteSong')->name('playlist.delete');

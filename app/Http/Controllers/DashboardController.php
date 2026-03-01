@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use App\Services\GamificationService;
+use App\Services\RecommendationService;
 use App\Models\DailyLog;
 use Carbon\Carbon;
 
@@ -25,15 +27,19 @@ class DashboardController extends Controller
         // Garantir que as missões diárias estão atribuidas
         $gamification->assignDailyMissions($user);
 
-        // Missões de hoje com progresso do utilizador
-        $dailyMissions = $user->missions()
-            ->wherePivot('assigned_date', $today)
-            ->get();
+        // Missões de hoje com progresso do utilizador (cache 10 min por user/dia)
+        $dailyMissions = Cache::remember(
+            "user:{$user->id}:missions:{$today}",
+            600,
+            fn () => $user->missions()->wherePivot('assigned_date', $today)->get()
+        );
 
-        // Verificar se o utilizador já fez o registo emocional de hoje
-        $todayLog = DailyLog::where('user_id', $user->id)
-            ->where('log_date', $today)
-            ->first();
+        // Verificar se o utilizador já fez o registo emocional de hoje (cache 5 min)
+        $todayLog = Cache::remember(
+            "user:{$user->id}:log:{$today}",
+            300,
+            fn () => DailyLog::where('user_id', $user->id)->where('log_date', $today)->first()
+        );
 
         // Dados de progresso pessoal para o painel resumo
         $progressData = [
@@ -64,6 +70,9 @@ class DashboardController extends Controller
         // Calendário emocional: mensagem contextual se a data de hoje for relevante
         $emotionalDate = config('emotional-calendar.' . now()->format('m-d'));
 
+        // Recomendações contextuais (GAP-18)
+        $recommendations = app(RecommendationService::class)->getRecommendations($user);
+
         return view('dashboard', compact(
             'dailyMissions',
             'progressData',
@@ -72,7 +81,8 @@ class DashboardController extends Controller
             'emotionalTags',
             'encouragement',
             'todayLog',
-            'emotionalDate'
+            'emotionalDate',
+            'recommendations'
         ));
     }
 
