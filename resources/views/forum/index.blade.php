@@ -14,12 +14,6 @@
         .masonry-item { break-inside: avoid; margin-bottom: 1.5rem; }
     </x-slot>
 
-    <x-slot name="actionButton">
-        <button onclick="togglePostModal()" aria-label="{{ __('Escrever nova publicação') }}" class="hidden md:flex bg-slate-900 text-white hover:bg-slate-800 px-5 py-2.5 rounded-full text-sm font-bold items-center gap-2 transition-all shadow-lg shadow-slate-900/20 active:scale-95 focus-visible:ring-4 focus-visible:ring-indigo-500 focus-visible:outline-none">
-            <i class="ri-quill-pen-line" aria-hidden="true"></i> {{ __('Escrever') }}
-        </button>
-    </x-slot>
-
     <section class="relative pt-20 pb-12 overflow-hidden text-center">
         <div class="max-w-4xl mx-auto px-6 text-left mb-2">
             <x-emotional-breadcrumb :items="[['label' => 'Mural da Esperança']]" />
@@ -28,14 +22,20 @@
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 border border-white text-indigo-600 text-xs font-bold uppercase tracking-wider shadow-sm backdrop-blur-sm mb-6" aria-hidden="true">
                 🌻 {{ __('Comunidade') }}
             </div>
-            
+
             <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
                 {{ __('O Mural da') }} <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-violet-600">{{ __('Esperança.') }}</span>
             </h1>
-            
+
             <p class="text-lg text-slate-500 leading-relaxed max-w-xl mx-auto mb-8">
                 {{ __('Partilha a tua história, deixa um desabafo ou acende uma luz. As tuas palavras podem ser o abrigo de alguém.') }}
             </p>
+
+            @auth
+                <button onclick="togglePostModal()" class="hidden md:inline-flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 px-6 py-3 rounded-full text-sm font-bold transition-all shadow-lg shadow-slate-900/20 active:scale-95 focus-visible:ring-4 focus-visible:ring-indigo-500 focus-visible:outline-none mb-8">
+                    <i class="ri-quill-pen-line" aria-hidden="true"></i> {{ __('Escrever no Mural') }}
+                </button>
+            @endauth
 
             <div class="max-w-md mx-auto mb-8 relative group z-30">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -72,6 +72,15 @@
             </div>
         </div>
     </main>
+
+    {{-- FAB mobile: acesso rápido à criação de post (acima da bottom bar) --}}
+    @auth
+        <button onclick="togglePostModal()"
+                aria-label="{{ __('Escrever nova publicação') }}"
+                class="md:hidden fixed bottom-24 right-4 z-50 w-14 h-14 bg-slate-900 text-white rounded-full shadow-xl shadow-slate-900/30 flex items-center justify-center active:scale-90 transition-transform">
+            <i class="ri-quill-pen-line text-xl" aria-hidden="true"></i>
+        </button>
+    @endauth
 
     <div id="postModal" class="fixed inset-0 z-[80] hidden" role="dialog" aria-modal="true" aria-labelledby="postModalTitle">
         <div id="postModalBackdrop" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity opacity-0" onclick="togglePostModal()" aria-hidden="true"></div>
