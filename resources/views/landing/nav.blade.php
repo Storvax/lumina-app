@@ -7,11 +7,19 @@
         </a>
 
         <div class="hidden md:flex items-center gap-6 text-sm font-medium">
-            <a href="#inicio" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Início</a>
-            <a href="#calma" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Zona Calma</a>
-            <a href="#comunidade" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Comunidade</a>
-            <a href="#forum" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Fórum</a>
-            <a href="#biblioteca" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Biblioteca</a>
+            @auth
+                <a href="{{ route('dashboard') }}" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Dashboard</a>
+                <a href="{{ route('forum.index') }}" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Mural</a>
+                <a href="{{ route('rooms.index') }}" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Fogueira</a>
+                <a href="{{ route('diary.index') }}" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Diário</a>
+                <a href="{{ route('calm.index') }}" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Zona Calma</a>
+            @else
+                <a href="#inicio" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Início</a>
+                <a href="#calma" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Zona Calma</a>
+                <a href="#comunidade" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Comunidade</a>
+                <a href="#forum" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Fórum</a>
+                <a href="#biblioteca" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Biblioteca</a>
+            @endauth
         </div>
 
         <div class="flex items-center gap-1 sm:gap-2 md:gap-3">
@@ -22,11 +30,12 @@
                 <i id="theme-toggle-light-icon" class="ri-sun-line hidden text-base sm:text-lg text-amber-400"></i>
             </button>
 
-            {{-- Utilizadores autenticados são redirecionados para o dashboard pelo HomeController --}}
-            @guest
+            @auth
+                <a href="{{ route('profile.show') }}" class="hidden md:flex text-sm font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-slate-800 px-4 py-2 rounded-full transition-colors">Perfil</a>
+            @else
                 <a href="{{ route('login') }}" class="hidden md:flex text-sm font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-slate-800 px-4 py-2 rounded-full transition-colors">Iniciar sessão</a>
                 <a href="{{ route('register') }}" class="hidden md:flex text-sm font-bold bg-primary-500 hover:bg-primary-600 text-white px-5 py-2 rounded-full transition-colors shadow-sm">Criar conta</a>
-            @endguest
+            @endauth
 
             <button class="bg-white dark:bg-slate-800 border border-rose-100 dark:border-rose-900/30 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:border-rose-200 px-2 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm shrink-0" onclick="document.getElementById('sosModal').classList.remove('hidden')">
                 <span class="relative flex h-2 w-2 shrink-0">
@@ -50,14 +59,26 @@
          style="top: calc(100% + 4px);"
          role="dialog" aria-label="Menu de navegação">
         <div class="flex flex-col gap-0.5">
-            <a href="#inicio"     class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Início</a>
-            <a href="#calma"      class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Zona Calma</a>
-            <a href="#comunidade" class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Comunidade</a>
-            <a href="#forum"      class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Fórum</a>
-            <a href="#biblioteca" class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Biblioteca</a>
+            @auth
+                <a href="{{ route('dashboard') }}"  class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Dashboard</a>
+                <a href="{{ route('forum.index') }}" class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Mural</a>
+                <a href="{{ route('rooms.index') }}" class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Fogueira</a>
+                <a href="{{ route('diary.index') }}" class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Diário</a>
+                <a href="{{ route('calm.index') }}"  class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Zona Calma</a>
+            @else
+                <a href="#inicio"     class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Início</a>
+                <a href="#calma"      class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Zona Calma</a>
+                <a href="#comunidade" class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Comunidade</a>
+                <a href="#forum"      class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Fórum</a>
+                <a href="#biblioteca" class="mobile-link py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-600 transition-colors">Biblioteca</a>
+            @endauth
         </div>
         <hr class="border-slate-100 dark:border-slate-800 my-3 sm:my-4">
-        @guest
+        @auth
+            <a href="{{ route('profile.show') }}" class="text-center w-full py-2.5 sm:py-3 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold transition-colors text-sm sm:text-base">
+                O meu Perfil
+            </a>
+        @else
             <div class="flex flex-col gap-2 sm:gap-3">
                 <a href="{{ route('register') }}" class="text-center w-full py-2.5 sm:py-3 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold transition-colors text-sm sm:text-base">
                     Criar conta gratuita
@@ -66,6 +87,6 @@
                     Iniciar sessão
                 </a>
             </div>
-        @endguest
+        @endauth
     </div>
 </nav>
