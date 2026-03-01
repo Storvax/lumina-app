@@ -61,6 +61,9 @@ class DashboardController extends Controller
         // Frases de encorajamento rotativas e nao repetitivas
         $encouragement = $this->getEncouragementPhrase($user, $progressData);
 
+        // Calendário emocional: mensagem contextual se a data de hoje for relevante
+        $emotionalDate = config('emotional-calendar.' . now()->format('m-d'));
+
         return view('dashboard', compact(
             'dailyMissions',
             'progressData',
@@ -68,7 +71,8 @@ class DashboardController extends Controller
             'pendingMilestone',
             'emotionalTags',
             'encouragement',
-            'todayLog'
+            'todayLog',
+            'emotionalDate'
         ));
     }
 

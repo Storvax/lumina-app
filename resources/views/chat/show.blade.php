@@ -22,8 +22,34 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+    @php
+        /*
+         * GAP-11: Mapa de temas por cor de sala.
+         * Usa classes Tailwind pré-compiladas em vez de interpolação
+         * dinâmica para garantir que o PurgeCSS não as remove.
+         */
+        $roomTheme = match($room->color ?? 'indigo') {
+            'red'    => ['accent' => '#ef4444', 'light' => '#fef2f2', 'border' => '#fecaca', 'dot' => 'rgb(239, 68, 68)'],
+            'orange' => ['accent' => '#f97316', 'light' => '#fff7ed', 'border' => '#fed7aa', 'dot' => 'rgb(249, 115, 22)'],
+            'amber'  => ['accent' => '#f59e0b', 'light' => '#fffbeb', 'border' => '#fde68a', 'dot' => 'rgb(245, 158, 11)'],
+            'teal'   => ['accent' => '#14b8a6', 'light' => '#f0fdfa', 'border' => '#99f6e4', 'dot' => 'rgb(20, 184, 166)'],
+            'blue'   => ['accent' => '#3b82f6', 'light' => '#eff6ff', 'border' => '#bfdbfe', 'dot' => 'rgb(59, 130, 246)'],
+            'violet' => ['accent' => '#8b5cf6', 'light' => '#f5f3ff', 'border' => '#ddd6fe', 'dot' => 'rgb(139, 92, 246)'],
+            'rose'   => ['accent' => '#f43f5e', 'light' => '#fff1f2', 'border' => '#fecdd3', 'dot' => 'rgb(244, 63, 94)'],
+            'emerald'=> ['accent' => '#10b981', 'light' => '#ecfdf5', 'border' => '#a7f3d0', 'dot' => 'rgb(16, 185, 129)'],
+            default  => ['accent' => '#6366f1', 'light' => '#eef2ff', 'border' => '#c7d2fe', 'dot' => 'rgb(99, 102, 241)'],
+        };
+    @endphp
+
     <style>
-        body { background-color: #f0f4f8; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 24px 24px; }
+        :root {
+            --room-accent: {{ $roomTheme['accent'] }};
+            --room-light: {{ $roomTheme['light'] }};
+            --room-border: {{ $roomTheme['border'] }};
+            --room-dot: {{ $roomTheme['dot'] }};
+        }
+        body { background-color: {{ $roomTheme['light'] }}; background-image: radial-gradient({{ $roomTheme['border'] }} 1px, transparent 1px); background-size: 24px 24px; }
+        .glass-panel { border-bottom-color: {{ $roomTheme['border'] }}; }
         .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(226, 232, 240, 0.8); }
         .blur-content { filter: blur(5px); user-select: none; cursor: pointer; transition: 0.3s; }
         .sensitive-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.7); border-radius: 1rem; cursor: pointer; z-index: 10; backdrop-filter: blur(4px); }

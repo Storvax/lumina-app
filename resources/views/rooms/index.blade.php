@@ -9,6 +9,16 @@
          x-data="liveRooms(@json($rooms->mapWithKeys(fn($r) => [(string) $r->id => $initialStats->get($r->id, 0)])))"
          x-init="initPolling()">
         
+        <div class="max-w-7xl mx-auto px-6 mb-4">
+            <x-emotional-breadcrumb :items="[['label' => 'A Fogueira']]" />
+            <x-contextual-tip
+                feature="rooms"
+                title="Salas de Apoio"
+                description="Cada sala tem um tema diferente. Entra, ouve ou partilha — ao teu ritmo."
+                icon="ri-group-line"
+            />
+        </div>
+
         <div class="max-w-7xl mx-auto px-6 mb-16 text-center animate-fade-up">
             <div class="inline-flex items-center gap-2 py-1 px-3 rounded-full bg-white/80 dark:bg-slate-800/80 border border-orange-100 dark:border-orange-900/50 shadow-sm backdrop-blur-md mb-6">
                 <span class="relative flex h-2 w-2">

@@ -51,7 +51,16 @@
     </div>
 
     <div class="max-w-7xl mx-auto px-6 py-10 pt-32">
-        
+
+        <x-emotional-breadcrumb :items="[['label' => 'Diário Emocional']]" />
+
+        <x-contextual-tip
+            feature="diary"
+            title="O Teu Espaço Seguro"
+            description="Escreve livremente — ninguém mais lê. Podes ditar por voz com o botão do microfone."
+            icon="ri-book-read-line"
+        />
+
         <div class="flex flex-col lg:flex-row justify-between items-end gap-8 mb-12 animate-fade-up">
             
             <div class="w-full lg:w-1/2 text-left">
