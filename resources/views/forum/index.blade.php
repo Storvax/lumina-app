@@ -21,6 +21,9 @@
     </x-slot>
 
     <section class="relative pt-20 pb-12 overflow-hidden text-center">
+        <div class="max-w-4xl mx-auto px-6 text-left mb-2">
+            <x-emotional-breadcrumb :items="[['label' => 'Mural da Esperança']]" />
+        </div>
         <div class="max-w-4xl mx-auto px-6 animate-fade-up">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 border border-white text-indigo-600 text-xs font-bold uppercase tracking-wider shadow-sm backdrop-blur-sm mb-6" aria-hidden="true">
                 🌻 {{ __('Comunidade') }}
