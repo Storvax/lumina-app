@@ -80,7 +80,7 @@
 
                         <div class="flex items-center gap-6 mb-8">
                             <div class="w-20 h-20 rounded-full bg-indigo-50 border-2 border-indigo-100 p-1 shrink-0">
-                                <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $user->name }}" class="w-full h-full rounded-full object-cover">
+                                <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $user->name }}" class="w-full h-full rounded-full object-cover" loading="lazy" alt="Avatar de {{ $user->name }}">
                             </div>
                             <div>
                                 <h3 class="font-bold text-lg text-slate-800">Foto de Perfil</h3>

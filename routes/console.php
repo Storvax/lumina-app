@@ -27,3 +27,6 @@ Schedule::command('lumina:purge-data')->dailyAt('03:00');
 // Detecção de desligamento progressivo — diariamente às 11h (UTC)
 // Notifica utilizadores inactivos há 3+ dias com mensagem calorosa (max 1/semana)
 Schedule::command('lumina:detect-disengagement')->dailyAt('11:00');
+
+// Temperatura comunitária — calcula o índice emocional a cada hora
+Schedule::command('lumina:community-temperature')->hourly();

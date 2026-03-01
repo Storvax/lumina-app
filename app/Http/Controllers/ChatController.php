@@ -75,15 +75,16 @@ class ChatController extends Controller
             ->pluck('target_user_id')
             ->toArray();
 
-        // 3. Carregar Mensagens (Com relações necessárias para UI)
-        $messages = Message::with(['user', 'reactions', 'replyTo.user', 'reads'])
+        // 3. Carregar Mensagens (Com cursor para "carregar mais")
+        $messageCursor = Message::with(['user', 'reactions', 'replyTo.user', 'reads'])
             ->where('room_id', $room->id)
             ->where('created_at', '>=', now()->subHours(24))
             ->latest()
-            ->take(50)
-            ->get()
-            ->reverse()
-            ->values();
+            ->cursorPaginate(50);
+
+        $messages = $messageCursor->getCollection()->reverse()->values();
+        $olderCursor = $messageCursor->nextCursor()?->encode();
+        $hasOlderMessages = $messageCursor->hasMorePages();
 
         // 4. Dados para Painel de Moderação
         $modStats = [];
@@ -111,7 +112,7 @@ class ChatController extends Controller
         // Sidebar: apenas salas públicas (exclui salas privadas de buddy sessions).
         $allRooms = Cache::remember('public_rooms', 300, fn() => Room::where('is_private', false)->where('is_active', true)->get());
 
-        return view('chat.show', compact('room', 'messages', 'allRooms', 'followingIds', 'modStats', 'modLogs'));
+        return view('chat.show', compact('room', 'messages', 'allRooms', 'followingIds', 'modStats', 'modLogs', 'olderCursor', 'hasOlderMessages'));
     }
 
     /**

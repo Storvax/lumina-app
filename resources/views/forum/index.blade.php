@@ -311,26 +311,26 @@
 
                 try {
                     const response = await axios.get(`{{ route('forum.index') }}?tag=${tag}`);
-                    
-                    // Limpar grelha antiga antes de injetar a nova (Impede quebra do Masonry)
+
                     grid.innerHTML = '';
-                    
+
                     setTimeout(() => {
-                        grid.innerHTML = response.data;
+                        grid.innerHTML = response.data.html;
                         grid.style.opacity = '1';
-                        
-                        // Atualiza o URL da barra de navegação sem reload
+
                         const newUrl = tag === 'all' ? '{{ route('forum.index') }}' : `{{ route('forum.index') }}?tag=${tag}`;
                         window.history.pushState(null, '', newUrl);
-                        
-                        // Reset do Scroll Infinito
+
+                        // Reset cursor e scroll infinito
+                        nextCursor = response.data.nextCursor;
+                        hasMore = response.data.hasMore;
                         if (typeof window.resetInfiniteScroll === 'function') {
                             window.resetInfiniteScroll();
                         }
                     }, 50);
 
-                } catch (error) { 
-                    console.error("Erro ao aplicar filtros:", error); 
+                } catch (error) {
+                    console.error("Erro ao aplicar filtros:", error);
                     grid.style.opacity = '1';
                 }
             };
@@ -359,7 +359,9 @@
                     const urlParams = new URLSearchParams(window.location.search);
                     const currentTag = urlParams.get('tag') || 'all';
                     const response = await axios.get(`{{ route('forum.index') }}?tag=${currentTag}&search=${query}`);
-                    grid.innerHTML = response.data;
+                    grid.innerHTML = response.data.html;
+                    nextCursor = response.data.nextCursor;
+                    hasMore = response.data.hasMore;
                     const newUrl = `{{ route('forum.index') }}?tag=${currentTag}&search=${query}`;
                     window.history.pushState(null, '', newUrl);
                 } catch (error) {} finally {
@@ -429,28 +431,30 @@
                 } catch (error) {}
             };
 
-            let nextPage = 2;
-            let lastPage = {{ $posts->lastPage() ?? 1 }};
+            let nextCursor = @json($posts->nextCursor()?->encode());
+            let hasMore = {{ $posts->hasMorePages() ? 'true' : 'false' }};
             let isLoading = false;
             const sentinel = document.getElementById('infinite-scroll-sentinel');
             const observer = new IntersectionObserver(async (entries) => {
-                if (entries[0].isIntersecting && !isLoading && nextPage <= lastPage) {
+                if (entries[0].isIntersecting && !isLoading && hasMore && nextCursor) {
                     isLoading = true; sentinel.classList.remove('opacity-0');
                     try {
                         const params = new URLSearchParams(window.location.search);
-                        params.set('page', nextPage);
+                        params.set('cursor', nextCursor);
                         const response = await axios.get(`{{ route('forum.index') }}?${params.toString()}`);
-                        document.getElementById('posts-grid').insertAdjacentHTML('beforeend', response.data);
-                        nextPage++;
-                        if (nextPage > lastPage) { sentinel.innerHTML = '<span class="text-slate-400 text-xs">Chegaste ao fim. 🌱</span>'; setTimeout(() => sentinel.classList.add('opacity-0'), 2000); }
-                    } catch (error) {} finally { isLoading = false; if(nextPage <= lastPage) sentinel.classList.add('opacity-0'); }
+                        document.getElementById('posts-grid').insertAdjacentHTML('beforeend', response.data.html);
+                        nextCursor = response.data.nextCursor;
+                        hasMore = response.data.hasMore;
+                        if (!hasMore) { sentinel.innerHTML = '<span class="text-slate-400 text-xs">Chegaste ao fim. 🌱</span>'; setTimeout(() => sentinel.classList.add('opacity-0'), 2000); }
+                    } catch (error) {} finally { isLoading = false; if(hasMore) sentinel.classList.add('opacity-0'); }
                 }
             }, { rootMargin: '200px' });
-            
+
             if (sentinel) observer.observe(sentinel);
 
             window.resetInfiniteScroll = function() {
-                nextPage = 2;
+                nextCursor = null;
+                hasMore = true;
                 if(sentinel) {
                     sentinel.innerHTML = '<div class="flex flex-col items-center gap-2 text-indigo-500"><i class="ri-loader-4-line text-2xl animate-spin"></i><span class="text-xs font-bold uppercase tracking-widest">A carregar mais histórias...</span></div>';
                     observer.observe(sentinel);

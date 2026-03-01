@@ -34,12 +34,15 @@ class User extends Authenticatable implements FilamentUser
         'diary_retention_days',
         'a11y_dyslexic_font',
         'a11y_reduced_motion',
-        'a11y_text_size'
+        'a11y_text_size',
+        'public_key',
+        'encrypted_private_key',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'encrypted_private_key',
     ];
 
     protected function casts(): array

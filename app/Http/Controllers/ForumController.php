@@ -53,13 +53,15 @@ class ForumController extends Controller
             $query->where('tag', $request->tag);
         }
 
-        $posts = $query->paginate(20)->appends($request->query());
+        $posts = $query->cursorPaginate(20);
 
-        // BUG CORRIGIDO: Se for um pedido AJAX (filtros ou scroll infinito), 
-        // devolvemos APENAS a grelha de cartões, sem a Navbar nem o Layout.
-        // Adicionámos os headers `X-Requested-With` no Axios para garantir que o Laravel deteta o AJAX.
+        // Para pedidos AJAX (filtros ou scroll infinito), devolvemos HTML + cursor metadata.
         if ($request->ajax() || $request->wantsJson()) {
-            return view('forum.partials.posts', compact('posts'))->render();
+            return response()->json([
+                'html' => view('forum.partials.posts', compact('posts'))->render(),
+                'nextCursor' => $posts->nextCursor()?->encode(),
+                'hasMore' => $posts->hasMorePages(),
+            ]);
         }
 
         return view('forum.index', compact('posts'));
