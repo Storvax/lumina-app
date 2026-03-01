@@ -65,7 +65,7 @@ class Post extends Model
     }
 
     // Helper: O user atual subscreveu?
-    public function isSubscribedBy(User $user = null)
+    public function isSubscribedBy(?User $user = null)
     {
         if (!$user) return false;
         return $this->subscribers()->where('user_id', $user->id)->exists();
