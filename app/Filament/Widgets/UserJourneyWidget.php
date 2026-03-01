@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class UserJourneyWidget extends Widget
 {
-    protected static string $view = 'filament.widgets.user-journey';
+    protected string $view = 'filament.widgets.user-journey';
     protected int | string | array $columnSpan = 'full';
     protected static ?int $sort = 3;
 

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Cache;
 
 class CommunityTemperatureWidget extends Widget
 {
-    protected static string $view = 'filament.widgets.community-temperature';
+    protected string $view = 'filament.widgets.community-temperature';
     protected int | string | array $columnSpan = 1;
     protected static ?int $sort = 1;
 
