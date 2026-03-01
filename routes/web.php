@@ -17,6 +17,7 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\SelfAssessmentController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\WallController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +26,7 @@ use App\Http\Controllers\PushSubscriptionController;
 */
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/offline', fn () => view('offline'))->name('offline');
 Route::get('/pesquisar', [SearchController::class, 'index'])->name('search.index');
 Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
 
@@ -195,6 +197,16 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
         Route::get('/resultado/{assessment}', 'show')->name('result');
         Route::get('/{type}', 'create')->name('create');
         Route::post('/{type}', 'store')->name('store');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | The Wall (Galeria Artística)
+    |--------------------------------------------------------------------------
+    */
+    Route::controller(WallController::class)->prefix('the-wall')->name('wall.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->middleware('throttle:content-creation')->name('store');
     });
 
     /*

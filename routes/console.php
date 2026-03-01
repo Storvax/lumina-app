@@ -23,3 +23,7 @@ Schedule::command('lumina:weekly-summary')->weeklyOn(0, '10:00');
 // Purga de dados com retenção expirada — corre diariamente às 03h (UTC)
 // Processa em chunks para não bloquear o servidor; respeita a configuração de cada utilizador
 Schedule::command('lumina:purge-data')->dailyAt('03:00');
+
+// Detecção de desligamento progressivo — diariamente às 11h (UTC)
+// Notifica utilizadores inactivos há 3+ dias com mensagem calorosa (max 1/semana)
+Schedule::command('lumina:detect-disengagement')->dailyAt('11:00');

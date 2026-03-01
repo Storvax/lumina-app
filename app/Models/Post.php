@@ -19,8 +19,10 @@ class Post extends Model
         'tag',
         'is_sensitive',
         'support_count',
-        'is_pinned', 
+        'is_pinned',
         'is_locked',
+        'risk_level',
+        'sentiment',
     ];
 
     // Relação com o Autor
