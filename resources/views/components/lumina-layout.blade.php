@@ -177,12 +177,20 @@
 
                     @auth
                         @if(Auth::user()->safety_plan)
-                            {{-- Acesso rápido ao plano de segurança pessoal, visível apenas quando o plano existe --}}
+                            {{-- Acesso rápido ao plano de segurança pessoal --}}
                             <a href="{{ route('calm.crisis') }}"
                                title="Ver o meu plano de segurança"
                                class="hidden md:flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-100 px-3 py-2 rounded-full text-xs font-bold transition-all">
                                 <i class="ri-shield-heart-line text-base"></i>
                                 <span>O meu plano</span>
+                            </a>
+                        @else
+                            {{-- Incentivo para criar o plano de segurança --}}
+                            <a href="{{ route('profile.edit') }}#safety"
+                               title="Criar o meu plano de segurança"
+                               class="hidden md:flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 px-3 py-2 rounded-full text-xs font-bold transition-all">
+                                <i class="ri-shield-heart-line text-base"></i>
+                                <span>Criar plano</span>
                             </a>
                         @endif
                     @endauth
@@ -210,6 +218,15 @@
             $tags = Auth::user()->emotional_tags ?? [];
             $needsCalm = in_array('Ansiedade', $tags) || in_array('Sobrecarregado(a)', $tags);
         @endphp
+
+        {{-- Botão flutuante mobile para acesso rápido ao plano de segurança --}}
+        @if(Auth::user()->safety_plan)
+            <a href="{{ route('calm.crisis') }}"
+               class="md:hidden fixed bottom-[86px] right-4 z-50 w-11 h-11 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-600/30 flex items-center justify-center active:scale-95 transition-transform"
+               title="O meu plano de segurança">
+                <i class="ri-shield-heart-line text-xl"></i>
+            </a>
+        @endif
 
         <div class="md:hidden fixed bottom-0 left-0 w-full z-40 bg-white/90 backdrop-blur-xl border-t border-slate-100 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)] transition-all">
             <div class="flex justify-around items-center h-[70px] px-2 pb-2">

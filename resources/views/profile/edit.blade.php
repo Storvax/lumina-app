@@ -21,7 +21,7 @@
         </style>
     </x-slot>
 
-    <div class="max-w-7xl mx-auto px-6 py-10 pt-32" x-data="{ currentTab: 'general' }">
+    <div class="max-w-7xl mx-auto px-6 py-10 pt-32" x-data="{ currentTab: window.location.hash === '#safety' ? 'safety' : (window.location.hash === '#notifications' ? 'notifications' : 'general') }">
         
         <div class="mb-10">
             <h1 class="text-3xl font-bold text-slate-900">Definições da Conta</h1>
