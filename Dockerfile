@@ -1,6 +1,6 @@
 FROM php:8.4-fpm
 
-# Dependências do sistema
+# Dependências do sistema (adicionado libpq-dev para suportar PostgreSQL)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     sqlite3 \
     libsqlite3-dev \
+    libpq-dev \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
@@ -18,6 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-install \
         pdo \
         pdo_sqlite \
+        pdo_pgsql \
+        pgsql \
         mbstring \
         exif \
         pcntl \
@@ -50,7 +53,7 @@ WORKDIR /var/www/html
 
 COPY . .
 
-# Criar directorios necessários para o build
+# Criar diretórios necessários para o build
 RUN mkdir -p bootstrap/cache \
         storage/framework/sessions \
         storage/framework/views \
