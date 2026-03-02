@@ -85,7 +85,7 @@
             .joining((user) => { addUserToSidebar(user); updateCounters(1, true); if(followingIds.includes(user.id)) showToast(`👋 ${user.name} entrou!`, true); })
             .leaving((user) => { removeUserFromSidebar(user); updateCounters(-1, true); })
             
-            .listen('MessageSent', (e) => {
+            .listen('.App\\Events\\MessageSent', (e) => {
                 if(isDnd) return;
                 
                 // Verificação de Segurança (Evita o erro 'undefined')
