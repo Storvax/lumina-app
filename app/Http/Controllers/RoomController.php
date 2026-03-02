@@ -11,7 +11,7 @@ class RoomController extends Controller
     public function index(Request $request)
     {
         // Excluir salas privadas (buddy sessions) da listagem pública.
-        $rooms = Room::where('is_private', false)->get();
+        $rooms = Room::where('is_private', false)->where('is_active', true)->get();
 
         // Endpoint invisível para o "Live Polling" do Frontend
         if ($request->ajax() || $request->wantsJson()) {

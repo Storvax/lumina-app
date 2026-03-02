@@ -14,25 +14,28 @@
         .masonry-item { break-inside: avoid; margin-bottom: 1.5rem; }
     </x-slot>
 
-    <x-slot name="actionButton">
-        <button onclick="togglePostModal()" aria-label="{{ __('Escrever nova publicação') }}" class="hidden md:flex bg-slate-900 text-white hover:bg-slate-800 px-5 py-2.5 rounded-full text-sm font-bold items-center gap-2 transition-all shadow-lg shadow-slate-900/20 active:scale-95 focus-visible:ring-4 focus-visible:ring-indigo-500 focus-visible:outline-none">
-            <i class="ri-quill-pen-line" aria-hidden="true"></i> {{ __('Escrever') }}
-        </button>
-    </x-slot>
-
     <section class="relative pt-20 pb-12 overflow-hidden text-center">
+        <div class="max-w-4xl mx-auto px-6 text-left mb-2">
+            <x-emotional-breadcrumb :items="[['label' => 'Mural da Esperança']]" />
+        </div>
         <div class="max-w-4xl mx-auto px-6 animate-fade-up">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 border border-white text-indigo-600 text-xs font-bold uppercase tracking-wider shadow-sm backdrop-blur-sm mb-6" aria-hidden="true">
                 🌻 {{ __('Comunidade') }}
             </div>
-            
+
             <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
                 {{ __('O Mural da') }} <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-violet-600">{{ __('Esperança.') }}</span>
             </h1>
-            
+
             <p class="text-lg text-slate-500 leading-relaxed max-w-xl mx-auto mb-8">
                 {{ __('Partilha a tua história, deixa um desabafo ou acende uma luz. As tuas palavras podem ser o abrigo de alguém.') }}
             </p>
+
+            @auth
+                <button onclick="togglePostModal()" class="hidden md:inline-flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 px-6 py-3 rounded-full text-sm font-bold transition-all shadow-lg shadow-slate-900/20 active:scale-95 focus-visible:ring-4 focus-visible:ring-indigo-500 focus-visible:outline-none mb-8">
+                    <i class="ri-quill-pen-line" aria-hidden="true"></i> {{ __('Escrever no Mural') }}
+                </button>
+            @endauth
 
             <div class="max-w-md mx-auto mb-8 relative group z-30">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -69,6 +72,15 @@
             </div>
         </div>
     </main>
+
+    {{-- FAB mobile: acesso rápido à criação de post (acima da bottom bar) --}}
+    @auth
+        <button onclick="togglePostModal()"
+                aria-label="{{ __('Escrever nova publicação') }}"
+                class="md:hidden fixed bottom-24 right-4 z-50 w-14 h-14 bg-slate-900 text-white rounded-full shadow-xl shadow-slate-900/30 flex items-center justify-center active:scale-90 transition-transform">
+            <i class="ri-quill-pen-line text-xl" aria-hidden="true"></i>
+        </button>
+    @endauth
 
     <div id="postModal" class="fixed inset-0 z-[80] hidden" role="dialog" aria-modal="true" aria-labelledby="postModalTitle">
         <div id="postModalBackdrop" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity opacity-0" onclick="togglePostModal()" aria-hidden="true"></div>
@@ -308,26 +320,26 @@
 
                 try {
                     const response = await axios.get(`{{ route('forum.index') }}?tag=${tag}`);
-                    
-                    // Limpar grelha antiga antes de injetar a nova (Impede quebra do Masonry)
+
                     grid.innerHTML = '';
-                    
+
                     setTimeout(() => {
-                        grid.innerHTML = response.data;
+                        grid.innerHTML = response.data.html;
                         grid.style.opacity = '1';
-                        
-                        // Atualiza o URL da barra de navegação sem reload
+
                         const newUrl = tag === 'all' ? '{{ route('forum.index') }}' : `{{ route('forum.index') }}?tag=${tag}`;
                         window.history.pushState(null, '', newUrl);
-                        
-                        // Reset do Scroll Infinito
+
+                        // Reset cursor e scroll infinito
+                        nextCursor = response.data.nextCursor;
+                        hasMore = response.data.hasMore;
                         if (typeof window.resetInfiniteScroll === 'function') {
                             window.resetInfiniteScroll();
                         }
                     }, 50);
 
-                } catch (error) { 
-                    console.error("Erro ao aplicar filtros:", error); 
+                } catch (error) {
+                    console.error("Erro ao aplicar filtros:", error);
                     grid.style.opacity = '1';
                 }
             };
@@ -356,7 +368,9 @@
                     const urlParams = new URLSearchParams(window.location.search);
                     const currentTag = urlParams.get('tag') || 'all';
                     const response = await axios.get(`{{ route('forum.index') }}?tag=${currentTag}&search=${query}`);
-                    grid.innerHTML = response.data;
+                    grid.innerHTML = response.data.html;
+                    nextCursor = response.data.nextCursor;
+                    hasMore = response.data.hasMore;
                     const newUrl = `{{ route('forum.index') }}?tag=${currentTag}&search=${query}`;
                     window.history.pushState(null, '', newUrl);
                 } catch (error) {} finally {
@@ -426,28 +440,30 @@
                 } catch (error) {}
             };
 
-            let nextPage = 2;
-            let lastPage = {{ $posts->lastPage() ?? 1 }};
+            let nextCursor = @json($posts->nextCursor()?->encode());
+            let hasMore = {{ $posts->hasMorePages() ? 'true' : 'false' }};
             let isLoading = false;
             const sentinel = document.getElementById('infinite-scroll-sentinel');
             const observer = new IntersectionObserver(async (entries) => {
-                if (entries[0].isIntersecting && !isLoading && nextPage <= lastPage) {
+                if (entries[0].isIntersecting && !isLoading && hasMore && nextCursor) {
                     isLoading = true; sentinel.classList.remove('opacity-0');
                     try {
                         const params = new URLSearchParams(window.location.search);
-                        params.set('page', nextPage);
+                        params.set('cursor', nextCursor);
                         const response = await axios.get(`{{ route('forum.index') }}?${params.toString()}`);
-                        document.getElementById('posts-grid').insertAdjacentHTML('beforeend', response.data);
-                        nextPage++;
-                        if (nextPage > lastPage) { sentinel.innerHTML = '<span class="text-slate-400 text-xs">Chegaste ao fim. 🌱</span>'; setTimeout(() => sentinel.classList.add('opacity-0'), 2000); }
-                    } catch (error) {} finally { isLoading = false; if(nextPage <= lastPage) sentinel.classList.add('opacity-0'); }
+                        document.getElementById('posts-grid').insertAdjacentHTML('beforeend', response.data.html);
+                        nextCursor = response.data.nextCursor;
+                        hasMore = response.data.hasMore;
+                        if (!hasMore) { sentinel.innerHTML = '<span class="text-slate-400 text-xs">Chegaste ao fim. 🌱</span>'; setTimeout(() => sentinel.classList.add('opacity-0'), 2000); }
+                    } catch (error) {} finally { isLoading = false; if(hasMore) sentinel.classList.add('opacity-0'); }
                 }
             }, { rootMargin: '200px' });
-            
+
             if (sentinel) observer.observe(sentinel);
 
             window.resetInfiniteScroll = function() {
-                nextPage = 2;
+                nextCursor = null;
+                hasMore = true;
                 if(sentinel) {
                     sentinel.innerHTML = '<div class="flex flex-col items-center gap-2 text-indigo-500"><i class="ri-loader-4-line text-2xl animate-spin"></i><span class="text-xs font-bold uppercase tracking-widest">A carregar mais histórias...</span></div>';
                     observer.observe(sentinel);

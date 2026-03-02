@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 use Carbon\Carbon;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes, HasPushSubscriptions;
 
     protected $fillable = [
         'name',
@@ -33,12 +34,15 @@ class User extends Authenticatable implements FilamentUser
         'diary_retention_days',
         'a11y_dyslexic_font',
         'a11y_reduced_motion',
-        'a11y_text_size'
+        'a11y_text_size',
+        'public_key',
+        'encrypted_private_key',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'encrypted_private_key',
     ];
 
     protected function casts(): array

@@ -1,18 +1,31 @@
 <x-lumina-layout title="Dashboard | Lumina">
     @php
         /*
-         * Mapeamento psicológico de gradiente de fundo com suporte completo a dark mode.
-         * O gradiente adapta-se às tags emocionais do utilizador, criando um ambiente
-         * visualmente coerente com o seu estado interior declarado.
+         * Gradiente de fundo baseado no mood_level (1-5) do registo de hoje.
+         * Mapa cromático: 1 (cinza-azulado) → 2 (azul frio) → 3 (neutro) → 4 (verde) → 5 (amarelo-quente).
+         * Fallback para tags emocionais quando não há registo.
          */
-        $primaryMood = strtolower($emotionalTags[0] ?? 'neutro');
+        $moodLevel = $progressData['todayMoodLevel'] ?? null;
 
-        $moodGradient = match(true) {
-            str_contains($primaryMood, 'ansiedade')      => 'from-amber-50/80 via-orange-50/30 to-transparent dark:from-amber-900/20 dark:via-orange-900/10',
-            str_contains($primaryMood, 'tristeza')       => 'from-emerald-50/80 via-teal-50/30 to-transparent dark:from-emerald-900/20 dark:via-teal-900/10',
-            str_contains($primaryMood, 'sobrecarregado') => 'from-blue-50/80 via-indigo-50/30 to-transparent dark:from-blue-900/20 dark:via-indigo-900/10',
-            default                                      => 'from-indigo-50/50 via-violet-50/20 to-transparent dark:from-indigo-900/20 dark:via-violet-900/10',
+        $moodGradient = match($moodLevel) {
+            1 => 'from-slate-100/80 via-blue-50/40 to-transparent dark:from-slate-800/30 dark:via-blue-900/15',
+            2 => 'from-blue-50/80 via-indigo-50/30 to-transparent dark:from-blue-900/20 dark:via-indigo-900/10',
+            3 => 'from-indigo-50/50 via-violet-50/20 to-transparent dark:from-indigo-900/20 dark:via-violet-900/10',
+            4 => 'from-emerald-50/80 via-teal-50/30 to-transparent dark:from-emerald-900/20 dark:via-teal-900/10',
+            5 => 'from-amber-50/80 via-yellow-50/30 to-transparent dark:from-amber-900/20 dark:via-yellow-900/10',
+            default => null,
         };
+
+        // Fallback: se não há mood_level, usar tags emocionais
+        if (!$moodGradient) {
+            $primaryMood = strtolower($emotionalTags[0] ?? 'neutro');
+            $moodGradient = match(true) {
+                str_contains($primaryMood, 'ansiedade')      => 'from-amber-50/80 via-orange-50/30 to-transparent dark:from-amber-900/20 dark:via-orange-900/10',
+                str_contains($primaryMood, 'tristeza')       => 'from-emerald-50/80 via-teal-50/30 to-transparent dark:from-emerald-900/20 dark:via-teal-900/10',
+                str_contains($primaryMood, 'sobrecarregado') => 'from-blue-50/80 via-indigo-50/30 to-transparent dark:from-blue-900/20 dark:via-indigo-900/10',
+                default                                      => 'from-indigo-50/50 via-violet-50/20 to-transparent dark:from-indigo-900/20 dark:via-violet-900/10',
+            };
+        }
 
         /*
          * Configuração visual do nível de fogueira do utilizador.
@@ -130,6 +143,34 @@
                     <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                         {{ $contextualHint['text'] }}
                     </p>
+                </div>
+            @endif
+
+            {{-- ================================================================
+                 SECÇÃO 3.5: CALENDÁRIO EMOCIONAL PORTUGUÊS
+                 Card contextual em datas com impacto emocional cultural.
+                 ================================================================ --}}
+            @if(!empty($emotionalDate))
+                @php
+                    $dateTypeStyles = match($emotionalDate['type'] ?? 'awareness') {
+                        'grief'       => 'bg-slate-50/80 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700',
+                        'celebration' => 'bg-amber-50/80 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
+                        'family'      => 'bg-rose-50/80 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800',
+                        default       => 'bg-teal-50/80 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800',
+                    };
+                    $dateIconColor = match($emotionalDate['type'] ?? 'awareness') {
+                        'grief'       => 'text-slate-500 dark:text-slate-400',
+                        'celebration' => 'text-amber-500 dark:text-amber-400',
+                        'family'      => 'text-rose-500 dark:text-rose-400',
+                        default       => 'text-teal-500 dark:text-teal-400',
+                    };
+                @endphp
+                <div class="flex items-start gap-4 {{ $dateTypeStyles }} backdrop-blur-sm rounded-2xl px-5 py-4 border">
+                    <i class="{{ $emotionalDate['icon'] }} {{ $dateIconColor }} text-2xl mt-0.5 shrink-0"></i>
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider {{ $dateIconColor }} mb-1">{{ $emotionalDate['title'] }}</p>
+                        <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{{ $emotionalDate['message'] }}</p>
+                    </div>
                 </div>
             @endif
 

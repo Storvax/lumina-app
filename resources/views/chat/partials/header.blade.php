@@ -5,7 +5,10 @@
             <div class="min-w-0 flex flex-col justify-center">
                 <div class="flex items-center gap-2">
                     <h1 class="text-base md:text-xl font-bold text-slate-900 truncate leading-tight">{{ $room->name }}</h1>
-                    <span class="hidden md:flex bg-{{ $room->color }}-100 text-{{ $room->color }}-700 text-[10px] font-bold px-1.5 py-0.5 rounded-md border border-{{ $room->color }}-200 items-center gap-1 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-{{ $room->color }}-500 animate-pulse"></span> LIVE</span>
+                    <span class="hidden md:flex text-[10px] font-bold px-1.5 py-0.5 rounded-md items-center gap-1 shrink-0"
+                          style="background: var(--room-light); color: var(--room-accent); border: 1px solid var(--room-border);">
+                        <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: var(--room-accent);"></span> LIVE
+                    </span>
                 </div>
                 <p class="text-xs text-slate-500 hidden md:block truncate">{{ $room->description }}</p>
             </div>
@@ -30,8 +33,9 @@
     </div>
 
     @if($room->pinned_message)
-        <div class="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800">
-            <i class="ri-pushpin-fill text-amber-500 shrink-0 mt-0.5"></i>
+        <div class="flex items-start gap-2 rounded-xl px-3 py-2 text-xs"
+             style="background: var(--room-light); border: 1px solid var(--room-border); color: var(--room-accent);">
+            <i class="ri-pushpin-fill shrink-0 mt-0.5" style="color: var(--room-accent);"></i>
             <span class="line-clamp-2 leading-relaxed">{{ $room->pinned_message }}</span>
         </div>
     @endif

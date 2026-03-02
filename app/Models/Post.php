@@ -19,8 +19,10 @@ class Post extends Model
         'tag',
         'is_sensitive',
         'support_count',
-        'is_pinned', 
+        'is_pinned',
         'is_locked',
+        'risk_level',
+        'sentiment',
     ];
 
     // Relação com o Autor
@@ -52,14 +54,18 @@ class Post extends Model
         static::addGlobalScope(new ShadowbanScope);
     }
 
-    // Relação: Quem subscreveu este post?
+    public function checkins(): HasMany
+    {
+        return $this->hasMany(PostCheckin::class);
+    }
+
     public function subscribers()
     {
         return $this->belongsToMany(User::class, 'post_subscriptions');
     }
 
     // Helper: O user atual subscreveu?
-    public function isSubscribedBy(User $user = null)
+    public function isSubscribedBy(?User $user = null)
     {
         if (!$user) return false;
         return $this->subscribers()->where('user_id', $user->id)->exists();

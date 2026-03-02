@@ -15,6 +15,10 @@ use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\SelfAssessmentController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\WallController;
+use App\Http\Controllers\CommunityReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +27,9 @@ use App\Http\Controllers\SelfAssessmentController;
 */
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/offline', fn () => view('offline'))->name('offline');
+Route::get('/comunidade/impacto', [CommunityReportController::class, 'index'])->name('community.report');
+Route::get('/pesquisar', [SearchController::class, 'index'])->name('search.index');
 Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
 
 /*
@@ -45,6 +52,8 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
         ->name('users.challenge');
     Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::patch('/perfil/notificacoes', [\App\Http\Controllers\ProfileController::class, 'updateNotificationPrefs'])->name('profile.notifications');
+    Route::post('/push/subscribe', [PushSubscriptionController::class, 'store'])->name('push.subscribe');
+    Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
 
     /*
     |--------------------------------------------------------------------------
@@ -194,6 +203,16 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | The Wall (Galeria Artística)
+    |--------------------------------------------------------------------------
+    */
+    Route::controller(WallController::class)->prefix('the-wall')->name('wall.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->middleware('throttle:content-creation')->name('store');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
     | Zona Calma
     |--------------------------------------------------------------------------
     */
@@ -201,7 +220,8 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/grounding', 'grounding')->name('grounding');
         Route::get('/crise', 'crisis')->name('crisis');
-        
+        Route::get('/sons', fn () => view('calm.sounds'))->name('sounds');
+
         Route::post('/playlist/sugerir', 'suggestSong')->middleware('throttle:suggestions')->name('playlist.suggest');
         Route::post('/playlist/{song}/votar', 'voteSong')->middleware('throttle:suggestions')->name('playlist.vote');
         Route::delete('/playlist/{song}', 'deleteSong')->name('playlist.delete');

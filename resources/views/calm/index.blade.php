@@ -1,7 +1,16 @@
 <x-lumina-layout title="Zona Calma | Lumina">
     <div class="py-12 pt-32">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            
+
+            <x-emotional-breadcrumb :items="[['label' => 'Zona Calma']]" />
+
+            <x-contextual-tip
+                feature="calm-zone"
+                title="Respira Fundo"
+                description="Explora exercícios de respiração, sons ambiente e ferramentas para te acalmar."
+                icon="ri-leaf-line"
+            />
+
             <div class="mb-10 text-center md:text-left">
                 <h1 class="text-3xl md:text-4xl font-black text-slate-800 dark:text-white flex items-center justify-center md:justify-start gap-3">
                     <i class="ri-leaf-line text-emerald-500"></i> O Teu Santuário

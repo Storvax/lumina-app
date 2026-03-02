@@ -4,6 +4,8 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * Notificação recebida quando outro membro da comunidade envia uma "Oferta de Apoio".
@@ -24,9 +26,29 @@ class GentleChallengeReceived extends Notification
     public function via(object $notifiable): array
     {
         if (method_exists($notifiable, 'isInQuietHours') && $notifiable->isInQuietHours()) {
-            return ['database']; 
+            return ['database'];
         }
-        return ['database', 'broadcast'];
+
+        $channels = ['database', 'broadcast'];
+
+        if ($notifiable->pushSubscriptions()->exists()) {
+            $channels[] = WebPushChannel::class;
+        }
+
+        return $channels;
+    }
+
+    /**
+     * Payload enviado ao Service Worker do browser.
+     */
+    public function toWebPush(object $notifiable, Notification $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title('Lumina — Desafio de Bem-estar')
+            ->body("{$this->senderPseudonym} enviou-te um desafio: {$this->missionText}")
+            ->action('Ver', 'view')
+            ->tag('challenge')
+            ->data(['url' => url('/dashboard')]);
     }
 
     public function toArray(object $notifiable): array

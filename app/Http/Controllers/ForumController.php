@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\PostCheckin;
 use App\Models\User;
 use App\Models\PostReaction;
 use App\Models\Comment;
@@ -52,13 +53,15 @@ class ForumController extends Controller
             $query->where('tag', $request->tag);
         }
 
-        $posts = $query->paginate(20)->appends($request->query());
+        $posts = $query->cursorPaginate(20);
 
-        // BUG CORRIGIDO: Se for um pedido AJAX (filtros ou scroll infinito), 
-        // devolvemos APENAS a grelha de cartões, sem a Navbar nem o Layout.
-        // Adicionámos os headers `X-Requested-With` no Axios para garantir que o Laravel deteta o AJAX.
+        // Para pedidos AJAX (filtros ou scroll infinito), devolvemos HTML + cursor metadata.
         if ($request->ajax() || $request->wantsJson()) {
-            return view('forum.partials.posts', compact('posts'))->render();
+            return response()->json([
+                'html' => view('forum.partials.posts', compact('posts'))->render(),
+                'nextCursor' => $posts->nextCursor()?->encode(),
+                'hasMore' => $posts->hasMorePages(),
+            ]);
         }
 
         return view('forum.index', compact('posts'));
@@ -423,15 +426,13 @@ class ForumController extends Controller
             'emotion' => 'required|in:empathy,sadness,strength,neutral',
         ]);
 
-        // updateOrInsert para lidar silenciosamente com check-ins repetidos
-        DB::table('post_checkins')->updateOrInsert(
+        PostCheckin::updateOrCreate(
             ['post_id' => $post->id, 'user_id' => Auth::id()],
             ['emotion' => $request->emotion, 'created_at' => now()]
         );
 
         $response = ['status' => 'ok'];
 
-        // Se o leitor se sentiu triste, sugerimos a Zona Calma em vez de deixá-lo sem apoio
         if ($request->emotion === 'sadness') {
             $response['suggestion'] = [
                 'message' => 'É normal sentires isso. A Zona Calma tem recursos que podem ajudar.',

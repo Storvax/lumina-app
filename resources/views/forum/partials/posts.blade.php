@@ -196,11 +196,17 @@
         </div>
     </article>
 @empty
-    <div class="col-span-full py-20 text-center">
+    {{-- column-span: all garante que o bloco ocupa todas as colunas do layout masonry --}}
+    <div class="py-20 text-center" style="column-span: all;">
         <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300" aria-hidden="true">
             <i class="ri-leaf-line text-4xl"></i>
         </div>
         <h3 class="text-xl font-bold text-slate-700 mb-2">{{ __('Sem histórias por agora') }}</h3>
-        <p class="text-slate-500">{{ __('Sê a primeira pessoa a partilhar e a acender uma luz.') }}</p>
+        <p class="text-slate-500 mb-6">{{ __('Sê a primeira pessoa a partilhar e a acender uma luz.') }}</p>
+        @auth
+            <button onclick="togglePostModal()" class="inline-flex items-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700 px-5 py-2.5 rounded-full text-sm font-bold transition-all active:scale-95 focus-visible:ring-4 focus-visible:ring-indigo-500 focus-visible:outline-none">
+                <i class="ri-quill-pen-line" aria-hidden="true"></i> {{ __('Escrever a primeira história') }}
+            </button>
+        @endauth
     </div>
 @endforelse

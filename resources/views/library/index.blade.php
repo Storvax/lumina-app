@@ -1,7 +1,9 @@
 <x-lumina-layout title="Biblioteca | Lumina">
     <div class="py-12 pt-32">
         <div class="max-w-7xl mx-auto px-6 lg:px-8">
-            
+
+            <x-emotional-breadcrumb :items="[['label' => 'Biblioteca']]" />
+
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-fade-up">
                 <div>
                     <h1 class="text-3xl font-black text-slate-900 dark:text-white">Biblioteca</h1>

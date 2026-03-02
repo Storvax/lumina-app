@@ -9,6 +9,16 @@
          x-data="liveRooms(@json($rooms->mapWithKeys(fn($r) => [(string) $r->id => $initialStats->get($r->id, 0)])))"
          x-init="initPolling()">
         
+        <div class="max-w-7xl mx-auto px-6 mb-4">
+            <x-emotional-breadcrumb :items="[['label' => 'A Fogueira']]" />
+            <x-contextual-tip
+                feature="rooms"
+                title="Salas de Apoio"
+                description="Cada sala tem um tema diferente. Entra, ouve ou partilha — ao teu ritmo."
+                icon="ri-group-line"
+            />
+        </div>
+
         <div class="max-w-7xl mx-auto px-6 mb-16 text-center animate-fade-up">
             <div class="inline-flex items-center gap-2 py-1 px-3 rounded-full bg-white/80 dark:bg-slate-800/80 border border-orange-100 dark:border-orange-900/50 shadow-sm backdrop-blur-md mb-6">
                 <span class="relative flex h-2 w-2">
@@ -77,10 +87,10 @@
                             <div class="flex items-center -space-x-3 group-hover:space-x-[-8px] transition-all duration-300">
                                 <template x-if="stats['{{ $room->id }}'] > 0">
                                     <div class="flex items-center -space-x-3 group-hover:space-x-[-8px] transition-all duration-300">
-                                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $seed }}1&backgroundColor=f8fafc" alt="Membro" class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm relative z-30">
+                                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $seed }}1&backgroundColor=f8fafc" alt="Membro" class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm relative z-30" loading="lazy">
                                         
                                         <template x-if="stats['{{ $room->id }}'] > 1">
-                                            <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $seed }}2&backgroundColor=f8fafc" alt="Membro" class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm relative z-20">
+                                            <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $seed }}2&backgroundColor=f8fafc" alt="Membro" class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm relative z-20" loading="lazy">
                                         </template>
                                         
                                         <div class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 shadow-sm relative z-10" x-text="'+' + stats['{{ $room->id }}']"></div>
