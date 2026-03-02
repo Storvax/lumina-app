@@ -1,11 +1,15 @@
 #!/bin/bash
 set -e
 
-echo "==> [1/6] A criar base de dados SQLite..."
-DB_PATH="${DB_DATABASE:-/var/www/html/database/database.sqlite}"
-mkdir -p "$(dirname "$DB_PATH")"
-touch "$DB_PATH"
-chown -R www-data:www-data "$(dirname "$DB_PATH")"
+if [ "$DB_CONNECTION" = "sqlite" ]; then
+    echo "==> [1/6] A criar base de dados SQLite..."
+    DB_PATH="${DB_DATABASE:-/var/www/html/database/database.sqlite}"
+    mkdir -p "$(dirname "$DB_PATH")"
+    touch "$DB_PATH"
+    chown -R www-data:www-data "$(dirname "$DB_PATH")"
+else
+    echo "==> [1/6] A usar PostgreSQL. Ignorando criacao de ficheiro SQLite..."
+fi
 
 echo "==> [2/6] A corrigir permissões..."
 mkdir -p \
@@ -24,8 +28,12 @@ php artisan view:cache    || true
 echo "==> [4/6] Migrações..."
 php artisan migrate --force || true
 
-echo "==> [5/6] Permissões pós-migração..."
-chown -R www-data:www-data "$(dirname "$DB_PATH")"
+if [ "$DB_CONNECTION" = "sqlite" ]; then
+    echo "==> [5/6] Permissões pós-migração SQLite..."
+    chown -R www-data:www-data "$(dirname "$DB_PATH")"
+else
+    echo "==> [5/6] A saltar permissoes extra para PostgreSQL..."
+fi
 
 echo "==> [6/6] A iniciar supervisor..."
 exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
