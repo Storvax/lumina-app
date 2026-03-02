@@ -86,21 +86,30 @@
             .leaving((user) => { removeUserFromSidebar(user); updateCounters(-1, true); })
             
             .listen('.App\\Events\\MessageSent', (e) => {
+                console.log('📬 MENSAGEM RECEBIDA!', e);
                 if(isDnd) return;
                 
-                // Verificação de Segurança (Evita o erro 'undefined')
-                if (e.message && e.message.user_id !== currentUserId) {
-                    appendMessage(e.message);
+                // O segredo: os dados vêm diretamente no 'e', não em 'e.message'!
+                const messageData = e.message || e;
+                
+                // O Laravel envia 'user_name', mas o appendMessage espera 'user.name'. Corrigimos em voo:
+                if (!messageData.user && messageData.user_name) {
+                    messageData.user = { name: messageData.user_name };
+                }
+                
+                // Se a mensagem NÃO for minha, desenha-a no ecrã
+                if (messageData.user_id !== currentUserId) {
+                    appendMessage(messageData);
                     
                     const ind = document.getElementById('typing-indicator');
                     if(ind) ind.classList.add('opacity-0');
                     
                     markMessagesAsRead();
                     
-                    // Smart Scroll Logic: Se o user não estiver no fundo, não faz scroll
+                    // Smart Scroll
                     scrollToBottom(false);
                 } else {
-                    // Se fui eu a enviar noutro tab/device, força scroll
+                    // Fui eu que enviei (talvez de outra aba). Faz scroll!
                     scrollToBottom(true);
                 }
             })
