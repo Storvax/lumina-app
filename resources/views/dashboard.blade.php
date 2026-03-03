@@ -230,6 +230,59 @@
 
             </div>
 
+            {{-- SECÇÃO 4.5: CALOR DA COMUNIDADE (O NOVO WIDGET) --}}
+            @php
+                // Prevenção de erros enquanto o backend não é atualizado pelo Claude
+                $cCurrent = $communityStats['current'] ?? 850;
+                $cTarget = $communityStats['target'] ?? 1000;
+                $cPercentage = $communityStats['percentage'] ?? 85;
+            @endphp
+            
+            <div class="relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[2rem] p-6 md:p-8 border border-rose-100 dark:border-rose-900/30 shadow-sm overflow-hidden group mt-4">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-gradient-to-br from-amber-100 to-rose-100 dark:from-rose-900/20 dark:to-amber-900/20 rounded-full blur-3xl opacity-70 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+                <div class="absolute -left-10 -bottom-10 w-32 h-32 bg-gradient-to-tr from-rose-50 to-indigo-50 dark:from-indigo-900/20 dark:to-rose-900/20 rounded-full blur-2xl opacity-60 pointer-events-none"></div>
+
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-rose-500 text-white flex items-center justify-center text-2xl shadow-lg shadow-rose-500/20 animate-[bounceSlight_3s_ease-in-out_infinite]">
+                                <i class="ri-fire-fill"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-black text-slate-800 dark:text-white">O Calor da Comunidade</h2>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Apoio partilhado esta semana</p>
+                            </div>
+                        </div>
+                        
+                        <a href="{{ route('forum.index') }}" class="hidden md:flex items-center gap-2 text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-400 px-4 py-2 rounded-xl hover:bg-rose-100 transition-colors">
+                            Contribuir <i class="ri-arrow-right-line"></i>
+                        </a>
+                    </div>
+
+                    <div class="mt-6 relative">
+                        <div class="flex justify-between text-xs font-bold mb-2">
+                            <span class="text-rose-600 dark:text-rose-400">
+                                <i class="ri-heart-pulse-fill"></i> <span>{{ $cCurrent }}</span> interações
+                            </span>
+                            <span class="text-slate-400">
+                                Objetivo: {{ $cTarget }}
+                            </span>
+                        </div>
+                        
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-5 md:h-6 overflow-hidden shadow-inner relative">
+                            <div class="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-400 to-rose-500 relative transition-all duration-1500 ease-out" 
+                                 style="width: {{ $cPercentage }}%;">
+                                <div class="absolute top-0 left-0 right-0 bottom-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)] animate-[shimmer_2s_infinite] -translate-x-full"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-center text-xs text-slate-400 dark:text-slate-500 mt-4 font-medium">
+                        Cada abraço 🫂, vela 🕯️ e comentário conta. Juntos, criamos um espaço mais seguro.
+                    </p>
+                </div>
+            </div>
+
             {{-- ================================================================
                  SECÇÃO 5: BANNER DE MARCO — DADOS REAIS APENAS
                  Bug corrigido: o "|| true" foi removido.
