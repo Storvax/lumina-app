@@ -239,7 +239,7 @@
                     nextBtnText: 'Continuar &rarr;',
                     prevBtnText: '&larr; Voltar',
                     doneBtnText: 'Entendido',
-                    progressText: '{{current}} de {{total}}',
+                    progressText: '@{{current}} de @{{total}}',
                     popoverClass: 'lumina-tour-theme',
                     steps: [
                         {
