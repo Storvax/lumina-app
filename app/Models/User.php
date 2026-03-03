@@ -37,6 +37,7 @@ class User extends Authenticatable implements FilamentUser
         'a11y_text_size',
         'public_key',
         'encrypted_private_key',
+        'onboarding_tours',
     ];
 
     protected $hidden = [
@@ -58,6 +59,7 @@ class User extends Authenticatable implements FilamentUser
             'hibernated_at' => 'datetime',
             'a11y_dyslexic_font' => 'boolean',
             'a11y_reduced_motion' => 'boolean',
+            'onboarding_tours' => 'array',
         ];
     }
 

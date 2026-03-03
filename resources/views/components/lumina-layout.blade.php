@@ -44,7 +44,6 @@
         /* Modo Madrugada (00h–05h): ajustes visuais subtis para acompanhar o utilizador */
         body.madrugada-mode { font-size: 105%; }
         body.madrugada-mode * { scroll-behavior: smooth; }
-        /* O filtro de cor já é reforçado via JavaScript; esta regra serve de fallback de CSS */
         body.madrugada-mode #night-mode-filter { opacity: 0.12 !important; }
 
         {{ $css ?? '' }}
@@ -63,7 +62,7 @@
 
     <div id="night-mode-filter" class="fixed inset-0 w-full h-full"></div>
 
-    <div id="sosModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+    <div id="sosModal" class="fixed inset-0 z-[150] hidden flex items-center justify-center p-4">
         <div id="modalOverlay" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity cursor-pointer"></div>
         <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-rose-100 animate-fade-up z-10">
             <div class="bg-rose-50 p-6 text-center border-b border-rose-100">
@@ -95,7 +94,7 @@
         </div>
     </div>
 
-    <div id="globalAlertModal" class="fixed inset-0 z-[150] hidden flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="globalAlertModal" class="fixed inset-0 z-[160] hidden flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onclick="closeAlert()"></div>
         <div id="globalAlertPanel" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border-2 border-transparent high-contrast:border-black transform transition-all scale-100 z-10">
             <div id="globalAlertIcon" class="mb-4 text-4xl"></div>
@@ -179,20 +178,12 @@
 
                     @auth
                         @if(Auth::user()->safety_plan)
-                            {{-- Acesso rápido ao plano de segurança pessoal --}}
-                            <a href="{{ route('calm.crisis') }}"
-                               title="Ver o meu plano de segurança"
-                               class="hidden md:flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-100 px-3 py-2 rounded-full text-xs font-bold transition-all">
-                                <i class="ri-shield-heart-line text-base"></i>
-                                <span>O meu plano</span>
+                            <a href="{{ route('calm.crisis') }}" title="Ver o meu plano de segurança" class="hidden md:flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-100 px-3 py-2 rounded-full text-xs font-bold transition-all">
+                                <i class="ri-shield-heart-line text-base"></i><span>O meu plano</span>
                             </a>
                         @else
-                            {{-- Incentivo para criar o plano de segurança --}}
-                            <a href="{{ route('profile.edit') }}#safety"
-                               title="Criar o meu plano de segurança"
-                               class="hidden md:flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 px-3 py-2 rounded-full text-xs font-bold transition-all">
-                                <i class="ri-shield-heart-line text-base"></i>
-                                <span>Criar plano</span>
+                            <a href="{{ route('profile.edit') }}#safety" title="Criar o meu plano de segurança" class="hidden md:flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 px-3 py-2 rounded-full text-xs font-bold transition-all">
+                                <i class="ri-shield-heart-line text-base"></i><span>Criar plano</span>
                             </a>
                         @endif
                     @endauth
@@ -204,63 +195,117 @@
                         </span>
                         SOS
                     </button>
-                    </div>
+                </div>
             </div>
         </nav>
     @endif
 
     <div class="fixed top-0 left-0 w-full h-full mesh-gradient opacity-60 -z-10 pointer-events-none"></div>
     
-    <main class="flex-1 w-full pt-28 pb-24 md:pb-12">
+    <main class="flex-1 w-full pt-28 pb-28 md:pb-12">
         {{ $slot }}
     </main>
 
     @auth
-        @php
-            $tags = Auth::user()->emotional_tags ?? [];
-            $needsCalm = in_array('Ansiedade', $tags) || in_array('Sobrecarregado(a)', $tags);
-        @endphp
-
-        {{-- Botão flutuante mobile para acesso rápido ao plano de segurança --}}
+        {{-- Botão flutuante mobile (Opcional - se quiseres o acesso rápido extra ao Safety Plan. Subi-o um pouco para não chocar com o Bottom Sheet) --}}
         @if(Auth::user()->safety_plan)
             <a href="{{ route('calm.crisis') }}"
-               class="md:hidden fixed bottom-[86px] right-4 z-50 w-11 h-11 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-600/30 flex items-center justify-center active:scale-95 transition-transform"
+               class="md:hidden fixed bottom-[90px] right-4 z-40 w-11 h-11 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-600/30 flex items-center justify-center active:scale-95 transition-transform"
                title="O meu plano de segurança">
                 <i class="ri-shield-heart-line text-xl"></i>
             </a>
         @endif
 
-        <div class="md:hidden fixed bottom-0 left-0 w-full z-40 bg-white/90 backdrop-blur-xl border-t border-slate-100 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)] transition-all">
-            <div class="flex justify-around items-center h-[70px] px-2 pb-2">
-                <a href="{{ route('dashboard') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-indigo-600 {{ request()->routeIs('dashboard') ? 'text-indigo-600' : '' }}">
-                    <i class="ri-home-smile-2-{{ request()->routeIs('dashboard') ? 'fill' : 'line' }} text-2xl"></i>
-                    <span class="text-[9px] font-bold">Início</span>
-                </a>
-                <a href="{{ route('forum.index') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-indigo-600 {{ request()->routeIs('forum.*') ? 'text-indigo-600' : '' }}">
-                    <i class="ri-quill-pen-{{ request()->routeIs('forum.*') ? 'fill' : 'line' }} text-2xl"></i>
-                    <span class="text-[9px] font-bold">Mural</span>
-                </a>
+        {{-- NAVEGAÇÃO HÍBRIDA MOBILE COM FAB CENTRAL (NOVO) --}}
+        <div x-data="{ actionSheetOpen: false }" class="md:hidden">
+            
+            {{-- Overlay Escuro do Menu Central --}}
+            <div x-show="actionSheetOpen" 
+                 style="display: none;" 
+                 @click="actionSheetOpen = false" 
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[45]"></div>
 
-                {{-- Botão central — Zona Calma (prioritário se o utilizador tem ansiedade/sobrecarga) ou Fogueira --}}
-                @if($needsCalm)
-                    <a href="{{ route('calm.index') }}" class="flex flex-col items-center justify-center w-14 h-14 -mt-8 bg-teal-500 text-white rounded-full shadow-lg shadow-teal-500/30 ring-4 ring-white animate-[pulse_4s_ease-in-out_infinite]">
-                        <i class="ri-lungs-fill text-2xl"></i>
+            {{-- Bottom Sheet (O Menu Deslizante de Ações) --}}
+            <div x-show="actionSheetOpen" 
+                 style="display: none;"
+                 x-transition:enter="transition transform ease-out duration-300"
+                 x-transition:enter-start="translate-y-full"
+                 x-transition:enter-end="translate-y-0"
+                 x-transition:leave="transition transform ease-in duration-200"
+                 x-transition:leave-start="translate-y-0"
+                 x-transition:leave-end="translate-y-full"
+                 class="fixed bottom-0 left-0 w-full bg-white rounded-t-[2rem] z-[50] p-6 pb-8 shadow-[0_-20px_60px_rgba(0,0,0,0.15)]">
+                 
+                 <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+                 <h3 class="text-lg font-bold text-slate-800 mb-6 px-2 text-center">O que precisas de fazer hoje?</h3>
+                 
+                 <div class="space-y-3">
+                     <a href="{{ route('diary.index') }}" class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-100 transition-all text-slate-700 active:scale-[0.98]">
+                         <div class="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-xl text-indigo-500"><i class="ri-book-read-fill"></i></div>
+                         <div class="flex-1">
+                             <p class="font-bold">Escrever no Diário</p>
+                             <p class="text-xs text-slate-500">Um espaço privado só para ti</p>
+                         </div>
+                         <i class="ri-arrow-right-s-line text-slate-300"></i>
+                     </a>
+                     
+                     <a href="{{ route('forum.index') }}" class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-100 transition-all text-slate-700 active:scale-[0.98]">
+                         <div class="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-xl text-indigo-500"><i class="ri-chat-smile-3-fill"></i></div>
+                         <div class="flex-1">
+                             <p class="font-bold">Partilhar no Mural</p>
+                             <p class="text-xs text-slate-500">Desabafa com a comunidade</p>
+                         </div>
+                         <i class="ri-arrow-right-s-line text-slate-300"></i>
+                     </a>
+
+                     <div class="my-4 border-t border-slate-100"></div>
+
+                     <button @click="actionSheetOpen = false; document.getElementById('sosModal').classList.remove('hidden')" class="w-full flex items-center gap-4 p-4 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-100 transition-all text-rose-700 text-left active:scale-[0.98]">
+                         <div class="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-xl text-rose-500"><i class="ri-alarm-warning-fill"></i></div>
+                         <div class="flex-1">
+                             <p class="font-bold">Preciso de ajuda urgente</p>
+                             <p class="text-xs text-rose-500/80">Linhas de apoio e SOS</p>
+                         </div>
+                     </button>
+                 </div>
+            </div>
+
+            {{-- Barra Inferior Física --}}
+            <div class="fixed bottom-0 left-0 w-full z-40 bg-white/95 backdrop-blur-xl border-t border-slate-100 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+                <div class="flex justify-between items-center h-[70px] px-6">
+                    {{-- 1. Início --}}
+                    <a href="{{ route('dashboard') }}" class="flex flex-col items-center justify-center w-12 text-slate-400 hover:text-indigo-600 transition-colors {{ request()->routeIs('dashboard') ? 'text-indigo-600' : '' }}">
+                        <i class="ri-home-smile-2-{{ request()->routeIs('dashboard') ? 'fill' : 'line' }} text-[26px]"></i>
                     </a>
-                @else
-                    <a href="{{ route('rooms.index') }}" class="flex flex-col items-center justify-center w-14 h-14 -mt-8 bg-orange-500 text-white rounded-full shadow-lg shadow-orange-500/30 ring-4 ring-white">
-                        <i class="ri-fire-fill text-2xl"></i>
+                    
+                    {{-- 2. Comunidade (Mural / Fogueira) --}}
+                    <a href="{{ route('forum.index') }}" class="flex flex-col items-center justify-center w-12 text-slate-400 hover:text-indigo-600 transition-colors {{ request()->routeIs('forum.*', 'rooms.*') ? 'text-indigo-600' : '' }}">
+                        <i class="ri-team-{{ request()->routeIs('forum.*', 'rooms.*') ? 'fill' : 'line' }} text-[26px]"></i>
                     </a>
-                @endif
 
-                <a href="{{ route('diary.index') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-teal-600 {{ request()->routeIs('diary.*') ? 'text-teal-600' : '' }}">
-                    <i class="ri-book-read-{{ request()->routeIs('diary.*') ? 'fill' : 'line' }} text-2xl"></i>
-                    <span class="text-[9px] font-bold">Diário</span>
-                </a>
+                    {{-- 3. Botão Central FAB (Adicionar/Agir) --}}
+                    <button @click="actionSheetOpen = !actionSheetOpen" 
+                            class="relative -top-5 flex flex-col items-center justify-center w-[60px] h-[60px] rounded-full shadow-xl shadow-indigo-600/30 ring-[6px] ring-white transition-all duration-300 z-50 focus:outline-none"
+                            :class="actionSheetOpen ? 'bg-slate-800 rotate-45 scale-90 shadow-none' : 'bg-indigo-600 active:scale-95'">
+                        <i class="ri-add-line text-3xl text-white"></i>
+                    </button>
 
-                <a href="{{ route('profile.show') }}" class="flex flex-col items-center gap-1 w-14 text-slate-400 hover:text-indigo-600 {{ request()->routeIs('profile.*') ? 'text-indigo-600' : '' }}">
-                    <i class="ri-user-smile-{{ request()->routeIs('profile.*') ? 'fill' : 'line' }} text-2xl"></i>
-                    <span class="text-[9px] font-bold">Perfil</span>
-                </a>
+                    {{-- 4. Refúgio (Zona Calma) --}}
+                    <a href="{{ route('calm.index') }}" class="flex flex-col items-center justify-center w-12 text-slate-400 hover:text-teal-600 transition-colors {{ request()->routeIs('calm.*') ? 'text-teal-600' : '' }}">
+                        <i class="ri-leaf-{{ request()->routeIs('calm.*') ? 'fill' : 'line' }} text-[26px]"></i>
+                    </a>
+
+                    {{-- 5. Perfil --}}
+                    <a href="{{ route('profile.show') }}" class="flex flex-col items-center justify-center w-12 text-slate-400 hover:text-indigo-600 transition-colors {{ request()->routeIs('profile.*') ? 'text-indigo-600' : '' }}">
+                        <i class="ri-user-smile-{{ request()->routeIs('profile.*') ? 'fill' : 'line' }} text-[26px]"></i>
+                    </a>
+                </div>
             </div>
         </div>
     @endauth
@@ -312,17 +357,14 @@
             const isNight     = hour >= 21 || hour < 6;
 
             if (isMadrugada) {
-                // Madrugada (00h–05h): filtro mais intenso e banner de apoio
                 document.getElementById('night-mode-filter').style.opacity = '0.12';
                 document.body.classList.add('madrugada-mode');
                 _showMadrugadaBanner();
             } else if (isNight) {
-                // Noite normal (21h–00h e 05h–06h): filtro suave
                 document.getElementById('night-mode-filter').style.opacity = '0.07';
             }
 
             function _showMadrugadaBanner() {
-                // Verifica se o utilizador já fechou o banner nesta sessão
                 if (sessionStorage.getItem('madrugada-banner-dismissed')) return;
 
                 const banner = document.createElement('div');
@@ -332,7 +374,7 @@
                 banner.className = [
                     'fixed bottom-20 md:bottom-6 left-4 right-4',
                     'md:left-auto md:right-6 md:max-w-sm',
-                    'z-40 bg-indigo-950/95 backdrop-blur-xl',
+                    'z-[45] bg-indigo-950/95 backdrop-blur-xl',
                     'text-white rounded-2xl p-5',
                     'border border-indigo-700/50 shadow-2xl',
                     'animate-fade-up'

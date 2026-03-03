@@ -56,4 +56,20 @@ class OnboardingController extends Controller
 
         return redirect($destination)->with('success', 'Bem-vindo(a) à Lumina. Estamos contigo.');
     }
+
+    public function markTourCompleted(Request $request)
+    {
+        $request->validate(['tour' => 'required|string']);
+        
+        $user = $request->user();
+        $tours = $user->onboarding_tours ?? [];
+        
+        // Marca este tour específico como 'true'
+        $tours[$request->tour] = true;
+        
+        $user->onboarding_tours = $tours;
+        $user->save();
+
+        return response()->json(['success' => true]);
+    }
 }
