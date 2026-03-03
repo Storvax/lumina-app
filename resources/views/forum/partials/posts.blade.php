@@ -145,8 +145,69 @@
                     @if($post->is_locked) <i class="ri-lock-fill text-amber-500 text-sm" aria-label="{{ __('Comentários bloqueados') }}"></i> @endif
                     {{ $post->title }}
                 </h3>
-                <div class="text-slate-600 text-[15px] leading-relaxed mb-6 opacity-90 line-clamp-6">
-                    {{ Str::limit($post->content, 250) }}
+                
+                {{-- LÓGICA DE RESUMO IA COM ALPINE JS --}}
+                <div x-data="{ 
+                        viewMode: 'original', // original | loading | summary
+                        summary: null,
+                        async fetchSummary() {
+                            this.viewMode = 'loading';
+                            try {
+                                // O Claude fará a rota e o Controller para isto
+                                const response = await axios.post(`/mural/{{ $post->id }}/summarize`);
+                                this.summary = response.data.summary;
+                                this.viewMode = 'summary';
+                            } catch (error) {
+                                console.error('Erro na IA:', error);
+                                this.viewMode = 'original';
+                                window.showAlert('Ops', 'Não foi possível resumir o texto agora. Tenta mais tarde.', 'error');
+                            }
+                        }
+                    }">
+                    
+                    {{-- TEXTO ORIGINAL --}}
+                    <div x-show="viewMode === 'original'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" class="relative">
+                        <div class="text-slate-600 text-[15px] leading-relaxed mb-6 opacity-90 line-clamp-6">
+                            {{ Str::limit($post->content, 250) }}
+                        </div>
+                        
+                        {{-- Só mostramos o botão se o texto for longo (> 200 caracteres) --}}
+                        @if(strlen($post->content) > 200)
+                            <div class="absolute bottom-[-15px] left-0 w-full h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                            <button @click.prevent="fetchSummary()" 
+                                    class="relative -mt-2 mb-4 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-bold flex items-center gap-1.5 hover:bg-indigo-100 transition-colors pointer-events-auto">
+                                <i class="ri-sparkling-fill text-indigo-400"></i> Simplificar Leitura
+                            </button>
+                        @endif
+                    </div>
+
+                    {{-- ESTADO DE CARREGAMENTO (LOADING) --}}
+                    <div x-show="viewMode === 'loading'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" class="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                        <div class="flex items-center gap-3 mb-2">
+                            <i class="ri-loader-4-line animate-spin text-indigo-500 text-lg"></i>
+                            <span class="text-sm font-bold text-slate-700">A ler com atenção...</span>
+                        </div>
+                        <div class="space-y-2 mt-3 w-full">
+                            <div class="h-2 bg-slate-200 rounded-full animate-pulse w-3/4"></div>
+                            <div class="h-2 bg-slate-200 rounded-full animate-pulse w-full"></div>
+                            <div class="h-2 bg-slate-200 rounded-full animate-pulse w-5/6"></div>
+                        </div>
+                    </div>
+
+                    {{-- TEXTO RESUMIDO (O que a IA devolve) --}}
+                    <div x-show="viewMode === 'summary'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" class="mb-6 relative">
+                        <div class="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100/50">
+                            <div class="flex items-center justify-between mb-3 border-b border-indigo-100 pb-2">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-1"><i class="ri-sparkling-fill"></i> Pontos Principais</span>
+                                <button @click.prevent="viewMode = 'original'" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition-colors">Ler original</button>
+                            </div>
+                            
+                            {{-- O conteúdo do resumo (HTML) virá do Backend já com as tags <ul> e <li> do Markdown renderizado --}}
+                            <div class="text-sm text-slate-700 leading-relaxed space-y-2 prose prose-sm prose-p:my-1 prose-li:my-0.5" x-html="summary">
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto pointer-events-auto">

@@ -23,6 +23,7 @@
             @keyframes grow { from { transform: scale(0); } to { transform: scale(1); } }
             
             .energy-bar { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+            @keyframes shimmer { 100% { transform: translateX(100%); } }
         </style>
     </x-slot>
 
@@ -33,19 +34,20 @@
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 pt-24 md:pt-32">
 
+        {{-- CABEÇALHO: O GUARDIÃO INTERIOR (A FOGUEIRA) --}}
         <header class="relative bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-8 md:p-12 shadow-2xl mb-8 overflow-hidden text-white">
             <div class="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
             
-            <div class="relative z-10 grid md:grid-cols-2 gap-8 items-center">
-                <div class="flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
-                    <div class="relative group">
+            <div class="relative z-10 grid md:grid-cols-12 gap-8 items-center">
+                <div class="md:col-span-7 lg:col-span-8 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
+                    <div class="relative group shrink-0">
                         <div class="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-white/10 border-4 border-white/20 flex items-center justify-center text-4xl font-bold backdrop-blur-sm">
                             <img src="https://api.dicebear.com/7.x/notionists/svg?seed={{ $user->name }}" class="w-full h-full rounded-full object-cover" loading="lazy" alt="Avatar de {{ $user->name }}">
                         </div>
                         <a href="{{ route('profile.edit') }}" class="absolute -bottom-2 -right-2 bg-white text-indigo-600 p-2 rounded-xl shadow-lg hover:scale-110 transition-transform"><i class="ri-settings-3-fill"></i></a>
                     </div>
                     
-                    <div>
+                    <div class="w-full">
                         <h1 class="text-3xl md:text-5xl font-black tracking-tight mb-2">{{ $user->name }}</h1>
                         <p class="text-indigo-100 text-sm md:text-base font-medium max-w-md mx-auto md:mx-0 opacity-90">
                             {{ $user->bio ?? '"A cuidar de mim, um dia de cada vez."' }}
@@ -66,49 +68,50 @@
                                 <i class="ri-edit-line text-xs"></i>
                             </button>
                         </div>
-                        
-                        <div class="flex flex-wrap justify-center md:justify-start gap-3 mt-4">
-                            <div class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 backdrop-blur-md">
-                                <i class="ri-fire-fill text-orange-400"></i> {{ $stats['flames'] }} Chamas
-                            </div>
-                            <div class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 backdrop-blur-md">
-                                <i class="ri-calendar-check-fill text-teal-400"></i> {{ $user->current_streak }} Dias Seguidos
-                            </div>
-                        </div>
                     </div>
                 </div>
 
-                <div class="flex justify-center items-center h-48 relative">
-                    <div class="relative">
-                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-orange-500/30 rounded-full blur-3xl animate-pulse"></div>
+                {{-- EVOLUÇÃO DA FOGUEIRA (O NOVO GUARDIÃO) --}}
+                @php
+                    // Variáveis Mock para o Guardião/Fogueira (O Claude vai preencher)
+                    $flameProgress = $stats['flame_progress'] ?? 65; 
+                    $flamesToNext = $stats['flames_to_next'] ?? 150;
+                @endphp
+                <div class="md:col-span-5 lg:col-span-4 flex flex-col items-center justify-center bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20">
+                    <div class="relative h-24 w-full flex items-center justify-center mb-2">
+                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-orange-500/30 rounded-full blur-3xl animate-pulse"></div>
 
                         @if($stats['bonfire_level'] === 'spark')
-                            <div class="flex flex-col items-center gap-2 animate-bounce">
-                                <i class="ri-sparkling-fill text-6xl text-amber-300 drop-shadow-[0_0_15px_rgba(252,211,77,0.8)]"></i>
-                                <span class="text-xs font-bold text-amber-200 uppercase tracking-widest bg-black/20 px-3 py-1 rounded-full">Faísca de Esperança</span>
-                            </div>
+                            <i class="ri-sparkling-fill text-6xl text-amber-300 drop-shadow-[0_0_15px_rgba(252,211,77,0.8)] animate-bounce"></i>
                         @elseif($stats['bonfire_level'] === 'flame')
-                            <div class="flex flex-col items-center">
-                                <i class="ri-fire-line text-8xl text-orange-400 animate-pulse drop-shadow-[0_0_20px_rgba(251,146,60,0.8)]"></i>
-                                <span class="text-xs font-bold text-orange-200 uppercase tracking-widest bg-black/20 px-3 py-1 rounded-full mt-[-10px]">Chama Viva</span>
-                            </div>
+                            <i class="ri-fire-line text-7xl text-orange-400 animate-pulse drop-shadow-[0_0_20px_rgba(251,146,60,0.8)]"></i>
                         @elseif($stats['bonfire_level'] === 'bonfire')
-                            <div class="flex flex-col items-center">
-                                <div class="relative">
-                                    <i class="ri-fire-fill text-9xl text-orange-600 absolute inset-0 animate-pulse opacity-80 blur-sm"></i>
-                                    <i class="ri-fire-fill text-9xl text-yellow-500 relative z-10 drop-shadow-2xl"></i>
-                                </div>
-                                <span class="text-xs font-bold text-orange-100 uppercase tracking-widest bg-black/20 px-3 py-1 rounded-full mt-[-15px] relative z-20">Fogueira Acolhedora</span>
+                            <div class="relative">
+                                <i class="ri-fire-fill text-8xl text-orange-600 absolute inset-0 animate-pulse opacity-80 blur-sm"></i>
+                                <i class="ri-fire-fill text-8xl text-yellow-500 relative z-10 drop-shadow-2xl"></i>
                             </div>
                         @else
-                            <div class="flex flex-col items-center">
-                                <div class="relative">
-                                    <i class="ri-fire-fill text-9xl text-amber-500 absolute inset-0 animate-pulse opacity-100 blur-md"></i>
-                                    <i class="ri-fire-fill text-9xl text-white relative z-10 drop-shadow-2xl"></i>
-                                </div>
-                                <span class="text-xs font-bold text-amber-100 uppercase tracking-widest bg-black/20 px-3 py-1 rounded-full mt-4 relative z-20">Chama Eterna</span>
+                            <div class="relative">
+                                <i class="ri-fire-fill text-8xl text-amber-500 absolute inset-0 animate-pulse opacity-100 blur-md"></i>
+                                <i class="ri-fire-fill text-8xl text-white relative z-10 drop-shadow-2xl"></i>
                             </div>
                         @endif
+                    </div>
+
+                    <div class="text-center w-full">
+                        <span class="text-xs font-black text-white uppercase tracking-widest">{{ $stats['bonfire_level_name'] ?? 'Chama Viva' }}</span>
+                        
+                        <div class="w-full mt-3">
+                            <div class="flex justify-between text-[10px] font-bold text-indigo-100 mb-1 px-1">
+                                <span><i class="ri-fire-fill text-orange-300"></i> {{ $stats['flames'] }} totais</span>
+                                <span>Evolui aos {{ $flamesToNext }}</span>
+                            </div>
+                            <div class="h-2 w-full bg-black/20 rounded-full overflow-hidden p-[1px]">
+                                <div class="h-full bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full relative" style="width: {{ $flameProgress }}%">
+                                    <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.5),transparent)] animate-[shimmer_2s_infinite] -translate-x-full"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -118,6 +121,7 @@
 
             <div class="lg:col-span-4 space-y-6">
                 
+                {{-- WIDGET DE ENERGIA --}}
                 <div class="glass-card rounded-[2rem] p-6 relative overflow-hidden" x-data="{ 
                     energy: {{ $user->energy_level ?? 3 }},
                     async saveEnergy(level) {
@@ -144,6 +148,7 @@
                     </div>
                 </div>
 
+                {{-- WIDGET PLANO SOS --}}
                 <div class="glass-card rounded-[2rem] p-6 bg-white dark:bg-slate-800">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
@@ -161,10 +166,11 @@
                     </div>
                 </div>
 
+                {{-- WIDGET CONQUISTAS --}}
                 <div class="glass-card rounded-[2rem] p-6 md:p-8">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                            <i class="ri-medal-line text-yellow-500"></i> Coleção de Conquistas
+                            <i class="ri-medal-line text-yellow-500"></i> Conquistas
                         </h3>
                         <span class="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-3 py-1 rounded-full">
                             {{ $stats['badges_count'] ?? 0 }}
@@ -208,6 +214,7 @@
 
             <div class="lg:col-span-8 space-y-6">
                 
+                {{-- O JARDIM / ESPIRAL DE HUMOR --}}
                 <div class="glass-card rounded-[2rem] p-6 md:p-8 relative overflow-hidden">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                         <div>
@@ -238,11 +245,12 @@
                             @else
                                 <div class="flex flex-col items-center justify-center text-slate-400 py-12">
                                     <i class="ri-leaf-line text-5xl mb-3 opacity-30"></i>
-                                    <p class="text-sm">Regista as tuas emoções no diário para começares a desenhar a tua espiral.</p>
+                                    <p class="text-sm">Regista as tuas emoções no diário para desenhar a tua espiral.</p>
                                 </div>
                             @endif
                         </div>
                     </div>
+                    
                     <div class="grid grid-cols-7 gap-2 md:gap-3">
                         @if(isset($garden) && is_array($garden) && count($garden) > 0)
                             @foreach($garden as $plot)
@@ -265,6 +273,66 @@
 
             </div>
 
+            {{-- NOVA SECÇÃO LARGURA TOTAL: IMPACTO REAL DA COMUNIDADE --}}
+            @php
+                // Mock de Variáveis de Impacto (Para o Claude alimentar)
+                $globalImpact = $globalImpact ?? [
+                    'current_flames' => 8450,
+                    'target_flames' => 10000,
+                    'percentage' => 84,
+                    'user_contribution' => $stats['flames'] ?? 0,
+                    'goal_name' => 'Plantar 1 Árvore em Portugal',
+                    'org_name' => 'Associação Florestal'
+                ];
+            @endphp
+            <div class="col-span-1 lg:col-span-12 mt-2">
+                <div class="relative bg-gradient-to-br from-teal-600 to-emerald-800 rounded-[2.5rem] p-8 md:p-10 text-white shadow-xl overflow-hidden group">
+                    {{-- Ilustração / Padrão de Fundo --}}
+                    <div class="absolute right-0 top-0 w-1/2 h-full opacity-10 pointer-events-none">
+                        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="absolute w-[400px] h-[400px] -right-20 -top-20 animate-[spin_60s_linear_infinite]">
+                            <path fill="#ffffff" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,79.6,-45.8C87.4,-32.6,90,-16.3,89.1,-0.5C88.1,15.3,83.6,30.6,75.2,43.6C66.8,56.6,54.5,67.3,40.7,75.1C26.9,82.9,11.5,87.8,-3.8,89.5C-19.1,91.2,-38.2,89.7,-52.6,81.5C-67,73.3,-76.8,58.4,-83.4,42.5C-90,26.6,-93.4,9.7,-91.3,-6.4C-89.2,-22.5,-81.6,-37.8,-70.7,-49.6C-59.8,-61.4,-45.6,-69.7,-31.6,-76.6C-17.6,-83.5,-3.8,-89,10.6,-86.3C25,-83.6,44.7,-76.4,44.7,-76.4Z" transform="translate(100 100)" />
+                        </svg>
+                    </div>
+
+                    <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div class="flex-1 text-center md:text-left">
+                            <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4">
+                                <i class="ri-earth-fill"></i> O Nosso Impacto Real
+                            </div>
+                            <h3 class="text-3xl md:text-4xl font-black mb-3">As tuas chamas geram vida.</h3>
+                            <p class="text-emerald-50 text-sm md:text-base leading-relaxed max-w-xl mx-auto md:mx-0">
+                                Quando a comunidade Lumina atingir a meta, doaremos o equivalente para <strong>{{ $globalImpact['goal_name'] }}</strong> via {{ $globalImpact['org_name'] }}.
+                            </p>
+                            
+                            <div class="mt-6 inline-flex items-center gap-3 bg-black/20 rounded-2xl p-3 border border-white/10">
+                                <div class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-2xl text-orange-400">
+                                    <i class="ri-fire-fill"></i>
+                                </div>
+                                <div class="text-left pr-4">
+                                    <p class="text-[10px] text-emerald-200 uppercase tracking-widest font-bold">A Tua Contribuição</p>
+                                    <p class="font-black text-lg">{{ $globalImpact['user_contribution'] }} <span class="text-sm font-medium opacity-80">chamas</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="w-full md:w-5/12 bg-white/10 backdrop-blur-lg border border-white/20 p-6 rounded-3xl text-center">
+                            <i class="ri-tree-fill text-6xl text-emerald-300 mb-2 drop-shadow-lg inline-block transform transition-transform group-hover:scale-110 duration-500"></i>
+                            <div class="flex justify-between text-xs font-bold text-emerald-100 mb-2 mt-4">
+                                <span>{{ number_format($globalImpact['current_flames']) }} alcançadas</span>
+                                <span>Alvo: {{ number_format($globalImpact['target_flames']) }}</span>
+                            </div>
+                            <div class="h-4 bg-black/30 rounded-full overflow-hidden p-[2px]">
+                                <div class="h-full bg-gradient-to-r from-emerald-300 to-yellow-300 rounded-full relative transition-all duration-1500" style="width: {{ $globalImpact['percentage'] }}%">
+                                    <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)] animate-[shimmer_2s_infinite] -translate-x-full"></div>
+                                </div>
+                            </div>
+                            <p class="text-[10px] text-emerald-200 mt-3 font-medium uppercase tracking-widest">Juntos somos uma floresta</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- SECÇÃO DE MARCOS DA JORNADA --}}
             <div class="col-span-1 lg:col-span-12 mt-4">
                 <div class="glass-card rounded-[2rem] p-6 md:p-8 relative">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
@@ -312,12 +380,12 @@
         </div>
     </div>
 
+    {{-- MODAIS (Sem alterações funcionais, apenas estrutura mantida para não quebrar a página) --}}
     <div id="safety-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="this.parentElement.classList.add('hidden')"></div>
         <div class="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl animate-fade-up">
             <h3 class="text-xl font-bold mb-4 dark:text-white flex items-center gap-2"><i class="ri-shield-heart-line text-rose-500"></i> Plano de Segurança</h3>
             <p class="text-sm text-slate-500 mb-4">Escreve o que te ajuda em momentos de crise.</p>
-            
             <form action="{{ route('profile.safety') }}" method="POST">
                 @csrf
                 <textarea name="safety_plan" rows="6" class="w-full rounded-2xl border-slate-200 dark:border-slate-600 dark:bg-slate-900 dark:text-white mb-6 p-4 focus:ring-indigo-500" placeholder="Escreve aqui...">{{ is_string($user->safety_plan) ? $user->safety_plan : '' }}</textarea>
@@ -334,7 +402,6 @@
         <div class="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl animate-fade-up">
             <h3 class="text-xl font-bold mb-2 dark:text-white">A tua identidade</h3>
             <p class="text-sm text-slate-500 mb-6">Escolhe até 3 áreas que definem a tua jornada atual.</p>
-            
             <form action="{{ route('profile.tags') }}" method="POST">
                 @csrf
                 <div class="flex flex-wrap gap-2 mb-6">
@@ -349,7 +416,6 @@
                         </label>
                     @endforeach
                 </div>
-                
                 <div class="flex justify-end gap-3">
                     <button type="button" onclick="document.getElementById('tags-modal').classList.add('hidden')" class="px-4 py-2 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">Cancelar</button>
                     <button type="submit" class="px-5 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all">Guardar</button>
@@ -362,7 +428,6 @@
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="this.parentElement.classList.add('hidden')"></div>
         <div class="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl animate-fade-up">
             <h3 class="text-xl font-bold mb-6 dark:text-white">Novo Marco</h3>
-            
             <form action="{{ route('profile.milestones.store') ?? '#' }}" method="POST">
                 @csrf
                 <div class="space-y-4 mb-6">
@@ -381,7 +446,6 @@
                         </label>
                     </div>
                 </div>
-                
                 <div class="flex justify-end gap-3">
                     <button type="button" onclick="document.getElementById('milestone-modal').classList.add('hidden')" class="px-4 py-2 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">Cancelar</button>
                     <button type="submit" class="px-5 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all">Adicionar à Jornada</button>
@@ -399,5 +463,4 @@
             }
         }
     </script>
-
 </x-lumina-layout>

@@ -74,15 +74,15 @@
                     </div>
                 </a>
 
-                <button onclick="alert('Funcionalidade de sons a integrar!')" class="group bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all relative overflow-hidden text-left w-full">
+                <a href="{{ route('calm.sounds') }}" class="group bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all relative overflow-hidden text-left w-full block">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 dark:bg-blue-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div class="relative z-10">
                         <div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-rainy-line"></i></div>
                         <h3 class="text-lg md:text-xl font-bold text-slate-800 dark:text-white mb-2">Paisagens Sonoras</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-xs md:text-sm mb-4">Ouve o som da chuva, lareira ou ondas em loop.</p>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs md:text-sm mb-4">Ouve o som da chuva, lareira ou ondas de Portugal.</p>
                         <span class="text-blue-600 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Ouvir <i class="ri-play-circle-line"></i></span>
                     </div>
-                </button>
+                </a>
             </div>
 
             {{-- Adicionado o ID: section-playlist --}}
