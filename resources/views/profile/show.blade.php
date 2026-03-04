@@ -18,12 +18,38 @@
                 box-shadow: none;
             }
 
-            /* Animações */
+            /* Animações Originais */
             .plant-grow { animation: grow 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); transform-origin: bottom center; }
             @keyframes grow { from { transform: scale(0); } to { transform: scale(1); } }
             
             .energy-bar { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
             @keyframes shimmer { 100% { transform: translateX(100%); } }
+
+            /* Clima da Alma (Chuva no Guardião) */
+            .rain-container { 
+                position: absolute; 
+                inset: 0; 
+                overflow: hidden; 
+                pointer-events: none; 
+                border-radius: inherit; 
+            }
+            .drop { 
+                position: absolute; 
+                width: 2px; 
+                height: 15px; 
+                background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.6)); 
+                animation: fall linear infinite; 
+            }
+            @keyframes fall {
+                0% { transform: translateY(-20px); opacity: 0; }
+                10% { opacity: 1; }
+                80% { opacity: 1; }
+                100% { transform: translateY(180px); opacity: 0; }
+            }
+            @keyframes bounceSlight {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-4px); }
+            }
         </style>
     </x-slot>
 
@@ -34,7 +60,7 @@
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 pt-24 md:pt-32">
 
-        {{-- CABEÇALHO: O GUARDIÃO INTERIOR (A FOGUEIRA) --}}
+        {{-- CABEÇALHO --}}
         <header class="relative bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-8 md:p-12 shadow-2xl mb-8 overflow-hidden text-white">
             <div class="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
             
@@ -71,49 +97,89 @@
                     </div>
                 </div>
 
-                {{-- EVOLUÇÃO DA FOGUEIRA (O NOVO GUARDIÃO) --}}
+                {{-- WIDGET: O GUARDIÃO DA CALMA (TERRÁRIO + CLIMA DA ALMA) --}}
                 @php
-                    // Variáveis Mock para o Guardião/Fogueira (O Claude vai preencher)
-                    $flameProgress = $stats['flame_progress'] ?? 65; 
-                    $flamesToNext = $stats['flames_to_next'] ?? 150;
+                    // Variáveis Mock para o Guardião (O Claude ligará à BD)
+                    $guardian = $guardianStatus ?? [
+                        'stage_name' => 'Broto de Coragem',
+                        'emoji' => '🌿',
+                        'color' => 'emerald',
+                        'current_flames' => $stats['flames'] ?? 85,
+                        'next_stage_flames' => 150,
+                        'progress_percent' => 56,
+                        'weather' => 'rainy', // 'sunny' ou 'rainy' (muda aqui para testar)
+                    ];
+                    $weather = $guardian['weather'];
                 @endphp
-                <div class="md:col-span-5 lg:col-span-4 flex flex-col items-center justify-center bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20">
-                    <div class="relative h-24 w-full flex items-center justify-center mb-2">
-                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-orange-500/30 rounded-full blur-3xl animate-pulse"></div>
+                <div class="md:col-span-5 lg:col-span-4 flex flex-col items-center justify-center bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20 relative overflow-hidden group">
+                    
+                    {{-- Efeito de Fundo do Clima --}}
+                    <div class="absolute inset-0 {{ $weather === 'rainy' ? 'bg-slate-900/30' : 'bg-gradient-to-tr from-emerald-500/10 to-teal-500/10' }} transition-colors duration-1000 pointer-events-none"></div>
 
-                        @if($stats['bonfire_level'] === 'spark')
-                            <i class="ri-sparkling-fill text-6xl text-amber-300 drop-shadow-[0_0_15px_rgba(252,211,77,0.8)] animate-bounce"></i>
-                        @elseif($stats['bonfire_level'] === 'flame')
-                            <i class="ri-fire-line text-7xl text-orange-400 animate-pulse drop-shadow-[0_0_20px_rgba(251,146,60,0.8)]"></i>
-                        @elseif($stats['bonfire_level'] === 'bonfire')
-                            <div class="relative">
-                                <i class="ri-fire-fill text-8xl text-orange-600 absolute inset-0 animate-pulse opacity-80 blur-sm"></i>
-                                <i class="ri-fire-fill text-8xl text-yellow-500 relative z-10 drop-shadow-2xl"></i>
+                    {{-- Animação de Chuva --}}
+                    @if($weather === 'rainy')
+                        <div class="rain-container z-0 opacity-70">
+                            @for($i = 0; $i < 20; $i++)
+                                <div class="drop" style="left: {{ rand(2, 98) }}%; animation-duration: {{ rand(8, 14)/10 }}s; animation-delay: -{{ rand(0, 20)/10 }}s;"></div>
+                            @endfor
+                        </div>
+                        <div class="absolute top-0 w-full h-20 bg-slate-900/50 blur-xl z-0 pointer-events-none"></div>
+                    @endif
+
+                    <div class="relative h-28 w-full flex items-center justify-center mb-3 z-10">
+                        {{-- Brilho de fundo suave --}}
+                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 {{ $weather === 'rainy' ? 'bg-blue-500/20' : 'bg-emerald-500/30' }} rounded-full blur-2xl transition-colors duration-1000"></div>
+
+                        {{-- Redoma de Vidro --}}
+                        <div class="relative w-24 h-32 rounded-t-full rounded-b-2xl {{ $weather === 'rainy' ? 'bg-slate-800/40 border-slate-500/30' : 'bg-white/20 border-white/40' }} backdrop-blur-sm border-2 shadow-[inset_0_-10px_20px_rgba(0,0,0,0.1)] flex items-center justify-center overflow-hidden transition-colors duration-1000">
+                            
+                            {{-- Reflexo do Vidro --}}
+                            <div class="absolute top-1 left-2 w-4 h-14 bg-white/30 rounded-full blur-[1px] transform -rotate-12 pointer-events-none z-30"></div>
+                            
+                            {{-- O Avatar / Emoji --}}
+                            <div class="text-5xl filter drop-shadow-lg transform transition-transform duration-700 group-hover:scale-110 animate-[bounceSlight_4s_ease-in-out_infinite] z-10 {{ $weather === 'rainy' ? 'opacity-90 grayscale-[30%]' : '' }}">
+                                {{ $guardian['emoji'] }}
                             </div>
-                        @else
-                            <div class="relative">
-                                <i class="ri-fire-fill text-8xl text-amber-500 absolute inset-0 animate-pulse opacity-100 blur-md"></i>
-                                <i class="ri-fire-fill text-8xl text-white relative z-10 drop-shadow-2xl"></i>
-                            </div>
-                        @endif
+                            
+                            {{-- Base de Terra/Água --}}
+                            <div class="absolute bottom-0 w-full h-6 z-10 {{ $weather === 'rainy' ? 'bg-gradient-to-t from-blue-900/70 to-blue-900/10' : 'bg-gradient-to-t from-emerald-900/60 to-transparent' }} transition-colors duration-1000"></div>
+                        </div>
                     </div>
 
-                    <div class="text-center w-full">
-                        <span class="text-xs font-black text-white uppercase tracking-widest">{{ $stats['bonfire_level_name'] ?? 'Chama Viva' }}</span>
+                    <div class="text-center w-full z-10">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest mb-2 {{ $weather === 'rainy' ? 'bg-blue-900/60 text-blue-200 border border-blue-500/30' : 'bg-emerald-500/30 text-emerald-100 border border-emerald-400/30' }} transition-colors duration-1000">
+                            <i class="{{ $weather === 'rainy' ? 'ri-rainy-fill' : 'ri-sun-fill' }}"></i> 
+                            {{ $weather === 'rainy' ? 'Tempo de Recolhimento' : 'Guardião da Calma' }}
+                        </div>
                         
-                        <div class="w-full mt-3">
-                            <div class="flex justify-between text-[10px] font-bold text-indigo-100 mb-1 px-1">
-                                <span><i class="ri-fire-fill text-orange-300"></i> {{ $stats['flames'] }} totais</span>
-                                <span>Evolui aos {{ $flamesToNext }}</span>
+                        <h2 class="text-lg font-black text-white mb-1 leading-tight">
+                            {{ $guardian['stage_name'] }}
+                        </h2>
+                        
+                        <p class="text-[10px] text-indigo-100/80 mb-4 leading-tight max-w-[220px] mx-auto min-h-[28px]">
+                            @if($weather === 'rainy')
+                                A chuva lá fora reflete o teu dia. <br>Está tudo bem em não estar bem.
+                            @else
+                                O teu esforço diário está a dar frutos. Continua a regar a tua mente.
+                            @endif
+                        </p>
+
+                        <div class="w-full">
+                            <div class="flex justify-between text-[10px] font-bold text-indigo-100 mb-1.5 px-1">
+                                <span class="flex items-center gap-1">
+                                    <i class="ri-fire-fill {{ $weather === 'rainy' ? 'text-blue-300' : 'text-orange-400' }}"></i> {{ $guardian['current_flames'] }} totais
+                                </span>
+                                <span class="opacity-80">Evolui: {{ $guardian['next_stage_flames'] }}</span>
                             </div>
-                            <div class="h-2 w-full bg-black/20 rounded-full overflow-hidden p-[1px]">
-                                <div class="h-full bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full relative" style="width: {{ $flameProgress }}%">
-                                    <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.5),transparent)] animate-[shimmer_2s_infinite] -translate-x-full"></div>
+                            <div class="h-2 w-full bg-black/30 rounded-full overflow-hidden p-[1px] border border-white/5">
+                                <div class="h-full bg-gradient-to-r {{ $weather === 'rainy' ? 'from-blue-400 to-indigo-400' : 'from-emerald-400 to-teal-400' }} rounded-full relative transition-all duration-1500" style="width: {{ $guardian['progress_percent'] }}%">
+                                    <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)] animate-[shimmer_2s_infinite] -translate-x-full"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </header>
 
@@ -273,9 +339,9 @@
 
             </div>
 
-            {{-- NOVA SECÇÃO LARGURA TOTAL: IMPACTO REAL DA COMUNIDADE --}}
+            {{-- SECÇÃO LARGURA TOTAL: IMPACTO REAL DA COMUNIDADE --}}
             @php
-                // Mock de Variáveis de Impacto (Para o Claude alimentar)
+                // Mock de Variáveis de Impacto
                 $globalImpact = $globalImpact ?? [
                     'current_flames' => 8450,
                     'target_flames' => 10000,
@@ -287,7 +353,6 @@
             @endphp
             <div class="col-span-1 lg:col-span-12 mt-2">
                 <div class="relative bg-gradient-to-br from-teal-600 to-emerald-800 rounded-[2.5rem] p-8 md:p-10 text-white shadow-xl overflow-hidden group">
-                    {{-- Ilustração / Padrão de Fundo --}}
                     <div class="absolute right-0 top-0 w-1/2 h-full opacity-10 pointer-events-none">
                         <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="absolute w-[400px] h-[400px] -right-20 -top-20 animate-[spin_60s_linear_infinite]">
                             <path fill="#ffffff" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,79.6,-45.8C87.4,-32.6,90,-16.3,89.1,-0.5C88.1,15.3,83.6,30.6,75.2,43.6C66.8,56.6,54.5,67.3,40.7,75.1C26.9,82.9,11.5,87.8,-3.8,89.5C-19.1,91.2,-38.2,89.7,-52.6,81.5C-67,73.3,-76.8,58.4,-83.4,42.5C-90,26.6,-93.4,9.7,-91.3,-6.4C-89.2,-22.5,-81.6,-37.8,-70.7,-49.6C-59.8,-61.4,-45.6,-69.7,-31.6,-76.6C-17.6,-83.5,-3.8,-89,10.6,-86.3C25,-83.6,44.7,-76.4,44.7,-76.4Z" transform="translate(100 100)" />
@@ -380,7 +445,7 @@
         </div>
     </div>
 
-    {{-- MODAIS (Sem alterações funcionais, apenas estrutura mantida para não quebrar a página) --}}
+    {{-- MODAIS --}}
     <div id="safety-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="this.parentElement.classList.add('hidden')"></div>
         <div class="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl animate-fade-up">
