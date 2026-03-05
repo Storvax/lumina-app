@@ -231,6 +231,142 @@
             </div>
 
             {{-- ================================================================
+                 SECÇÃO 4.5: CALOR DA COMUNIDADE (O NOVO WIDGET)
+                 ================================================================ --}}
+            @php
+                // Prevenção de erros enquanto o backend não é atualizado pelo Claude
+                $cCurrent = $communityStats['current'] ?? 850;
+                $cTarget = $communityStats['target'] ?? 1000;
+                $cPercentage = $communityStats['percentage'] ?? 85;
+            @endphp
+            
+            <div class="relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[2rem] p-6 md:p-8 border border-rose-100 dark:border-rose-900/30 shadow-sm overflow-hidden group mt-4">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-gradient-to-br from-amber-100 to-rose-100 dark:from-rose-900/20 dark:to-amber-900/20 rounded-full blur-3xl opacity-70 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+                <div class="absolute -left-10 -bottom-10 w-32 h-32 bg-gradient-to-tr from-rose-50 to-indigo-50 dark:from-indigo-900/20 dark:to-rose-900/20 rounded-full blur-2xl opacity-60 pointer-events-none"></div>
+
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-rose-500 text-white flex items-center justify-center text-2xl shadow-lg shadow-rose-500/20 animate-[bounceSlight_3s_ease-in-out_infinite]">
+                                <i class="ri-fire-fill"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-black text-slate-800 dark:text-white">O Calor da Comunidade</h2>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Apoio partilhado esta semana</p>
+                            </div>
+                        </div>
+                        
+                        <a href="{{ route('forum.index') }}" class="hidden md:flex items-center gap-2 text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-400 px-4 py-2 rounded-xl hover:bg-rose-100 transition-colors">
+                            Contribuir <i class="ri-arrow-right-line"></i>
+                        </a>
+                    </div>
+
+                    <div class="mt-6 relative">
+                        <div class="flex justify-between text-xs font-bold mb-2">
+                            <span class="text-rose-600 dark:text-rose-400">
+                                <i class="ri-heart-pulse-fill"></i> <span>{{ $cCurrent }}</span> interações
+                            </span>
+                            <span class="text-slate-400">
+                                Objetivo: {{ $cTarget }}
+                            </span>
+                        </div>
+                        
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-5 md:h-6 overflow-hidden shadow-inner relative">
+                            <div class="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-400 to-rose-500 relative transition-all duration-1500 ease-out" 
+                                 style="width: {{ $cPercentage }}%;">
+                                <div class="absolute top-0 left-0 right-0 bottom-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)] animate-[shimmer_2s_infinite] -translate-x-full"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-center text-xs text-slate-400 dark:text-slate-500 mt-4 font-medium">
+                        Cada abraço 🫂, vela 🕯️ e comentário conta. Juntos, criamos um espaço mais seguro.
+                    </p>
+                </div>
+            </div>
+
+            {{-- ================================================================
+                 SECÇÃO 4.6: IMPACTO NO MUNDO REAL (GAMIFICAÇÃO COLETIVA)
+                 ================================================================ --}}
+            @php
+                // Mock de dados (O Claude vai preencher isto com dados reais depois)
+                $globalImpact = $globalImpact ?? [
+                    'current_flames' => 7650,
+                    'target_flames' => 10000,
+                    'percentage' => 76,
+                    'goal_title' => 'Plantar 1 Árvore na Serra da Estrela',
+                    'ngo_name' => 'Associação Plantar Uma Árvore',
+                    'participants_count' => 342,
+                    'message' => 'Quando atingirmos as 10.000 chamas coletivas, a Lumina fará a doação em nome de toda a comunidade.'
+                ];
+            @endphp
+
+            <div class="relative rounded-[2.5rem] p-1 bg-gradient-to-br from-emerald-400 to-teal-600 shadow-xl shadow-teal-900/20 overflow-hidden mb-8 group mt-12">
+                {{-- Brilho animado que passa pelo rebordo --}}
+                <div class="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.3)_50%,transparent_75%)] w-[200%] h-[200%] animate-[shimmer_3s_infinite] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+                
+                <div class="relative bg-emerald-950/40 backdrop-blur-2xl rounded-[2.3rem] p-6 md:p-10 border border-white/10 overflow-hidden z-10">
+                    
+                    {{-- Elementos decorativos de fundo (Folhas / Árvore) --}}
+                    <i class="ri-tree-line absolute -right-10 -bottom-10 text-[180px] text-white/5 transform -rotate-12 group-hover:scale-110 transition-transform duration-1000 pointer-events-none"></i>
+                    <i class="ri-leaf-fill absolute top-10 left-10 text-4xl text-emerald-400/20 animate-pulse pointer-events-none"></i>
+
+                    <div class="grid md:grid-cols-2 gap-8 md:gap-12 items-center relative z-10">
+                        
+                        {{-- Informação Textual --}}
+                        <div>
+                            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-emerald-100 text-[10px] font-black uppercase tracking-widest mb-4">
+                                <i class="ri-earth-line text-emerald-300"></i> Impacto Real
+                            </div>
+                            
+                            <h2 class="text-2xl md:text-4xl font-black text-white mb-3 leading-tight">
+                                O teu autocuidado <br/> <span class="text-emerald-300">muda o mundo.</span>
+                            </h2>
+                            
+                            <p class="text-emerald-100/80 text-sm md:text-base leading-relaxed mb-6">
+                                {{ $globalImpact['message'] }} O nosso objetivo atual é <strong>{{ $globalImpact['goal_title'] }}</strong> com a {{ $globalImpact['ngo_name'] }}.
+                            </p>
+
+                            <div class="flex items-center gap-3">
+                                <div class="flex -space-x-3">
+                                    {{-- Avatares falsos de utilizadores que contribuíram --}}
+                                    <div class="w-8 h-8 rounded-full bg-emerald-700 border-2 border-emerald-900 flex items-center justify-center text-xs text-white shadow-sm">A</div>
+                                    <div class="w-8 h-8 rounded-full bg-teal-600 border-2 border-emerald-900 flex items-center justify-center text-xs text-white shadow-sm">M</div>
+                                    <div class="w-8 h-8 rounded-full bg-indigo-500 border-2 border-emerald-900 flex items-center justify-center text-xs text-white shadow-sm">R</div>
+                                </div>
+                                <span class="text-xs font-medium text-emerald-200">
+                                    <strong>+{{ $globalImpact['participants_count'] }}</strong> pessoas a contribuir
+                                </span>
+                            </div>
+                        </div>
+
+                        {{-- Barra de Progresso Circular / Grande --}}
+                        <div class="bg-white/10 border border-white/20 rounded-[2rem] p-6 md:p-8 backdrop-blur-sm text-center shadow-2xl">
+                            <i class="ri-fire-fill text-5xl text-orange-400 drop-shadow-[0_0_15px_rgba(251,146,60,0.6)] animate-[bounceSlight_3s_ease-in-out_infinite] mb-2 block"></i>
+                            
+                            <h3 class="text-3xl font-black text-white mb-1">
+                                {{ number_format($globalImpact['current_flames']) }} <span class="text-lg text-emerald-200 font-medium">/ {{ number_format($globalImpact['target_flames']) }}</span>
+                            </h3>
+                            <p class="text-xs font-bold uppercase tracking-widest text-emerald-300 mb-6">Chamas Coletivas</p>
+
+                            <div class="relative w-full h-4 bg-emerald-950/50 rounded-full overflow-hidden shadow-inner border border-white/5">
+                                {{-- A barra verde vibrante --}}
+                                <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full transition-all duration-1500" style="width: {{ $globalImpact['percentage'] }}%;">
+                                    {{-- Efeito de brilho interno na barra --}}
+                                    <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.5),transparent)] animate-[shimmer_2s_infinite] -translate-x-full"></div>
+                                </div>
+                            </div>
+                            
+                            <p class="text-[10px] text-emerald-200/60 font-medium mt-3 text-right">
+                                Faltam apenas {{ number_format($globalImpact['target_flames'] - $globalImpact['current_flames']) }} chamas!
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            {{-- ================================================================
                  SECÇÃO 5: BANNER DE MARCO — DADOS REAIS APENAS
                  Bug corrigido: o "|| true" foi removido.
                  O banner só aparece quando $pendingMilestone tem dados reais
@@ -436,4 +572,11 @@
 
         </div>
     </div>
+    
+    <x-slot name="css">
+        <style>
+            @keyframes shimmer { 100% { transform: translateX(100%); } }
+            @keyframes bounceSlight { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+        </style>
+    </x-slot>
 </x-lumina-layout>

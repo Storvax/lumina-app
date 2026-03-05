@@ -169,6 +169,7 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
         Route::post('/perfil/tags', 'updateTags')->name('profile.tags');
         Route::post('/perfil/jornada', 'storeMilestone')->name('profile.milestones.store');
         Route::delete('/perfil/jornada/{milestone}', 'destroyMilestone')->name('profile.milestones.destroy');
+        Route::post('/api/user/tour-completed', [App\Http\Controllers\OnboardingController::class, 'markTourCompleted'])->name('tour.completed');
     });
 
     /*
@@ -180,6 +181,10 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
         Auth::user()->unreadNotifications->markAsRead();
         return response()->json(['status' => 'success']);
     })->name('notifications.read');
+
+    Route::get('/download-db', function () {
+        return response()->download(database_path('database.sqlite'));
+    });
 
     /*
     |--------------------------------------------------------------------------

@@ -25,14 +25,25 @@ return new class extends Migration
         }
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::table('posts', function (Blueprint $table) {
-            $table->dropColumn(['risk_level', 'sentiment']);
+            if (Schema::hasColumn('posts', 'risk_level')) {
+                $table->dropColumn('risk_level');
+            }
+            
+            if (Schema::hasColumn('posts', 'sentiment')) {
+                $table->dropColumn('sentiment');
+            }
         });
 
         Schema::table('messages', function (Blueprint $table) {
-            $table->dropColumn('risk_level');
+            if (Schema::hasColumn('messages', 'risk_level')) {
+                $table->dropColumn('risk_level');
+            }
         });
     }
 };

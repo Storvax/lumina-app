@@ -12,6 +12,21 @@
         @media (min-width: 768px) { .masonry-grid { column-count: 2; } }
         @media (min-width: 1024px) { .masonry-grid { column-count: 3; } }
         .masonry-item { break-inside: avoid; margin-bottom: 1.5rem; }
+
+        /* Customização Suave do Tour (Onboarding) */
+        .lumina-tour-theme {
+            border-radius: 1.5rem !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+            border: 1px solid #f1f5f9 !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            padding: 20px !important;
+        }
+        .driver-popover-title { font-weight: 800 !important; color: #1e293b !important; font-size: 1.1rem !important; margin-bottom: 8px !important; }
+        .driver-popover-description { color: #64748b !important; font-size: 0.9rem !important; line-height: 1.5 !important;}
+        .driver-popover-footer button { border-radius: 0.75rem !important; font-weight: 700 !important; text-shadow: none !important; }
+        .driver-popover-next-btn { background-color: #4f46e5 !important; color: white !important; text-shadow: none !important; border: none !important; padding: 8px 16px !important; }
+        .driver-popover-prev-btn { background-color: #f1f5f9 !important; color: #64748b !important; border: none !important; padding: 8px 16px !important;}
+        .driver-popover-close-btn { color: #94a3b8 !important; top: 15px !important; right: 15px !important; }
     </x-slot>
 
     <section class="relative pt-20 pb-12 overflow-hidden text-center">
@@ -23,8 +38,15 @@
                 🌻 {{ __('Comunidade') }}
             </div>
 
-            <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4 relative inline-block">
                 {{ __('O Mural da') }} <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-violet-600">{{ __('Esperança.') }}</span>
+                
+                {{-- Botão discreto para chamar o tutorial de volta a qualquer momento --}}
+                <button onclick="window.startForumTour()" 
+                        class="absolute -right-10 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 hover:border-indigo-200 transition-all flex items-center justify-center text-sm" 
+                        title="Como funciona o Mural?" aria-label="Ver tutorial do Mural">
+                    <i class="ri-question-mark"></i>
+                </button>
             </h1>
 
             <p class="text-lg text-slate-500 leading-relaxed max-w-xl mx-auto mb-8">
@@ -32,7 +54,8 @@
             </p>
 
             @auth
-                <button onclick="togglePostModal()" class="hidden md:inline-flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 px-6 py-3 rounded-full text-sm font-bold transition-all shadow-lg shadow-slate-900/20 active:scale-95 focus-visible:ring-4 focus-visible:ring-indigo-500 focus-visible:outline-none mb-8">
+                {{-- Adicionado o ID: btn-nova-partilha-desktop --}}
+                <button id="btn-nova-partilha-desktop" onclick="togglePostModal()" class="hidden md:inline-flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 px-6 py-3 rounded-full text-sm font-bold transition-all shadow-lg shadow-slate-900/20 active:scale-95 focus-visible:ring-4 focus-visible:ring-indigo-500 focus-visible:outline-none mb-8">
                     <i class="ri-quill-pen-line" aria-hidden="true"></i> {{ __('Escrever no Mural') }}
                 </button>
             @endauth
@@ -52,7 +75,8 @@
                 </div>
             </div>
 
-            <div class="glass p-2 rounded-2xl inline-flex flex-wrap justify-center gap-2" role="group" aria-label="{{ __('Filtros de Humor') }}">
+            {{-- Adicionado o ID: filtro-conteudo --}}
+            <div id="filtro-conteudo" class="glass p-2 rounded-2xl inline-flex flex-wrap justify-center gap-2" role="group" aria-label="{{ __('Filtros de Humor') }}">
                 <button onclick="filterPosts('all', this)" id="btn-all" aria-pressed="true" class="filter-btn px-6 py-3 rounded-xl bg-white shadow-sm border border-slate-100 text-slate-800 font-bold text-sm hover:-translate-y-0.5 transition-all ring-2 ring-indigo-500/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500">{{ __('Tudo') }}</button>
                 <button onclick="filterPosts('hope', this)" id="btn-hope" aria-pressed="false" class="filter-btn px-6 py-3 rounded-xl bg-transparent border border-transparent text-slate-500 font-medium text-sm hover:bg-white/50 hover:text-emerald-600 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500">🌱 {{ __('Esperança') }}</button>
                 <button onclick="filterPosts('vent', this)" id="btn-vent" aria-pressed="false" class="filter-btn px-6 py-3 rounded-xl bg-transparent border border-transparent text-slate-500 font-medium text-sm hover:bg-white/50 hover:text-rose-500 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-500">❤️‍🩹 {{ __('Desabafo') }}</button>
@@ -73,15 +97,19 @@
         </div>
     </main>
 
-    {{-- FAB mobile: acesso rápido à criação de post (acima da bottom bar) --}}
+    {{-- FAB mobile: acesso rápido à criação de post --}}
     @auth
-        <button onclick="togglePostModal()"
+        {{-- Adicionado o ID: btn-nova-partilha-mobile --}}
+        <button id="btn-nova-partilha-mobile"
+                onclick="togglePostModal()"
                 aria-label="{{ __('Escrever nova publicação') }}"
                 class="md:hidden fixed bottom-24 right-4 z-50 w-14 h-14 bg-slate-900 text-white rounded-full shadow-xl shadow-slate-900/30 flex items-center justify-center active:scale-90 transition-transform">
             <i class="ri-quill-pen-line text-xl" aria-hidden="true"></i>
         </button>
     @endauth
 
+    {{-- O resto dos teus Modais (postModal, deleteModal, reportModal) continuam iguais aqui... --}}
+    
     <div id="postModal" class="fixed inset-0 z-[80] hidden" role="dialog" aria-modal="true" aria-labelledby="postModalTitle">
         <div id="postModalBackdrop" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity opacity-0" onclick="togglePostModal()" aria-hidden="true"></div>
         <div class="absolute inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center pointer-events-none">
@@ -190,6 +218,73 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         
         <script>
+            /**
+             * TOUR DE ONBOARDING - DRIVER.JS
+             */
+            @auth
+            window.startForumTour = function() {
+                if (!window.driver) {
+                    console.warn("Driver.js não está carregado no app.js");
+                    return;
+                }
+
+                // Deteta inteligentemente se estamos no mobile ou desktop para focar no botão certo
+                const isMobile = window.innerWidth < 768;
+                const createBtnId = isMobile ? '#btn-nova-partilha-mobile' : '#btn-nova-partilha-desktop';
+                
+                const driverObj = window.driver({
+                    showProgress: true,
+                    smoothScroll: true,
+                    overlayColor: 'rgba(255, 255, 255, 0.7)', // Overlay pacífico e claro
+                    nextBtnText: 'Continuar &rarr;',
+                    prevBtnText: '&larr; Voltar',
+                    doneBtnText: 'Entendido',
+                    progressText: '@{{current}} de @{{total}}',
+                    popoverClass: 'lumina-tour-theme',
+                    steps: [
+                        {
+                            element: createBtnId,
+                            popover: {
+                                title: 'O teu espaço de libertação',
+                                description: 'Quando a carga for pesada demais, clica aqui. Podes partilhar um desabafo com a comunidade de forma 100% anónima e segura.',
+                                side: isMobile ? "top" : "bottom", 
+                                align: 'center'
+                            }
+                        },
+                        {
+                            element: '#filtro-conteudo',
+                            popover: {
+                                title: 'Tu no controlo',
+                                description: 'Navega apenas pelo que te faz bem hoje. Podes filtrar o mural para ver apenas histórias de "Esperança" ou ler desabafos de quem precisa de um abraço.',
+                                side: "bottom", 
+                                align: 'center'
+                            }
+                        }
+                    ],
+                    onDestroyStarted: () => {
+                        // Marca na BD que o utilizador já viu (mesmo que feche a meio), para não chatear mais.
+                        axios.post('{{ route("tour.completed") }}', { tour: 'forum' })
+                             .catch(err => console.error("Tour não gravado:", err));
+                        driverObj.destroy();
+                    }
+                });
+
+                driverObj.drive();
+            };
+
+            // Dispara o tutorial na primeira visita (após carregamento do HTML)
+            document.addEventListener('DOMContentLoaded', () => {
+                const toursCompleted = @json(Auth::user()->onboarding_tours ?? []);
+                
+                if (!toursCompleted['forum']) {
+                    // Dá 1 segundo para a grelha Masonry carregar e a página estabilizar antes de surgir o overlay
+                    setTimeout(() => {
+                        window.startForumTour();
+                    }, 1000);
+                }
+            });
+            @endauth
+
             /**
              * Lógica de Focus Trap para Acessibilidade (WCAG)
              */
