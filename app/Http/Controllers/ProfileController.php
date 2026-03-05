@@ -98,18 +98,43 @@ class ProfileController extends Controller
             });
 
         // 5. Milestones & Identity
-        $milestones = $user->milestones()->orderBy('date', 'desc')->get(); 
+        $milestones = $user->milestones()->orderBy('date', 'desc')->get();
         $tagsList = ['Ansiedade', 'Luto', 'Burnout', 'Depressão', 'TDAH', 'Pânico', 'Recuperação', 'Stress', 'Solidão'];
 
+        // 6. Guardian Status (estágios por chamas)
+        $guardianStatus = match (true) {
+            $flames >= 500 => ['stage' => 'beacon', 'label' => 'Farol', 'icon' => '🏔️', 'description' => 'Iluminas o caminho de muitos.'],
+            $flames >= 200 => ['stage' => 'bonfire', 'label' => 'Fogueira', 'icon' => '🔥', 'description' => 'A tua presença aquece quem te rodeia.'],
+            $flames >= 50  => ['stage' => 'flame', 'label' => 'Chama', 'icon' => '🕯️', 'description' => 'A tua luz começa a brilhar com força.'],
+            default        => ['stage' => 'spark', 'label' => 'Faísca', 'icon' => '✨', 'description' => 'Cada pequeno gesto conta. Estás a começar.'],
+        };
+
+        // 7. Soul Climate (clima emocional baseado nos últimos 7 dias de DailyLog)
+        $recentLogs = DailyLog::where('user_id', $user->id)
+            ->where('log_date', '>=', Carbon::today()->subDays(7))
+            ->pluck('mood_level');
+
+        $avgMood = $recentLogs->isNotEmpty() ? round($recentLogs->avg(), 1) : null;
+
+        $weather = match (true) {
+            $avgMood === null            => ['icon' => '🌫️', 'label' => 'Indefinido', 'description' => 'Sem registos recentes para calcular.'],
+            $avgMood >= 4.0              => ['icon' => '☀️', 'label' => 'Céu Limpo', 'description' => 'Os teus dias têm sido luminosos.'],
+            $avgMood >= 3.0              => ['icon' => '⛅', 'label' => 'Parcialmente Nublado', 'description' => 'Altos e baixos, mas estás no caminho.'],
+            $avgMood >= 2.0              => ['icon' => '🌧️', 'label' => 'Chuvoso', 'description' => 'Dias mais cinzentos. Sê gentil contigo.'],
+            default                      => ['icon' => '🌩️', 'label' => 'Tempestade', 'description' => 'Período difícil. Procura apoio se precisares.'],
+        };
+
         return view('profile.show', compact(
-            'user', 
-            'garden', 
-            'stats', 
-            'allAchievements', 
-            'unlockedIds', 
-            'spiralData', 
-            'milestones', 
-            'tagsList'
+            'user',
+            'garden',
+            'stats',
+            'allAchievements',
+            'unlockedIds',
+            'spiralData',
+            'milestones',
+            'tagsList',
+            'guardianStatus',
+            'weather'
         ));
     }
 

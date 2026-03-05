@@ -19,6 +19,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\WallController;
 use App\Http\Controllers\CommunityReportController;
+use App\Http\Controllers\PactController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,6 +32,7 @@ Route::get('/offline', fn () => view('offline'))->name('offline');
 Route::get('/comunidade/impacto', [CommunityReportController::class, 'index'])->name('community.report');
 Route::get('/pesquisar', [SearchController::class, 'index'])->name('search.index');
 Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
+Route::get('/salas/silencio', [RoomController::class, 'silentRoom'])->middleware(['auth', 'verified', 'onboarding'])->name('rooms.silent');
 
 /*
 |--------------------------------------------------------------------------
@@ -74,6 +76,7 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
             Route::post('/save', 'toggleSave')->name('save');
             Route::post('/subscrever', 'toggleSubscription')->name('subscribe');
             Route::post('/checkin', 'postCheckin')->name('checkin');
+            Route::post('/summarize', 'summarize')->name('summarize');
             Route::patch('/pin', 'togglePin')->name('pin');
             Route::patch('/lock', 'toggleLock')->name('lock');
         });
@@ -225,11 +228,27 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/grounding', 'grounding')->name('grounding');
         Route::get('/crise', 'crisis')->name('crisis');
-        Route::get('/sons', fn () => view('calm.sounds'))->name('sounds');
+        Route::get('/sons', 'sounds')->name('sounds');
+        Route::get('/combustao', 'combustion')->name('combustion');
+        Route::get('/respiracao', 'breathing')->name('breathing');
+        Route::get('/reflexao', [CalmZoneController::class, 'reflection'])->name('reflection');
+        Route::post('/reflexao', [CalmZoneController::class, 'reflectionChat'])->name('reflection.chat');
+        Route::get('/cofre', 'vault')->name('vault');
+        Route::post('/cofre', 'storeVaultItem')->name('vault.store');
 
         Route::post('/playlist/sugerir', 'suggestSong')->middleware('throttle:suggestions')->name('playlist.suggest');
         Route::post('/playlist/{song}/votar', 'voteSong')->middleware('throttle:suggestions')->name('playlist.vote');
         Route::delete('/playlist/{song}', 'deleteSong')->name('playlist.delete');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Diário do Pacto
+    |--------------------------------------------------------------------------
+    */
+    Route::controller(PactController::class)->prefix('pacto')->name('pact.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
     });
 });
 

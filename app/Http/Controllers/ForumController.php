@@ -15,6 +15,7 @@ use App\Services\GamificationService;
 use App\Services\CBTAnalysisService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -442,6 +443,45 @@ class ForumController extends Controller
         }
 
         return response()->json($response);
+    }
+
+    /**
+     * Gera um resumo cognitivo do post via OpenAI API.
+     * Reutiliza o resumo se já existir (cache em BD).
+     */
+    public function summarize(Post $post)
+    {
+        if ($post->ai_summary) {
+            return response()->json(['summary' => $post->ai_summary]);
+        }
+
+        $response = Http::withToken(env('OPENAI_API_KEY'))
+            ->timeout(15)
+            ->post('https://api.openai.com/v1/chat/completions', [
+                'model' => 'gpt-4o-mini',
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'És um assistente de saúde mental empático. Resume o seguinte desabafo em 2-3 frases acolhedoras, validando os sentimentos do autor sem julgar. Responde sempre em Português de Portugal.',
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $post->content,
+                    ],
+                ],
+                'max_tokens' => 200,
+                'temperature' => 0.7,
+            ]);
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Não foi possível gerar o resumo.'], 502);
+        }
+
+        $summary = $response->json('choices.0.message.content');
+
+        $post->update(['ai_summary' => $summary]);
+
+        return response()->json(['summary' => $summary]);
     }
 
     /**

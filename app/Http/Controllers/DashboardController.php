@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Cache;
 use App\Services\GamificationService;
 use App\Services\RecommendationService;
 use App\Models\DailyLog;
+use App\Models\Post;
+use App\Models\User;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -73,6 +75,22 @@ class DashboardController extends Controller
         // Recomendações contextuais (GAP-18)
         $recommendations = app(RecommendationService::class)->getRecommendations($user);
 
+        // Estatísticas da comunidade (widgets)
+        $communityStats = Cache::remember('community:stats', 900, fn () => [
+            'total_users' => User::count(),
+            'active_today' => User::where('last_activity_at', '>=', now()->startOfDay())->count(),
+            'posts_this_week' => Post::where('created_at', '>=', now()->subDays(7))->count(),
+            'logs_today' => DailyLog::where('log_date', now()->toDateString())->count(),
+        ]);
+
+        // Impacto global da plataforma
+        $globalImpact = Cache::remember('community:impact', 3600, fn () => [
+            'total_logs' => DailyLog::count(),
+            'total_posts' => Post::count(),
+            'total_hugs' => \App\Models\PostReaction::where('type', 'hug')->count(),
+            'total_flames' => (int) User::sum('flames'),
+        ]);
+
         return view('dashboard', compact(
             'dailyMissions',
             'progressData',
@@ -82,7 +100,9 @@ class DashboardController extends Controller
             'encouragement',
             'todayLog',
             'emotionalDate',
-            'recommendations'
+            'recommendations',
+            'communityStats',
+            'globalImpact'
         ));
     }
 

@@ -8,6 +8,14 @@ use Illuminate\Support\Facades\DB;
 
 class RoomController extends Controller
 {
+    /**
+     * Sala Silenciosa — presença partilhada sem mensagens.
+     */
+    public function silentRoom()
+    {
+        return view('rooms.silent');
+    }
+
     public function index(Request $request)
     {
         // Excluir salas privadas (buddy sessions) da listagem pública.
