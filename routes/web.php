@@ -250,6 +250,15 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
     });
+
+    // Casulo / Pacto Diário
+    Route::get('/comunidade/pacto', function () {
+        return view('forum.pact', [
+            'hasAnswered' => false, 
+            'myAnswer' => '', 
+            'pactAnswers' => []
+        ]);
+    })->name('forum.pact');
 });
 
 require __DIR__.'/auth.php';
