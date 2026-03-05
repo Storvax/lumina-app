@@ -183,4 +183,14 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasMany(PlaylistSong::class);
     }
+
+    public function vaultItems()
+    {
+        return $this->hasMany(VaultItem::class);
+    }
+
+    public function pactAnswers()
+    {
+        return $this->hasMany(PactAnswer::class);
+    }
 }

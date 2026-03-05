@@ -44,3 +44,13 @@ Broadcast::channel('chat.{roomId}', function ($user, $roomId) {
         'name' => $user->name,
     ];
 });
+
+// Canal da Sala Silenciosa (Presença)
+// Permite que os utilizadores vejam quem está presente sem interação verbal.
+Broadcast::channel('silent-room', function ($user) {
+    return [
+        'id' => $user->id,
+        'name' => $user->pseudonym,
+        'avatar' => $user->avatar,
+    ];
+});

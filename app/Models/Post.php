@@ -23,6 +23,7 @@ class Post extends Model
         'is_locked',
         'risk_level',
         'sentiment',
+        'ai_summary',
     ];
 
     // Relação com o Autor

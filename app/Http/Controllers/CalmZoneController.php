@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\PlaylistSong;
+use App\Models\DailyLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http; // Importante!
+use Illuminate\Support\Facades\Http;
+use Carbon\Carbon;
 
 class CalmZoneController extends Controller
 {
@@ -32,6 +34,169 @@ class CalmZoneController extends Controller
     {
         $user = Auth::user();
         return view('calm.crisis', compact('user'));
+    }
+
+    public function sounds()
+    {
+        return view('calm.sounds', ['categories' => config('sound-library.categories')]);
+    }
+
+    /**
+     * Diário de Combustão — escrita terapêutica com prompts diários.
+     */
+    public function combustion()
+    {
+        $user = Auth::user();
+
+        $entries = DailyLog::where('user_id', $user->id)
+            ->whereNotNull('note')
+            ->orderBy('log_date', 'desc')
+            ->take(7)
+            ->get();
+
+        $prompts = [
+            'O que gostarias de deixar ir hoje?',
+            'Descreve uma emoção que carregas há demasiado tempo.',
+            'Se a tua dor tivesse uma cor, qual seria?',
+            'Escreve uma carta ao teu eu de há um ano.',
+            'O que te impede de descansar verdadeiramente?',
+            'Qual foi o momento mais difícil desta semana?',
+            'Que pensamento repetitivo gostarias de silenciar?',
+            'Descreve o peso que sentes agora, sem filtros.',
+            'Se pudesses gritar algo ao mundo, o que seria?',
+            'O que significa "estar bem" para ti neste momento?',
+            'Escreve sobre algo que nunca disseste a ninguém.',
+            'Que parte de ti merece mais compaixão?',
+            'O que farias se não tivesses medo?',
+            'Descreve um lugar onde te sentes seguro/a.',
+            'Qual é a tua maior necessidade emocional agora?',
+            'Escreve uma frase que resuma o teu dia.',
+            'O que aprendeste sobre ti esta semana?',
+            'Descreve um momento de coragem recente.',
+            'Que hábito gostarias de transformar?',
+            'Escreve sobre algo que te surpreendeu em ti.',
+            'O que te dá esperança, mesmo nos dias cinzentos?',
+            'Descreve como te sentes fisicamente neste momento.',
+            'Que conversa interna precisas de ter contigo?',
+            'Se pudesses mudar uma coisa no teu dia, qual seria?',
+            'Escreve algo que precisas de ouvir.',
+            'Qual é a emoção dominante neste instante?',
+            'O que significa autocuidado para ti?',
+            'Descreve um pequeno gesto que te fez bem recentemente.',
+            'Que limite precisas de estabelecer?',
+            'Escreve uma promessa gentil a ti mesmo/a.',
+        ];
+
+        $dailyPrompt = $prompts[now()->dayOfYear % count($prompts)];
+
+        return view('calm.combustion', compact('entries', 'dailyPrompt'));
+    }
+
+    /**
+     * Respiração Somática — exercícios guiados de respiração.
+     */
+    public function breathing()
+    {
+        $techniques = [
+            [
+                'name' => 'Respiração 4-7-8',
+                'description' => 'Inspirar 4s, segurar 7s, expirar 8s. Ativa o sistema parassimpático.',
+                'inhale' => 4, 'hold' => 7, 'exhale' => 8, 'cycles' => 4,
+            ],
+            [
+                'name' => 'Respiração Caixa',
+                'description' => 'Inspirar 4s, segurar 4s, expirar 4s, segurar 4s. Equilíbrio total.',
+                'inhale' => 4, 'hold' => 4, 'exhale' => 4, 'hold_after' => 4, 'cycles' => 6,
+            ],
+            [
+                'name' => 'Expiração Prolongada',
+                'description' => 'Inspirar 3s, expirar 6s. Foco no alívio da tensão.',
+                'inhale' => 3, 'hold' => 0, 'exhale' => 6, 'cycles' => 8,
+            ],
+            [
+                'name' => 'Respiração Diafragmática',
+                'description' => 'Respiração lenta pela barriga. 5s inspirar, 5s expirar.',
+                'inhale' => 5, 'hold' => 0, 'exhale' => 5, 'cycles' => 10,
+            ],
+        ];
+
+        return view('calm.breathing', compact('techniques'));
+    }
+
+    /**
+     * Reflexão do Tempo — chat com o "eu do futuro" via IA.
+     */
+    public function reflection()
+    {
+        return view('calm.reflection');
+    }
+
+    /**
+     * Reflexão do Tempo — processar mensagem e obter resposta do "eu do futuro".
+     */
+    public function reflectionChat(Request $request)
+    {
+        $validated = $request->validate([
+            'message' => 'required|string|max:1000',
+        ]);
+
+        $user = Auth::user();
+
+        $response = Http::withToken(env('OPENAI_API_KEY'))
+            ->timeout(20)
+            ->post('https://api.openai.com/v1/chat/completions', [
+                'model' => 'gpt-4o-mini',
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => "És o 'eu do futuro' do utilizador — uma versão mais sábia, mais calma e mais compassiva dele/a daqui a 5 anos. Responde com empatia profunda, validação emocional e esperança realista. Nunca dês conselhos clínicos. Usa a segunda pessoa ('tu'). Fala em Português de Portugal. Sê breve (2-4 frases). O nome do utilizador é {$user->name}.",
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $validated['message'],
+                    ],
+                ],
+                'max_tokens' => 250,
+                'temperature' => 0.8,
+            ]);
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Não foi possível contactar o teu eu do futuro.'], 502);
+        }
+
+        return response()->json(['reply' => $response->json('choices.0.message.content')]);
+    }
+
+    /**
+     * Cofre de Luz — listar itens guardados do utilizador.
+     */
+    public function vault()
+    {
+        $items = Auth::user()->vaultItems()
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('calm.vault', compact('items'));
+    }
+
+    /**
+     * Cofre de Luz — guardar novo item (texto, imagem ou link).
+     */
+    public function storeVaultItem(Request $request)
+    {
+        $validated = $request->validate([
+            'type' => 'required|in:text,image,link',
+            'title' => 'nullable|string|max:100',
+            'content' => 'required|string|max:2000',
+        ]);
+
+        $item = Auth::user()->vaultItems()->create($validated);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'item' => $item]);
+        }
+
+        return back()->with('success', 'Guardado no teu Cofre de Luz.');
     }
 
     public function suggestSong(Request $request)
