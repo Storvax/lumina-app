@@ -101,13 +101,16 @@
                 @php
                     $guardian = $guardianStatus ?? [];
                     
-                    // Proteções rigorosas: se o backend não enviar a chave, usamos um valor por defeito
                     $weather = $guardian['weather'] ?? 'sunny';
                     $guardian['emoji'] = $guardian['emoji'] ?? '🌱';
                     $guardian['stage_name'] = $guardian['stage_name'] ?? 'Semente da Intenção';
-                    $guardian['current_flames'] = $guardian['current_flames'] ?? ($stats['flames'] ?? 0);
+                    $guardian['current_flames'] = $stats['flames'] ?? 0;
                     $guardian['next_stage_flames'] = $guardian['next_stage_flames'] ?? 50;
-                    $guardian['progress_percent'] = $guardian['progress_percent'] ?? 0;
+                    
+                    // Cálculo da percentagem correto
+                    $guardian['progress_percent'] = $guardian['next_stage_flames'] > 0 
+                        ? min(100, round(($guardian['current_flames'] / $guardian['next_stage_flames']) * 100)) 
+                        : 100;
                 @endphp
                 <div class="md:col-span-5 lg:col-span-4 flex flex-col items-center justify-center bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20 relative overflow-hidden group">
                     
@@ -237,35 +240,42 @@
                             <i class="ri-medal-line text-yellow-500"></i> Conquistas
                         </h3>
                         <span class="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-3 py-1 rounded-full">
-                            {{ $stats['badges_count'] ?? 0 }}
+                            {{ $stats['badges_count'] ?? 1 }}
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-3">
+                    @php
+                        // Mock de Conquistas Mistério
+                        $allAchievements = [
+                            (object)['id' => 1, 'name' => 'Primeiro Passo', 'description' => 'Fizeste o teu 1º registo.', 'icon' => 'ri-seedling-line', 'color' => 'emerald'],
+                            (object)['id' => 2, 'name' => 'Chama Quente', 'description' => '7 dias seguidos.', 'icon' => 'ri-fire-fill', 'color' => 'orange'],
+                            (object)['id' => 3, 'name' => '???', 'description' => 'Continua a explorar para descobrir.', 'icon' => 'ri-question-mark', 'color' => 'slate'],
+                            (object)['id' => 4, 'name' => '???', 'description' => 'Continua a explorar para descobrir.', 'icon' => 'ri-lock-2-line', 'color' => 'slate'],
+                        ];
+                        $unlockedIds = [1]; // Simula que apenas a 1 foi desbloqueada
+                    @endphp
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                         @foreach($allAchievements as $badge)
                             @php 
-                                $isUnlocked = isset($unlockedIds) && in_array($badge->id, $unlockedIds); 
-                                $color = $badge->color ?? 'orange';
-                                $icon = $badge->icon ?? 'ri-medal-line';
-                                $name = $badge->name ?? 'Conquista';
-                                $description = $badge->description ?? '';
+                                $isUnlocked = in_array($badge->id, $unlockedIds); 
                             @endphp
                             
                             <div class="relative group">
-                                <div class="aspect-square rounded-2xl flex flex-col items-center justify-center p-2 border transition-all duration-300 cursor-default
+                                <div class="aspect-square rounded-2xl flex flex-col items-center justify-center p-2 border transition-all duration-300 cursor-help
                                     {{ $isUnlocked 
-                                        ? 'bg-'.$color.'-50 dark:bg-'.$color.'-900/20 border-'.$color.'-100 dark:border-'.$color.'-800' 
+                                        ? 'bg-'.$badge->color.'-50 dark:bg-'.$badge->color.'-900/20 border-'.$badge->color.'-100 dark:border-'.$badge->color.'-800' 
                                         : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700 grayscale opacity-40 hover:opacity-70' 
                                     }}">
-                                    <i class="{{ $icon }} text-2xl md:text-3xl mb-1 {{ $isUnlocked ? 'text-'.$color.'-500 drop-shadow-sm' : 'text-slate-400' }}"></i>
+                                    <i class="{{ $badge->icon }} text-2xl md:text-3xl mb-1 {{ $isUnlocked ? 'text-'.$badge->color.'-500 drop-shadow-sm' : 'text-slate-400' }}"></i>
                                     <p class="text-[9px] font-bold text-center leading-tight {{ $isUnlocked ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400' }}">
-                                        {{ $name }}
+                                        {{ $badge->name }}
                                     </p>
                                 </div>
                                 
                                 <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-40 bg-slate-900 text-white text-xs p-3 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-xl">
-                                    <p class="font-bold mb-1">{{ $name }}</p>
-                                    <p class="opacity-80 text-[10px]">{{ $description }}</p>
+                                    <p class="font-bold mb-1">{{ $badge->name }}</p>
+                                    <p class="opacity-80 text-[10px]">{{ $badge->description }}</p>
                                     <div class="mt-2 pt-2 border-t border-white/10 text-[10px] font-bold {{ $isUnlocked ? 'text-green-400' : 'text-slate-400' }}">
                                         @if($isUnlocked) <i class="ri-check-line"></i> Conquistado! @else <i class="ri-lock-line"></i> Bloqueado @endif
                                     </div>
@@ -344,7 +354,7 @@
                     'current_flames' => 8450,
                     'target_flames' => 10000,
                     'percentage' => 84,
-                    'user_contribution' => $stats['flames'] ?? 0,
+                    'user_contribution' => auth()->user()->flames ?? 0,
                     'goal_name' => 'Plantar 1 Árvore em Portugal',
                     'org_name' => 'Associação Florestal'
                 ];
