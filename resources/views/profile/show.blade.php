@@ -99,17 +99,15 @@
 
                 {{-- WIDGET: O GUARDIÃO DA CALMA (TERRÁRIO + CLIMA DA ALMA) --}}
                 @php
-                    // Variáveis Mock para o Guardião (O Claude ligará à BD)
-                    $guardian = $guardianStatus ?? [
-                        'stage_name' => 'Broto de Coragem',
-                        'emoji' => '🌿',
-                        'color' => 'emerald',
-                        'current_flames' => $stats['flames'] ?? 85,
-                        'next_stage_flames' => 150,
-                        'progress_percent' => 56,
-                        'weather' => 'rainy', // 'sunny' ou 'rainy' (muda aqui para testar)
-                    ];
-                    $weather = $guardian['weather'];
+                    $guardian = $guardianStatus ?? [];
+                    
+                    // Proteções rigorosas: se o backend não enviar a chave, usamos um valor por defeito
+                    $weather = $guardian['weather'] ?? 'sunny';
+                    $guardian['emoji'] = $guardian['emoji'] ?? '🌱';
+                    $guardian['stage_name'] = $guardian['stage_name'] ?? 'Semente da Intenção';
+                    $guardian['current_flames'] = $guardian['current_flames'] ?? ($stats['flames'] ?? 0);
+                    $guardian['next_stage_flames'] = $guardian['next_stage_flames'] ?? 50;
+                    $guardian['progress_percent'] = $guardian['progress_percent'] ?? 0;
                 @endphp
                 <div class="md:col-span-5 lg:col-span-4 flex flex-col items-center justify-center bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20 relative overflow-hidden group">
                     
