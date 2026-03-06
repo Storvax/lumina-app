@@ -247,8 +247,19 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
     | Diário do Pacto (integrado na comunidade)
     |--------------------------------------------------------------------------
     */
-    Route::get('/comunidade/pacto', [ForumController::class, 'pact'])->name('pact.index');
-    Route::post('/comunidade/pacto/responder', [ForumController::class, 'storePact'])->name('pact.store');
+    Route::controller(PactController::class)->prefix('pacto')->name('pact.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+    });
+
+    // Casulo / Pacto Diário
+    Route::get('/comunidade/pacto', function () {
+        return view('forum.pact', [
+            'hasAnswered' => false, 
+            'myAnswer' => '', 
+            'pactAnswers' => []
+        ]);
+    })->name('forum.pact');
 });
 
 require __DIR__.'/auth.php';

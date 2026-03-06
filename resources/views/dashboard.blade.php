@@ -64,9 +64,6 @@
 
             {{-- ================================================================
                  SECÇÃO 1: SAUDAÇÃO CONTEXTUAL + MINI PAINEL DE PROGRESSO
-                 A hora do dia e o estado do utilizador definem o tom da saudação.
-                 O painel de streak/chamas/nível traz o progresso para o topo
-                 da página, eliminando a necessidade de navegar para o perfil.
                  ================================================================ --}}
             <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
@@ -76,13 +73,11 @@
                     <h1 class="text-3xl font-bold text-slate-900 dark:text-white">
                         {{ $greeting }}, {{ $firstName }} 👋
                     </h1>
-                    {{-- Frase de encorajamento rotativa — muda uma vez por dia, não a cada reload --}}
                     <p class="text-slate-500 dark:text-slate-400 mt-1.5 text-sm italic">
                         "{{ $encouragement }}"
                     </p>
                 </div>
 
-                {{-- Mini painel: streak + chamas + nível --}}
                 <div class="flex items-center gap-3 shrink-0">
                     <div class="flex items-center gap-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl px-4 py-2.5 border border-slate-100 dark:border-slate-700 shadow-sm">
                         <i class="ri-fire-fill text-orange-500 text-lg"></i>
@@ -109,8 +104,6 @@
 
             {{-- ================================================================
                  SECÇÃO 2: CHECK-IN EMOCIONAL RÁPIDO
-                 Só aparece se o utilizador ainda não fez o registo de hoje.
-                 Apresentado de forma suave — nunca obrigatório nem culpabilizante.
                  ================================================================ --}}
             @if(!$progressData['todayLogged'])
                 <div class="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
@@ -133,9 +126,7 @@
             @endif
 
             {{-- ================================================================
-                 SECÇÃO 3: SUGESTÃO CONTEXTUAL (baseada no estado emocional)
-                 Só aparece quando existe uma tag emocional relevante declarada.
-                 Orienta sem pressionar — oferece, não impõe.
+                 SECÇÃO 3: SUGESTÃO CONTEXTUAL
                  ================================================================ --}}
             @if($contextualHint)
                 <div class="flex items-start gap-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl px-5 py-4 border border-slate-100 dark:border-slate-700">
@@ -148,7 +139,6 @@
 
             {{-- ================================================================
                  SECÇÃO 3.5: CALENDÁRIO EMOCIONAL PORTUGUÊS
-                 Card contextual em datas com impacto emocional cultural.
                  ================================================================ --}}
             @if(!empty($emotionalDate))
                 @php
@@ -176,8 +166,6 @@
 
             {{-- ================================================================
                  SECÇÃO 4: CARTÕES DE ACESSO RÁPIDO AOS MÓDULOS PRINCIPAIS
-                 Funcionalidade original preservada e enriquecida.
-                 O cartão do Diário adapta o CTA conforme o utilizador já registou hoje.
                  ================================================================ --}}
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 
@@ -206,7 +194,6 @@
                         <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Diário Emocional</h3>
                         <p class="text-slate-500 dark:text-slate-400 text-sm mb-6">Despeja os teus pensamentos. Ninguém vai ler a não ser tu.</p>
                         <span class="text-teal-600 dark:text-teal-400 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                            {{-- CTA adapta-se ao estado de registo de hoje --}}
                             {{ $progressData['todayLogged'] ? 'Ver registo de hoje' : 'Escrever' }}
                             <i class="ri-arrow-right-line"></i>
                         </span>
@@ -231,10 +218,9 @@
             </div>
 
             {{-- ================================================================
-                 SECÇÃO 4.5: CALOR DA COMUNIDADE (O NOVO WIDGET)
+                 SECÇÃO 4.5: CALOR DA COMUNIDADE
                  ================================================================ --}}
             @php
-                // Prevenção de erros enquanto o backend não é atualizado pelo Claude
                 $cCurrent = $communityStats['current'] ?? 850;
                 $cTarget = $communityStats['target'] ?? 1000;
                 $cPercentage = $communityStats['percentage'] ?? 85;
@@ -287,33 +273,22 @@
 
             {{-- ================================================================
                  SECÇÃO 4.6: IMPACTO NO MUNDO REAL (GAMIFICAÇÃO COLETIVA)
+                 Protegido com fallbacks "?? 'texto default'"
                  ================================================================ --}}
             @php
-                // Mock de dados (O Claude vai preencher isto com dados reais depois)
-                $globalImpact = $globalImpact ?? [
-                    'current_flames' => 7650,
-                    'target_flames' => 10000,
-                    'percentage' => 76,
-                    'goal_title' => 'Plantar 1 Árvore na Serra da Estrela',
-                    'ngo_name' => 'Associação Plantar Uma Árvore',
-                    'participants_count' => 342,
-                    'message' => 'Quando atingirmos as 10.000 chamas coletivas, a Lumina fará a doação em nome de toda a comunidade.'
-                ];
+                $globalImpact = $globalImpact ?? [];
             @endphp
 
             <div class="relative rounded-[2.5rem] p-1 bg-gradient-to-br from-emerald-400 to-teal-600 shadow-xl shadow-teal-900/20 overflow-hidden mb-8 group mt-12">
-                {{-- Brilho animado que passa pelo rebordo --}}
                 <div class="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.3)_50%,transparent_75%)] w-[200%] h-[200%] animate-[shimmer_3s_infinite] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
                 
                 <div class="relative bg-emerald-950/40 backdrop-blur-2xl rounded-[2.3rem] p-6 md:p-10 border border-white/10 overflow-hidden z-10">
                     
-                    {{-- Elementos decorativos de fundo (Folhas / Árvore) --}}
                     <i class="ri-tree-line absolute -right-10 -bottom-10 text-[180px] text-white/5 transform -rotate-12 group-hover:scale-110 transition-transform duration-1000 pointer-events-none"></i>
                     <i class="ri-leaf-fill absolute top-10 left-10 text-4xl text-emerald-400/20 animate-pulse pointer-events-none"></i>
 
                     <div class="grid md:grid-cols-2 gap-8 md:gap-12 items-center relative z-10">
                         
-                        {{-- Informação Textual --}}
                         <div>
                             <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-emerald-100 text-[10px] font-black uppercase tracking-widest mb-4">
                                 <i class="ri-earth-line text-emerald-300"></i> Impacto Real
@@ -323,42 +298,40 @@
                                 O teu autocuidado <br/> <span class="text-emerald-300">muda o mundo.</span>
                             </h2>
                             
+                            {{-- FALLBACKS DE PROTEÇÃO APLICADOS AQUI --}}
                             <p class="text-emerald-100/80 text-sm md:text-base leading-relaxed mb-6">
-                                {{ $globalImpact['message'] }} O nosso objetivo atual é <strong>{{ $globalImpact['goal_title'] }}</strong> com a {{ $globalImpact['ngo_name'] }}.
+                                {{ $globalImpact['message'] ?? 'Quando atingirmos a meta coletiva, faremos uma doação em nome de todos.' }} 
+                                O nosso objetivo atual é <strong>{{ $globalImpact['goal_title'] ?? 'Plantar 1 Árvore' }}</strong> com a {{ $globalImpact['ngo_name'] ?? 'Associação Florestal' }}.
                             </p>
 
                             <div class="flex items-center gap-3">
                                 <div class="flex -space-x-3">
-                                    {{-- Avatares falsos de utilizadores que contribuíram --}}
                                     <div class="w-8 h-8 rounded-full bg-emerald-700 border-2 border-emerald-900 flex items-center justify-center text-xs text-white shadow-sm">A</div>
                                     <div class="w-8 h-8 rounded-full bg-teal-600 border-2 border-emerald-900 flex items-center justify-center text-xs text-white shadow-sm">M</div>
                                     <div class="w-8 h-8 rounded-full bg-indigo-500 border-2 border-emerald-900 flex items-center justify-center text-xs text-white shadow-sm">R</div>
                                 </div>
                                 <span class="text-xs font-medium text-emerald-200">
-                                    <strong>+{{ $globalImpact['participants_count'] }}</strong> pessoas a contribuir
+                                    <strong>+{{ $globalImpact['participants_count'] ?? 0 }}</strong> pessoas a contribuir
                                 </span>
                             </div>
                         </div>
 
-                        {{-- Barra de Progresso Circular / Grande --}}
                         <div class="bg-white/10 border border-white/20 rounded-[2rem] p-6 md:p-8 backdrop-blur-sm text-center shadow-2xl">
                             <i class="ri-fire-fill text-5xl text-orange-400 drop-shadow-[0_0_15px_rgba(251,146,60,0.6)] animate-[bounceSlight_3s_ease-in-out_infinite] mb-2 block"></i>
                             
                             <h3 class="text-3xl font-black text-white mb-1">
-                                {{ number_format($globalImpact['current_flames']) }} <span class="text-lg text-emerald-200 font-medium">/ {{ number_format($globalImpact['target_flames']) }}</span>
+                                {{ number_format($globalImpact['current_flames'] ?? 0) }} <span class="text-lg text-emerald-200 font-medium">/ {{ number_format($globalImpact['target_flames'] ?? 10000) }}</span>
                             </h3>
                             <p class="text-xs font-bold uppercase tracking-widest text-emerald-300 mb-6">Chamas Coletivas</p>
 
                             <div class="relative w-full h-4 bg-emerald-950/50 rounded-full overflow-hidden shadow-inner border border-white/5">
-                                {{-- A barra verde vibrante --}}
-                                <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full transition-all duration-1500" style="width: {{ $globalImpact['percentage'] }}%;">
-                                    {{-- Efeito de brilho interno na barra --}}
+                                <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full transition-all duration-1500" style="width: {{ $globalImpact['percentage'] ?? 0 }}%;">
                                     <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.5),transparent)] animate-[shimmer_2s_infinite] -translate-x-full"></div>
                                 </div>
                             </div>
                             
                             <p class="text-[10px] text-emerald-200/60 font-medium mt-3 text-right">
-                                Faltam apenas {{ number_format($globalImpact['target_flames'] - $globalImpact['current_flames']) }} chamas!
+                                Faltam apenas {{ number_format(($globalImpact['target_flames'] ?? 10000) - ($globalImpact['current_flames'] ?? 0)) }} chamas!
                             </p>
                         </div>
 
@@ -367,10 +340,7 @@
             </div>
 
             {{-- ================================================================
-                 SECÇÃO 5: BANNER DE MARCO — DADOS REAIS APENAS
-                 Bug corrigido: o "|| true" foi removido.
-                 O banner só aparece quando $pendingMilestone tem dados reais
-                 vindos do DashboardController::detectPendingMilestone().
+                 SECÇÃO 5: BANNER DE MARCO
                  ================================================================ --}}
             @if($pendingMilestone)
                 <div x-data="{ open: false }"
@@ -422,9 +392,6 @@
 
             {{-- ================================================================
                  SECÇÃO 6: FOCO DE HOJE — MISSÕES DIÁRIAS
-                 Melhorias: barra de progresso global, celebração de conclusão,
-                 estado vazio mais humano, mensagem "Feito. Bem feito." por missão.
-                 Bug corrigido: divisão por zero protegida com max(1, target_count).
                  ================================================================ --}}
             <div class="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 dark:bg-orange-900/20 rounded-bl-full -mr-8 -mt-8 pointer-events-none"></div>
@@ -457,7 +424,6 @@
                         </div>
                     </div>
 
-                    {{-- Barra de progresso global das missões do dia --}}
                     @if($totalMissions > 0)
                         <div class="mb-6 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                             <div class="h-full rounded-full transition-all duration-700 ease-out {{ $allDone ? 'bg-green-400' : 'bg-orange-400' }}"
@@ -466,7 +432,6 @@
                         </div>
                     @endif
 
-                    {{-- Mensagem celebratória quando todas as missões estão concluídas --}}
                     @if($allDone)
                         <div class="mb-6 flex items-center gap-3 bg-green-50 dark:bg-green-900/20 rounded-2xl px-5 py-4 border border-green-100 dark:border-green-800">
                             <i class="ri-checkbox-circle-fill text-green-500 text-2xl shrink-0"></i>
@@ -484,11 +449,6 @@
                             @forelse($dailyMissions as $mission)
                                 @php
                                     $isCompleted = !is_null($mission->pivot->completed_at);
-
-                                    /*
-                                     * Protecção contra divisão por zero:
-                                     * target_count pode ser 0 em missões criadas sem valor explícito.
-                                     */
                                     $targetCount     = max(1, (int) $mission->target_count);
                                     $progressPercent = min(100, (int) round(($mission->pivot->progress / $targetCount) * 100));
                                 @endphp
@@ -501,7 +461,6 @@
 
                                     <div class="flex justify-between items-start mb-3">
                                         <div class="flex items-start gap-3">
-                                            {{-- Check verde ao concluir — reforço positivo visual --}}
                                             <div class="w-6 h-6 mt-0.5 rounded-full flex items-center justify-center shrink-0 border-2 transition-all duration-300
                                                 {{ $isCompleted
                                                     ? 'bg-green-500 border-green-500 text-white'
@@ -543,7 +502,6 @@
                                             </p>
                                         </div>
                                     @else
-                                        {{-- Mensagem humana de conclusão em vez de silêncio --}}
                                         <p class="ml-9 text-[10px] text-green-600 dark:text-green-400 mt-1.5 font-medium">
                                             Feito. Bem feito.
                                         </p>
@@ -551,7 +509,6 @@
                                 </div>
 
                             @empty
-                                {{-- Estado vazio: acolhedor, sem pressão, sem vazio frio --}}
                                 <div class="col-span-full flex flex-col items-center py-10 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
                                     <i class="ri-leaf-line text-4xl text-slate-300 dark:text-slate-600 mb-3"></i>
                                     <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">Sem missões para hoje.</p>

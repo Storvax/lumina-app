@@ -53,8 +53,27 @@
                 {{ __('Partilha a tua história, deixa um desabafo ou acende uma luz. As tuas palavras podem ser o abrigo de alguém.') }}
             </p>
 
+            {{-- ACESSO AO CASULO --}}
+            <a href="{{ route('forum.pact') }}" class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 md:p-8 rounded-[2rem] bg-gradient-to-r from-violet-900 to-indigo-900 border border-violet-500/30 shadow-xl shadow-violet-900/20 relative overflow-hidden group block max-w-2xl mx-auto text-left">
+                <i class="ri-shield-user-fill absolute -right-4 -bottom-4 text-8xl text-white/5 transform -rotate-12 group-hover:scale-110 transition-transform duration-500 pointer-events-none"></i>
+                
+                <div class="relative z-10">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-violet-200 text-[10px] font-black uppercase tracking-widest mb-3 border border-white/10">
+                        Grupo Privado
+                    </div>
+                    <h3 class="text-xl md:text-2xl font-black text-white mb-1">Casulo da Resiliência</h3>
+                    <p class="text-violet-200/70 text-sm">O teu círculo restrito de apoio (12 pessoas). Entra e partilha a reflexão do dia.</p>
+                </div>
+                
+                <div class="relative z-10 flex -space-x-3 shrink-0">
+                    <div class="w-10 h-10 rounded-full bg-slate-800 border-2 border-violet-900 flex items-center justify-center text-xs text-white shadow-sm font-medium">M</div>
+                    <div class="w-10 h-10 rounded-full bg-slate-700 border-2 border-violet-900 flex items-center justify-center text-xs text-white shadow-sm font-medium">A</div>
+                    <div class="w-10 h-10 rounded-full bg-slate-600 border-2 border-violet-900 flex items-center justify-center text-xs text-white shadow-sm font-medium">J</div>
+                    <div class="w-10 h-10 rounded-full bg-violet-500 border-2 border-violet-900 flex items-center justify-center text-xs font-bold text-white shadow-sm"><i class="ri-arrow-right-line"></i></div>
+                </div>
+            </a>
+
             @auth
-                {{-- Adicionado o ID: btn-nova-partilha-desktop --}}
                 <button id="btn-nova-partilha-desktop" onclick="togglePostModal()" class="hidden md:inline-flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 px-6 py-3 rounded-full text-sm font-bold transition-all shadow-lg shadow-slate-900/20 active:scale-95 focus-visible:ring-4 focus-visible:ring-indigo-500 focus-visible:outline-none mb-8">
                     <i class="ri-quill-pen-line" aria-hidden="true"></i> {{ __('Escrever no Mural') }}
                 </button>
@@ -75,7 +94,6 @@
                 </div>
             </div>
 
-            {{-- Adicionado o ID: filtro-conteudo --}}
             <div id="filtro-conteudo" class="glass p-2 rounded-2xl inline-flex flex-wrap justify-center gap-2" role="group" aria-label="{{ __('Filtros de Humor') }}">
                 <button onclick="filterPosts('all', this)" id="btn-all" aria-pressed="true" class="filter-btn px-6 py-3 rounded-xl bg-white shadow-sm border border-slate-100 text-slate-800 font-bold text-sm hover:-translate-y-0.5 transition-all ring-2 ring-indigo-500/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500">{{ __('Tudo') }}</button>
                 <button onclick="filterPosts('hope', this)" id="btn-hope" aria-pressed="false" class="filter-btn px-6 py-3 rounded-xl bg-transparent border border-transparent text-slate-500 font-medium text-sm hover:bg-white/50 hover:text-emerald-600 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500">🌱 {{ __('Esperança') }}</button>
@@ -99,7 +117,6 @@
 
     {{-- FAB mobile: acesso rápido à criação de post --}}
     @auth
-        {{-- Adicionado o ID: btn-nova-partilha-mobile --}}
         <button id="btn-nova-partilha-mobile"
                 onclick="togglePostModal()"
                 aria-label="{{ __('Escrever nova publicação') }}"
@@ -107,8 +124,6 @@
             <i class="ri-quill-pen-line text-xl" aria-hidden="true"></i>
         </button>
     @endauth
-
-    {{-- O resto dos teus Modais (postModal, deleteModal, reportModal) continuam iguais aqui... --}}
     
     <div id="postModal" class="fixed inset-0 z-[80] hidden" role="dialog" aria-modal="true" aria-labelledby="postModalTitle">
         <div id="postModalBackdrop" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity opacity-0" onclick="togglePostModal()" aria-hidden="true"></div>
@@ -228,14 +243,13 @@
                     return;
                 }
 
-                // Deteta inteligentemente se estamos no mobile ou desktop para focar no botão certo
                 const isMobile = window.innerWidth < 768;
                 const createBtnId = isMobile ? '#btn-nova-partilha-mobile' : '#btn-nova-partilha-desktop';
                 
                 const driverObj = window.driver({
                     showProgress: true,
                     smoothScroll: true,
-                    overlayColor: 'rgba(255, 255, 255, 0.7)', // Overlay pacífico e claro
+                    overlayColor: 'rgba(255, 255, 255, 0.7)',
                     nextBtnText: 'Continuar &rarr;',
                     prevBtnText: '&larr; Voltar',
                     doneBtnText: 'Entendido',
@@ -262,7 +276,6 @@
                         }
                     ],
                     onDestroyStarted: () => {
-                        // Marca na BD que o utilizador já viu (mesmo que feche a meio), para não chatear mais.
                         axios.post('{{ route("tour.completed") }}', { tour: 'forum' })
                              .catch(err => console.error("Tour não gravado:", err));
                         driverObj.destroy();
@@ -272,12 +285,10 @@
                 driverObj.drive();
             };
 
-            // Dispara o tutorial na primeira visita (após carregamento do HTML)
             document.addEventListener('DOMContentLoaded', () => {
                 const toursCompleted = @json(Auth::user()->onboarding_tours ?? []);
                 
                 if (!toursCompleted['forum']) {
-                    // Dá 1 segundo para a grelha Masonry carregar e a página estabilizar antes de surgir o overlay
                     setTimeout(() => {
                         window.startForumTour();
                     }, 1000);
@@ -400,7 +411,7 @@
                 const grid = document.getElementById('posts-grid');
                 grid.style.opacity = '0.5';
                 
-                // Reset de botões (Acessibilidade + UI)
+                // Reset de botões
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.className = "filter-btn px-6 py-3 rounded-xl bg-transparent border border-transparent text-slate-500 font-medium text-sm hover:bg-white/50 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500";
                     btn.setAttribute('aria-pressed', 'false');
@@ -474,7 +485,7 @@
                 }
             }
 
-            // Resto da Lógica Mantida (Moderação, Formulário de Criação...)
+            // Formulário de Criação
             const createForm = document.getElementById('create-post-form');
             if(createForm) {
                 createForm.addEventListener('submit', async (e) => {
