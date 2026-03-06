@@ -446,8 +446,10 @@ class ForumController extends Controller
     }
 
     /**
-     * Gera um resumo cognitivo do post via OpenAI API.
-     * Reutiliza o resumo se já existir (cache em BD).
+     * Generates an empathetic AI summary of a post via OpenAI.
+     * Persists the result to the DB to avoid repeated API calls.
+     *
+     * @return \Illuminate\Http\JsonResponse
      */
     public function summarize(Post $post)
     {
@@ -455,33 +457,36 @@ class ForumController extends Controller
             return response()->json(['summary' => $post->ai_summary]);
         }
 
-        $response = Http::withToken(env('OPENAI_API_KEY'))
-            ->timeout(15)
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => 'gpt-4o-mini',
-                'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => 'És um assistente de saúde mental empático. Resume o seguinte desabafo em 2-3 frases acolhedoras, validando os sentimentos do autor sem julgar. Responde sempre em Português de Portugal.',
+        try {
+            $response = Http::withToken(config('services.openai.api_key'))
+                ->timeout(15)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => config('services.openai.model', 'gpt-4o-mini'),
+                    'messages' => [
+                        [
+                            'role' => 'system',
+                            'content' => 'És um assistente de saúde mental empático. Resume o seguinte desabafo em 2-3 frases acolhedoras, validando os sentimentos do autor sem julgar. Responde sempre em Português de Portugal.',
+                        ],
+                        [
+                            'role' => 'user',
+                            'content' => $post->content,
+                        ],
                     ],
-                    [
-                        'role' => 'user',
-                        'content' => $post->content,
-                    ],
-                ],
-                'max_tokens' => 200,
-                'temperature' => 0.7,
-            ]);
+                    'max_tokens' => 200,
+                    'temperature' => 0.7,
+                ]);
 
-        if ($response->failed()) {
-            return response()->json(['error' => 'Não foi possível gerar o resumo.'], 502);
+            if ($response->failed()) {
+                return response()->json(['error' => 'Não foi possível gerar o resumo.'], 502);
+            }
+
+            $summary = $response->json('choices.0.message.content');
+            $post->update(['ai_summary' => $summary]);
+
+            return response()->json(['summary' => $summary]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            return response()->json(['error' => 'Serviço temporariamente indisponível.'], 503);
         }
-
-        $summary = $response->json('choices.0.message.content');
-
-        $post->update(['ai_summary' => $summary]);
-
-        return response()->json(['summary' => $summary]);
     }
 
     /**
