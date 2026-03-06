@@ -9,6 +9,8 @@ use App\Services\GamificationService;
 use App\Services\RecommendationService;
 use App\Models\DailyLog;
 use App\Models\Post;
+use App\Models\PostReaction;
+use App\Models\Comment;
 use App\Models\User;
 use Carbon\Carbon;
 
@@ -75,21 +77,33 @@ class DashboardController extends Controller
         // Recomendações contextuais (GAP-18)
         $recommendations = app(RecommendationService::class)->getRecommendations($user);
 
-        // Estatísticas da comunidade (widgets)
-        $communityStats = Cache::remember('community:stats', 900, fn () => [
-            'total_users' => User::count(),
-            'active_today' => User::where('last_activity_at', '>=', now()->startOfDay())->count(),
-            'posts_this_week' => Post::where('created_at', '>=', now()->subDays(7))->count(),
-            'logs_today' => DailyLog::where('log_date', now()->toDateString())->count(),
-        ]);
+        $communityStats = Cache::remember('community:stats', 900, function () {
+            $weekStart = now()->subDays(7);
+            $current = Comment::where('created_at', '>=', $weekStart)->count()
+                     + PostReaction::where('created_at', '>=', $weekStart)->count();
+            $target = 1000;
 
-        // Impacto global da plataforma
-        $globalImpact = Cache::remember('community:impact', 3600, fn () => [
-            'total_logs' => DailyLog::count(),
-            'total_posts' => Post::count(),
-            'total_hugs' => \App\Models\PostReaction::where('type', 'hug')->count(),
-            'total_flames' => (int) User::sum('flames'),
-        ]);
+            return [
+                'current' => $current,
+                'target' => $target,
+                'percentage' => min(100, round(($current / max($target, 1)) * 100)),
+            ];
+        });
+
+        $globalImpact = Cache::remember('community:impact', 3600, function () {
+            $currentFlames = (int) User::sum('flames');
+            $targetFlames = 10000;
+
+            return [
+                'current_flames' => $currentFlames,
+                'target_flames' => $targetFlames,
+                'percentage' => min(100, round(($currentFlames / max($targetFlames, 1)) * 100)),
+                'goal_title' => 'Plantar 1 Árvore na Serra da Estrela',
+                'ngo_name' => 'Associação Plantar Uma Árvore',
+                'participants_count' => User::where('flames', '>', 0)->count(),
+                'message' => 'Quando atingirmos a meta coletiva, faremos uma doação em nome de todos.',
+            ];
+        });
 
         return view('dashboard', compact(
             'dailyMissions',

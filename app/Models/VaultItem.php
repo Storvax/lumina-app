@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class VaultItem extends Model
 {
-    protected $fillable = ['user_id', 'type', 'title', 'content'];
+    protected $fillable = ['user_id', 'content'];
 
     public function user(): BelongsTo
     {
