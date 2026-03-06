@@ -9,41 +9,38 @@ use Illuminate\Support\Facades\DB;
 class RoomController extends Controller
 {
     /**
-     * Sala Silenciosa — presença partilhada sem mensagens.
+     * Renders the silent room view. Presence is managed client-side
+     * via the `silent-room` broadcast channel defined in channels.php.
      */
     public function silentRoom()
     {
         return view('rooms.silent');
     }
 
+    /**
+     * Lists public active rooms with live presence counts.
+     * Returns JSON for AJAX polling requests, HTML for initial page load.
+     */
     public function index(Request $request)
     {
-        // Excluir salas privadas (buddy sessions) da listagem pública.
         $rooms = Room::where('is_private', false)->where('is_active', true)->get();
 
-        // Endpoint invisível para o "Live Polling" do Frontend
-        if ($request->ajax() || $request->wantsJson()) {
-            $counts = DB::table('room_visits')
-                ->whereIn('room_id', $rooms->pluck('id'))
-                ->where('updated_at', '>=', now()->subMinutes(15))
-                ->groupBy('room_id')
-                ->select('room_id', DB::raw('count(*) as total'))
-                ->pluck('total', 'room_id');
-
-            $stats = $rooms->pluck('id')->mapWithKeys(
-                fn($id) => [$id => $counts->get($id, 0)]
-            );
-
-            return response()->json($stats);
-        }
-        
-        $initialStats = DB::table('room_visits')
+        $presenceCounts = DB::table('room_visits')
             ->whereIn('room_id', $rooms->pluck('id'))
             ->where('updated_at', '>=', now()->subMinutes(15))
             ->groupBy('room_id')
             ->select('room_id', DB::raw('count(*) as total'))
             ->pluck('total', 'room_id');
 
-        return view('rooms.index', compact('rooms', 'initialStats'));
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(
+                $rooms->pluck('id')->mapWithKeys(fn ($id) => [$id => $presenceCounts->get($id, 0)])
+            );
+        }
+
+        return view('rooms.index', [
+            'rooms' => $rooms,
+            'initialStats' => $presenceCounts,
+        ]);
     }
 }
