@@ -43,12 +43,11 @@ class CalmZoneController extends Controller
     }
 
     /**
-     * Displays the combustion diary with the user's recent journal entries
-     * and a daily rotating therapeutic writing prompt.
+     * Combustion diary: therapeutic writing with daily rotating prompts.
      *
      * @return \Illuminate\View\View
      */
-    public function combustion()
+    public function burn()
     {
         $entries = DailyLog::where('user_id', Auth::id())
             ->whereNotNull('note')
@@ -89,19 +88,17 @@ class CalmZoneController extends Controller
             'Escreve uma promessa gentil a ti mesmo/a.',
         ];
 
-        // Deterministic daily rotation to avoid prompt change on reload
         $dailyPrompt = $prompts[now()->dayOfYear % count($prompts)];
 
-        return view('calm.combustion', compact('entries', 'dailyPrompt'));
+        return view('calm.burn', compact('entries', 'dailyPrompt'));
     }
 
     /**
-     * Returns the somatic breathing view with pre-configured technique parameters
-     * used by the frontend timer animation (inhale/hold/exhale cycle durations).
+     * Somatic breathing: technique parameters for the frontend timer animation.
      *
      * @return \Illuminate\View\View
      */
-    public function breathing()
+    public function breathe()
     {
         $techniques = [
             [
@@ -126,7 +123,12 @@ class CalmZoneController extends Controller
             ],
         ];
 
-        return view('calm.breathing', compact('techniques'));
+        return view('calm.breathe', compact('techniques'));
+    }
+
+    public function heartbeat()
+    {
+        return view('calm.heartbeat');
     }
 
     public function reflection()
@@ -135,34 +137,52 @@ class CalmZoneController extends Controller
     }
 
     /**
-     * Processes a message through OpenAI acting as the user's compassionate
-     * "future self" (5 years ahead). Never provides clinical advice.
+     * Sends a reflection message to OpenAI acting as the user's compassionate
+     * "future self" using first-person plural ("Nós conseguimos").
+     * Supports conversation history for multi-turn context.
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function reflectionChat(Request $request)
+    public function sendReflection(Request $request)
     {
         $validated = $request->validate([
             'message' => 'required|string|max:1000',
+            'history' => 'nullable|array|max:20',
+            'history.*.role' => 'required_with:history|in:user,assistant',
+            'history.*.content' => 'required_with:history|string|max:1000',
         ]);
 
         $user = Auth::user();
+
+        // Build message chain: system prompt → prior turns → current message
+        $messages = [
+            [
+                'role' => 'system',
+                'content' => "És o 'eu do futuro' do utilizador — uma versão mais sábia, mais calma e mais compassiva dele/a daqui a 5 anos. Usa a primeira pessoa do plural ('Nós conseguimos', 'Nós sabemos'). Responde com empatia profunda, validação emocional e esperança realista. Nunca dês conselhos clínicos. Fala em Português de Portugal. Sê breve (2-4 frases). O nome do utilizador é {$user->name}.",
+            ],
+        ];
+
+        // Append prior conversation turns for multi-turn context
+        if (!empty($validated['history'])) {
+            foreach ($validated['history'] as $turn) {
+                $messages[] = [
+                    'role' => $turn['role'],
+                    'content' => $turn['content'],
+                ];
+            }
+        }
+
+        $messages[] = [
+            'role' => 'user',
+            'content' => $validated['message'],
+        ];
 
         try {
             $response = Http::withToken(config('services.openai.api_key'))
                 ->timeout(20)
                 ->post('https://api.openai.com/v1/chat/completions', [
                     'model' => config('services.openai.model', 'gpt-4o-mini'),
-                    'messages' => [
-                        [
-                            'role' => 'system',
-                            'content' => "És o 'eu do futuro' do utilizador — uma versão mais sábia, mais calma e mais compassiva dele/a daqui a 5 anos. Responde com empatia profunda, validação emocional e esperança realista. Nunca dês conselhos clínicos. Usa a segunda pessoa ('tu'). Fala em Português de Portugal. Sê breve (2-4 frases). O nome do utilizador é {$user->name}.",
-                        ],
-                        [
-                            'role' => 'user',
-                            'content' => $validated['message'],
-                        ],
-                    ],
+                    'messages' => $messages,
                     'max_tokens' => 250,
                     'temperature' => 0.8,
                 ]);
@@ -179,28 +199,27 @@ class CalmZoneController extends Controller
 
     /**
      * Lists the authenticated user's vault items (personal emotional anchors).
+     * Variable named $lights to match the frontend's "luzes" metaphor.
      *
      * @return \Illuminate\View\View
      */
     public function vault()
     {
-        $items = Auth::user()->vaultItems()
+        $lights = Auth::user()->vaultItems()
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('calm.vault', compact('items'));
+        return view('calm.vault', compact('lights'));
     }
 
     /**
-     * Stores a new vault item (text, image URL, or external link).
+     * Stores a new vault item (a single "luz" — text content only).
      *
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
     public function storeVaultItem(Request $request)
     {
         $validated = $request->validate([
-            'type' => 'required|in:text,image,link',
-            'title' => 'nullable|string|max:100',
             'content' => 'required|string|max:2000',
         ]);
 

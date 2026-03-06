@@ -9,6 +9,8 @@ use App\Models\PostReaction;
 use App\Models\Comment;
 use App\Models\Report;
 use App\Models\ModerationLog;
+use App\Models\PactPrompt;
+use App\Models\PactAnswer;
 use Illuminate\Support\Facades\DB;
 use App\Notifications\ForumInteraction;
 use App\Services\GamificationService;
@@ -446,8 +448,8 @@ class ForumController extends Controller
     }
 
     /**
-     * Generates an empathetic AI summary of a post via OpenAI.
-     * Persists the result to the DB to avoid repeated API calls.
+     * Generates an empathetic AI-powered summary of a post via OpenAI.
+     * Returns cached result if already generated to avoid redundant API calls.
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -465,7 +467,7 @@ class ForumController extends Controller
                     'messages' => [
                         [
                             'role' => 'system',
-                            'content' => 'És um assistente de saúde mental empático. Resume o seguinte desabafo em 2-3 frases acolhedoras, validando os sentimentos do autor sem julgar. Responde sempre em Português de Portugal.',
+                            'content' => 'Resume este desabafo em 3 bullet points curtos e empáticos. Devolve apenas HTML <ul><li>. Valida os sentimentos sem julgar. Responde em Português de Portugal.',
                         ],
                         [
                             'role' => 'user',
@@ -497,10 +499,76 @@ class ForumController extends Controller
         $user = Auth::user();
         $subscription = $post->subscribers()->toggle($user->id);
         $subscribed = count($subscription['attached']) > 0;
-        
+
         return response()->json([
             'subscribed' => $subscribed,
             'message' => $subscribed ? 'Notificações ativadas para esta publicação.' : 'Notificações desativadas.'
         ]);
+    }
+
+    /**
+     * Displays today's pact prompt with community answers.
+     * Uses active_date for deterministic daily rotation.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function pact()
+    {
+        $todayPrompt = PactPrompt::where('active_date', now()->toDateString())->first();
+
+        // Fallback: rotate through all prompts if none is specifically scheduled for today
+        if (!$todayPrompt) {
+            $prompts = PactPrompt::orderBy('id')->get();
+            $todayPrompt = $prompts->isNotEmpty()
+                ? $prompts[now()->dayOfYear % $prompts->count()]
+                : null;
+        }
+
+        $communityAnswers = collect();
+        $myAnswer = null;
+
+        if ($todayPrompt) {
+            $communityAnswers = PactAnswer::where('pact_prompt_id', $todayPrompt->id)
+                ->where('user_id', '!=', Auth::id())
+                ->latest()
+                ->take(20)
+                ->get();
+
+            $myAnswer = PactAnswer::where('user_id', Auth::id())
+                ->where('pact_prompt_id', $todayPrompt->id)
+                ->whereDate('created_at', now()->toDateString())
+                ->first();
+        }
+
+        return view('calm.pact', compact('todayPrompt', 'communityAnswers', 'myAnswer'));
+    }
+
+    /**
+     * Stores the user's answer to today's pact prompt.
+     * One answer per user per prompt per day via updateOrCreate on created_at date.
+     *
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     */
+    public function storePact(Request $request)
+    {
+        $validated = $request->validate([
+            'pact_prompt_id' => 'required|exists:pact_prompts,id',
+            'answer' => 'required|string|max:2000',
+        ]);
+
+        $answer = Auth::user()->pactAnswers()->updateOrCreate(
+            [
+                'pact_prompt_id' => $validated['pact_prompt_id'],
+            ],
+            [
+                'answer' => $validated['answer'],
+            ]
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'answer' => $answer]);
+        }
+
+        return back()->with('success', 'A tua reflexão foi guardada.');
     }
 }

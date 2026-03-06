@@ -7,15 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PactAnswer extends Model
 {
-    protected $fillable = ['user_id', 'pact_prompt_id', 'body', 'is_anonymous', 'answer_date'];
-
-    protected function casts(): array
-    {
-        return [
-            'is_anonymous' => 'boolean',
-            'answer_date' => 'date',
-        ];
-    }
+    protected $fillable = ['user_id', 'pact_prompt_id', 'answer'];
 
     public function user(): BelongsTo
     {

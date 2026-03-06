@@ -89,28 +89,25 @@ class ProfileController extends Controller
         $milestones = $user->milestones()->orderBy('date', 'desc')->get();
         $tagsList = ['Ansiedade', 'Luto', 'Burnout', 'Depressão', 'TDAH', 'Pânico', 'Recuperação', 'Stress', 'Solidão'];
 
-        // --- Guardian Status (gamification tier based on accumulated flames) ---
+        // --- Guardian Status (3-tier progression: Semente → Broto → Árvore) ---
         $guardianStatus = match (true) {
-            $flames >= 500 => ['stage' => 'beacon', 'label' => 'Farol', 'icon' => '🏔️', 'description' => 'Iluminas o caminho de muitos.'],
-            $flames >= 200 => ['stage' => 'bonfire', 'label' => 'Fogueira', 'icon' => '🔥', 'description' => 'A tua presença aquece quem te rodeia.'],
-            $flames >= 50  => ['stage' => 'flame', 'label' => 'Chama', 'icon' => '🕯️', 'description' => 'A tua luz começa a brilhar com força.'],
-            default        => ['stage' => 'spark', 'label' => 'Faísca', 'icon' => '✨', 'description' => 'Cada pequeno gesto conta. Estás a começar.'],
+            $flames >= 151 => ['emoji' => '🌳', 'stage_name' => 'Árvore', 'next_stage_flames' => null],
+            $flames >= 51  => ['emoji' => '🌿', 'stage_name' => 'Broto', 'next_stage_flames' => 151],
+            default        => ['emoji' => '🌱', 'stage_name' => 'Semente', 'next_stage_flames' => 51],
         };
 
-        // --- Soul Climate (7-day mood average mapped to weather metaphor) ---
-        $recentMoods = DailyLog::where('user_id', $user->id)
-            ->where('log_date', '>=', Carbon::today()->subDays(7))
-            ->pluck('mood_level');
+        // --- Soul Climate (based on TODAY's log — mood + distress tags) ---
+        $todayLog = DailyLog::where('user_id', $user->id)
+            ->where('log_date', Carbon::today()->toDateString())
+            ->first();
 
-        $avgMood = $recentMoods->isNotEmpty() ? round($recentMoods->avg(), 1) : null;
+        $distressTags = ['ansiedade', 'tristeza', 'pânico', 'medo', 'solidão'];
+        $isDistressed = $todayLog && (
+            $todayLog->mood_level <= 2
+            || !empty(array_intersect($todayLog->tags ?? [], $distressTags))
+        );
 
-        $weather = match (true) {
-            $avgMood === null => ['icon' => '🌫️', 'label' => 'Indefinido', 'description' => 'Sem registos recentes para calcular.'],
-            $avgMood >= 4.0   => ['icon' => '☀️', 'label' => 'Céu Limpo', 'description' => 'Os teus dias têm sido luminosos.'],
-            $avgMood >= 3.0   => ['icon' => '⛅', 'label' => 'Parcialmente Nublado', 'description' => 'Altos e baixos, mas estás no caminho.'],
-            $avgMood >= 2.0   => ['icon' => '🌧️', 'label' => 'Chuvoso', 'description' => 'Dias mais cinzentos. Sê gentil contigo.'],
-            default           => ['icon' => '🌩️', 'label' => 'Tempestade', 'description' => 'Período difícil. Procura apoio se precisares.'],
-        };
+        $weather = $todayLog ? ($isDistressed ? 'rainy' : 'sunny') : 'sunny';
 
         return view('profile.show', compact(
             'user', 'garden', 'stats', 'allAchievements', 'unlockedIds',
