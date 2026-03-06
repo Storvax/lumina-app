@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Scopes\ShadowbanScope;
 
@@ -26,33 +27,24 @@ class Post extends Model
         'ai_summary',
     ];
 
-    // Relação com o Autor
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new ShadowbanScope);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    // Relação com Comentários
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
     }
 
-    // Relação com Reações (Faltava isto!)
     public function reactions(): HasMany
     {
         return $this->hasMany(PostReaction::class);
-    }
-    public function isSavedBy(User $user)
-    {
-        return $this->reactions()->where('user_id', $user->id)->exists(); // (Isto é para reactions, ignora)
-        // Usa antes isto na View ou Controller: $user->savedPosts->contains($post->id)
-    }
-
-    // Ativar o Scope automaticamente
-    protected static function booted()
-    {
-        static::addGlobalScope(new ShadowbanScope);
     }
 
     public function checkins(): HasMany
@@ -60,13 +52,12 @@ class Post extends Model
         return $this->hasMany(PostCheckin::class);
     }
 
-    public function subscribers()
+    public function subscribers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'post_subscriptions');
     }
 
-    // Helper: O user atual subscreveu?
-    public function isSubscribedBy(?User $user = null)
+    public function isSubscribedBy(?User $user = null): bool
     {
         if (!$user) return false;
         return $this->subscribers()->where('user_id', $user->id)->exists();

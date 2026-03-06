@@ -10,40 +10,45 @@ use Illuminate\Support\Facades\Auth;
 class PactController extends Controller
 {
     /**
-     * Diário do Pacto — prompt do dia + respostas anónimas da comunidade.
+     * Displays the daily pact prompt with anonymous community answers.
+     * The prompt rotates deterministically based on the day of the year.
+     *
+     * @return \Illuminate\View\View
      */
     public function index()
     {
-        // Prompt do dia: roda entre prompts ativos usando o dia do ano
         $prompts = PactPrompt::where('is_active', true)->orderBy('id')->get();
 
         $todayPrompt = $prompts->isNotEmpty()
             ? $prompts[now()->dayOfYear % $prompts->count()]
             : null;
 
-        // Respostas anónimas do dia (de outros utilizadores)
-        $communityAnswers = $todayPrompt
-            ? PactAnswer::where('pact_prompt_id', $todayPrompt->id)
+        $communityAnswers = collect();
+        $myAnswer = null;
+
+        if ($todayPrompt) {
+            $communityAnswers = PactAnswer::where('pact_prompt_id', $todayPrompt->id)
                 ->where('answer_date', now()->toDateString())
                 ->where('is_anonymous', true)
+                ->where('user_id', '!=', Auth::id())
                 ->latest()
                 ->take(20)
-                ->get()
-            : collect();
+                ->get();
 
-        // Resposta do utilizador atual (se já respondeu hoje)
-        $myAnswer = $todayPrompt
-            ? PactAnswer::where('user_id', Auth::id())
+            $myAnswer = PactAnswer::where('user_id', Auth::id())
                 ->where('pact_prompt_id', $todayPrompt->id)
                 ->where('answer_date', now()->toDateString())
-                ->first()
-            : null;
+                ->first();
+        }
 
         return view('calm.pact', compact('todayPrompt', 'communityAnswers', 'myAnswer'));
     }
 
     /**
-     * Guardar resposta ao prompt do dia.
+     * Stores or updates the user's answer to today's pact prompt.
+     * Uses updateOrCreate to enforce one answer per user per prompt per day.
+     *
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {

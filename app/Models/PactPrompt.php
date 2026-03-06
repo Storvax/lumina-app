@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PactPrompt extends Model
 {
-    protected $fillable = ['body', 'category', 'is_active'];
+    protected $fillable = ['question', 'active_date'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['active_date' => 'date'];
     }
 
     public function answers(): HasMany

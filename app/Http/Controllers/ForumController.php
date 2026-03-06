@@ -9,6 +9,8 @@ use App\Models\PostReaction;
 use App\Models\Comment;
 use App\Models\Report;
 use App\Models\ModerationLog;
+use App\Models\PactPrompt;
+use App\Models\PactAnswer;
 use Illuminate\Support\Facades\DB;
 use App\Notifications\ForumInteraction;
 use App\Services\GamificationService;
@@ -446,8 +448,10 @@ class ForumController extends Controller
     }
 
     /**
-     * Gera um resumo cognitivo do post via OpenAI API.
-     * Reutiliza o resumo se já existir (cache em BD).
+     * Generates an empathetic AI-powered summary of a post via OpenAI.
+     * Returns cached result if already generated to avoid redundant API calls.
+     *
+     * @return \Illuminate\Http\JsonResponse
      */
     public function summarize(Post $post)
     {
@@ -455,33 +459,36 @@ class ForumController extends Controller
             return response()->json(['summary' => $post->ai_summary]);
         }
 
-        $response = Http::withToken(env('OPENAI_API_KEY'))
-            ->timeout(15)
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => 'gpt-4o-mini',
-                'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => 'És um assistente de saúde mental empático. Resume o seguinte desabafo em 2-3 frases acolhedoras, validando os sentimentos do autor sem julgar. Responde sempre em Português de Portugal.',
+        try {
+            $response = Http::withToken(config('services.openai.api_key'))
+                ->timeout(15)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => config('services.openai.model', 'gpt-4o-mini'),
+                    'messages' => [
+                        [
+                            'role' => 'system',
+                            'content' => 'Resume este desabafo em 3 bullet points curtos e empáticos. Devolve apenas HTML <ul><li>. Valida os sentimentos sem julgar. Responde em Português de Portugal.',
+                        ],
+                        [
+                            'role' => 'user',
+                            'content' => $post->content,
+                        ],
                     ],
-                    [
-                        'role' => 'user',
-                        'content' => $post->content,
-                    ],
-                ],
-                'max_tokens' => 200,
-                'temperature' => 0.7,
-            ]);
+                    'max_tokens' => 200,
+                    'temperature' => 0.7,
+                ]);
 
-        if ($response->failed()) {
-            return response()->json(['error' => 'Não foi possível gerar o resumo.'], 502);
+            if ($response->failed()) {
+                return response()->json(['error' => 'Não foi possível gerar o resumo.'], 502);
+            }
+
+            $summary = $response->json('choices.0.message.content');
+            $post->update(['ai_summary' => $summary]);
+
+            return response()->json(['summary' => $summary]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            return response()->json(['error' => 'Serviço temporariamente indisponível.'], 503);
         }
-
-        $summary = $response->json('choices.0.message.content');
-
-        $post->update(['ai_summary' => $summary]);
-
-        return response()->json(['summary' => $summary]);
     }
 
     /**
@@ -492,10 +499,76 @@ class ForumController extends Controller
         $user = Auth::user();
         $subscription = $post->subscribers()->toggle($user->id);
         $subscribed = count($subscription['attached']) > 0;
-        
+
         return response()->json([
             'subscribed' => $subscribed,
             'message' => $subscribed ? 'Notificações ativadas para esta publicação.' : 'Notificações desativadas.'
         ]);
+    }
+
+    /**
+     * Displays today's pact prompt with community answers.
+     * Uses active_date for deterministic daily rotation.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function pact()
+    {
+        $todayPrompt = PactPrompt::where('active_date', now()->toDateString())->first();
+
+        // Fallback: rotate through all prompts if none is specifically scheduled for today
+        if (!$todayPrompt) {
+            $prompts = PactPrompt::orderBy('id')->get();
+            $todayPrompt = $prompts->isNotEmpty()
+                ? $prompts[now()->dayOfYear % $prompts->count()]
+                : null;
+        }
+
+        $communityAnswers = collect();
+        $myAnswer = null;
+
+        if ($todayPrompt) {
+            $communityAnswers = PactAnswer::where('pact_prompt_id', $todayPrompt->id)
+                ->where('user_id', '!=', Auth::id())
+                ->latest()
+                ->take(20)
+                ->get();
+
+            $myAnswer = PactAnswer::where('user_id', Auth::id())
+                ->where('pact_prompt_id', $todayPrompt->id)
+                ->whereDate('created_at', now()->toDateString())
+                ->first();
+        }
+
+        return view('calm.pact', compact('todayPrompt', 'communityAnswers', 'myAnswer'));
+    }
+
+    /**
+     * Stores the user's answer to today's pact prompt.
+     * One answer per user per prompt per day via updateOrCreate on created_at date.
+     *
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     */
+    public function storePact(Request $request)
+    {
+        $validated = $request->validate([
+            'pact_prompt_id' => 'required|exists:pact_prompts,id',
+            'answer' => 'required|string|max:2000',
+        ]);
+
+        $answer = Auth::user()->pactAnswers()->updateOrCreate(
+            [
+                'pact_prompt_id' => $validated['pact_prompt_id'],
+            ],
+            [
+                'answer' => $validated['answer'],
+            ]
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'answer' => $answer]);
+        }
+
+        return back()->with('success', 'A tua reflexão foi guardada.');
     }
 }

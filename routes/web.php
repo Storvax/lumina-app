@@ -19,7 +19,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\WallController;
 use App\Http\Controllers\CommunityReportController;
-use App\Http\Controllers\PactController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -229,10 +229,11 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
         Route::get('/grounding', 'grounding')->name('grounding');
         Route::get('/crise', 'crisis')->name('crisis');
         Route::get('/sons', 'sounds')->name('sounds');
-        Route::get('/combustao', 'combustion')->name('combustion');
-        Route::get('/respiracao', 'breathing')->name('breathing');
+        Route::get('/combustao', 'burn')->name('burn');
+        Route::get('/respiracao', 'breathe')->name('breathe');
+        Route::get('/sintonia', 'heartbeat')->name('heartbeat');
         Route::get('/reflexao', [CalmZoneController::class, 'reflection'])->name('reflection');
-        Route::post('/reflexao', [CalmZoneController::class, 'reflectionChat'])->name('reflection.chat');
+        Route::post('/reflexao/enviar', [CalmZoneController::class, 'sendReflection'])->name('reflection.send');
         Route::get('/cofre', 'vault')->name('vault');
         Route::post('/cofre', 'storeVaultItem')->name('vault.store');
 
@@ -243,7 +244,7 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Diário do Pacto
+    | Diário do Pacto (integrado na comunidade)
     |--------------------------------------------------------------------------
     */
     Route::controller(PactController::class)->prefix('pacto')->name('pact.')->group(function () {

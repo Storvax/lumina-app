@@ -13,48 +13,47 @@ use App\Models\Achievement;
 use App\Models\Milestone;
 use App\Services\GamificationService;
 use Carbon\Carbon;
-use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
     /**
-     * Display the user's sanctuary/profile view.
-     * Aggregates garden state, gamification stats, milestones, and spiral data.
+     * Aggregates the user's sanctuary view: emotional garden, gamification stats,
+     * mood spiral, milestones, guardian status, and soul climate.
      */
     public function show(Request $request): View
     {
         $user = Auth::user();
-        
-        // 1. Garden State (Last 14 days)
+
+        // --- Garden State (14-day emotional history, single query) ---
+        $gardenStart = Carbon::today()->subDays(13);
+        $logs = DailyLog::where('user_id', $user->id)
+            ->where('log_date', '>=', $gardenStart->format('Y-m-d'))
+            ->pluck('mood_level', 'log_date');
+
         $garden = [];
         for ($i = 13; $i >= 0; $i--) {
             $date = Carbon::today()->subDays($i);
-            $log = DailyLog::where('user_id', $user->id)
-                ->where('log_date', $date->format('Y-m-d'))
-                ->first();
-            
-            if (!$log) {
+            $dateKey = $date->format('Y-m-d');
+
+            if (!$logs->has($dateKey)) {
                 $garden[] = ['type' => 'empty', 'date' => $date->format('d/m')];
             } else {
-                $icon = match($log->mood_level) {
-                    1 => '🥀', 2 => '🌱', 3 => '🌿', 4 => '🌷', 5 => '🌻', default => '🌱'
-                };
+                $mood = $logs[$dateKey];
                 $garden[] = [
-                    'type' => 'plant', 
-                    'icon' => $icon, 
-                    'mood' => $log->mood_level, 
-                    'date' => $date->format('d/m')
+                    'type' => 'plant',
+                    'icon' => match ($mood) { 1 => '🥀', 2 => '🌱', 3 => '🌿', 4 => '🌷', 5 => '🌻', default => '🌱' },
+                    'mood' => $mood,
+                    'date' => $date->format('d/m'),
                 ];
             }
         }
 
-        // 2. Gamification & Badges
+        // --- Gamification & Badges ---
         $allAchievements = Achievement::all();
         $unlockedIds = $user->achievements->pluck('id')->toArray();
 
-        // 3. User Statistics & Bonfire Level
         $flames = $user->flames ?? 0;
-        $bonfireLevel = match(true) {
+        $bonfireLevel = match (true) {
             $flames >= 500 => 'beacon',
             $flames >= 200 => 'bonfire',
             $flames >= 50  => 'flame',
@@ -66,104 +65,76 @@ class ProfileController extends Controller
             'streak' => $user->current_streak ?? $this->calculateStreak($user),
             'flames' => $flames,
             'bonfire_level' => $bonfireLevel,
-            'badges_count' => count($unlockedIds) . '/' . $allAchievements->count()
+            'badges_count' => count($unlockedIds) . '/' . $allAchievements->count(),
         ];
 
-        // 4. Mood Spiral Data (Last 30 entries formatted for the Archimedean SVG)
+        // --- Mood Spiral (last 30 entries for the Archimedean SVG) ---
         $colorMap = [
-            1 => '#f43f5e', // rose-500 (Very Difficult)
-            2 => '#f59e0b', // amber-500 (Difficult)
-            3 => '#94a3b8', // slate-400 (Neutral)
-            4 => '#14b8a6', // teal-500 (Good)
-            5 => '#6366f1', // indigo-500 (Excellent)
+            1 => '#f43f5e', 2 => '#f59e0b', 3 => '#94a3b8',
+            4 => '#14b8a6', 5 => '#6366f1',
         ];
 
         $spiralData = DailyLog::where('user_id', $user->id)
             ->orderBy('log_date', 'desc')
             ->take(30)
             ->get()
-            ->reverse() // Reverses to chronological order: inside of the spiral is older
+            ->reverse()
             ->values()
-            ->map(function ($log) use ($colorMap) {
-                // Usa a nota pessoal no tooltip; fallback para sem registo
-                $notePreview = $log->note
-                    ? mb_strimwidth($log->note, 0, 60, '...')
-                    : 'Sem nota escrita';
+            ->map(fn ($log) => [
+                'date'  => Carbon::parse($log->log_date)->format('d/m'),
+                'color' => $colorMap[$log->mood_level] ?? '#cbd5e1',
+                'note'  => $log->note ? mb_strimwidth($log->note, 0, 60, '...') : 'Sem nota escrita',
+            ]);
 
-                return [
-                    'date'  => Carbon::parse($log->log_date)->format('d/m'),
-                    'color' => $colorMap[$log->mood_level] ?? '#cbd5e1',
-                    'note'  => $notePreview,
-                ];
-            });
-
-        // 5. Milestones & Identity
         $milestones = $user->milestones()->orderBy('date', 'desc')->get();
         $tagsList = ['Ansiedade', 'Luto', 'Burnout', 'Depressão', 'TDAH', 'Pânico', 'Recuperação', 'Stress', 'Solidão'];
 
-        // 6. Guardian Status (estágios por chamas)
+        // --- Guardian Status (3-tier progression: Semente → Broto → Árvore) ---
         $guardianStatus = match (true) {
-            $flames >= 500 => ['stage' => 'beacon', 'label' => 'Farol', 'icon' => '🏔️', 'description' => 'Iluminas o caminho de muitos.'],
-            $flames >= 200 => ['stage' => 'bonfire', 'label' => 'Fogueira', 'icon' => '🔥', 'description' => 'A tua presença aquece quem te rodeia.'],
-            $flames >= 50  => ['stage' => 'flame', 'label' => 'Chama', 'icon' => '🕯️', 'description' => 'A tua luz começa a brilhar com força.'],
-            default        => ['stage' => 'spark', 'label' => 'Faísca', 'icon' => '✨', 'description' => 'Cada pequeno gesto conta. Estás a começar.'],
+            $flames >= 151 => ['emoji' => '🌳', 'stage_name' => 'Árvore', 'next_stage_flames' => null],
+            $flames >= 51  => ['emoji' => '🌿', 'stage_name' => 'Broto', 'next_stage_flames' => 151],
+            default        => ['emoji' => '🌱', 'stage_name' => 'Semente', 'next_stage_flames' => 51],
         };
 
-        // 7. Soul Climate (clima emocional baseado nos últimos 7 dias de DailyLog)
-        $recentLogs = DailyLog::where('user_id', $user->id)
-            ->where('log_date', '>=', Carbon::today()->subDays(7))
-            ->pluck('mood_level');
+        // --- Soul Climate (based on TODAY's log — mood + distress tags) ---
+        $todayLog = DailyLog::where('user_id', $user->id)
+            ->where('log_date', Carbon::today()->toDateString())
+            ->first();
 
-        $avgMood = $recentLogs->isNotEmpty() ? round($recentLogs->avg(), 1) : null;
+        $distressTags = ['ansiedade', 'tristeza', 'pânico', 'medo', 'solidão'];
+        $isDistressed = $todayLog && (
+            $todayLog->mood_level <= 2
+            || !empty(array_intersect($todayLog->tags ?? [], $distressTags))
+        );
 
-        $weather = match (true) {
-            $avgMood === null            => ['icon' => '🌫️', 'label' => 'Indefinido', 'description' => 'Sem registos recentes para calcular.'],
-            $avgMood >= 4.0              => ['icon' => '☀️', 'label' => 'Céu Limpo', 'description' => 'Os teus dias têm sido luminosos.'],
-            $avgMood >= 3.0              => ['icon' => '⛅', 'label' => 'Parcialmente Nublado', 'description' => 'Altos e baixos, mas estás no caminho.'],
-            $avgMood >= 2.0              => ['icon' => '🌧️', 'label' => 'Chuvoso', 'description' => 'Dias mais cinzentos. Sê gentil contigo.'],
-            default                      => ['icon' => '🌩️', 'label' => 'Tempestade', 'description' => 'Período difícil. Procura apoio se precisares.'],
-        };
+        $weather = $todayLog ? ($isDistressed ? 'rainy' : 'sunny') : 'sunny';
 
         return view('profile.show', compact(
-            'user',
-            'garden',
-            'stats',
-            'allAchievements',
-            'unlockedIds',
-            'spiralData',
-            'milestones',
-            'tagsList',
-            'guardianStatus',
-            'weather'
+            'user', 'garden', 'stats', 'allAchievements', 'unlockedIds',
+            'spiralData', 'milestones', 'tagsList', 'guardianStatus', 'weather'
         ));
     }
 
-    /**
-     * Update the user's emotional identity tags.
-     */
     public function updateTags(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'tags' => 'nullable|array|max:3',
-            'tags.*' => 'string|max:30'
+            'tags.*' => 'string|max:30',
         ]);
 
         $request->user()->forceFill([
-            'emotional_tags' => $validated['tags'] ?? []
+            'emotional_tags' => $validated['tags'] ?? [],
         ])->save();
 
         return back()->with('success', 'Tags de identidade atualizadas!');
     }
 
-    /**
-     * Store a new psychological milestone for the user.
-     */
     public function storeMilestone(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'title' => 'required|string|max:100',
             'date' => 'required|date',
-            'is_public' => 'sometimes|accepted'
+            'is_public' => 'sometimes|accepted',
         ]);
 
         $request->user()->milestones()->create([
@@ -175,9 +146,6 @@ class ProfileController extends Controller
         return back()->with('success', 'Novo marco adicionado à tua jornada!');
     }
 
-    /**
-     * Delete an existing milestone.
-     */
     public function destroyMilestone(Milestone $milestone): RedirectResponse
     {
         if ($milestone->user_id !== Auth::id()) {
@@ -188,17 +156,11 @@ class ProfileController extends Controller
         return back()->with('success', 'Marco removido com sucesso.');
     }
 
-    /**
-     * Display the user's profile form.
-     */
     public function edit(Request $request): View
     {
         return view('profile.edit', ['user' => $request->user()]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $request->user()->fill($request->validated());
@@ -212,46 +174,39 @@ class ProfileController extends Controller
     }
 
     /**
-     * Inicia o processo de eliminação da conta (Direito ao Esquecimento).
+     * Initiates account deletion (GDPR Right to Erasure).
+     * Soft-deletes the user first so the async GDPR job can find the record.
      */
     public function destroy(Request $request): RedirectResponse
     {
         $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password']
+            'password' => ['required', 'current_password'],
         ]);
 
         $user = $request->user();
-        
-        Auth::logout();
 
-        // Soft Delete the user BEFORE dispatching the job so withTrashed() can find it
+        Auth::logout();
         $user->delete();
 
-        // Dispatch the GDPR job
         \App\Jobs\ProcessGdprDeletion::dispatch($user);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // Envia uma mensagem flash de despedida empática para a sessão
         return Redirect::to('/')->with('status', 'A tua conta está a ser eliminada em segurança. Receberás um email de confirmação em breve.');
     }
-    
-    /**
-     * Update the user's daily battery/energy level via AJAX request.
-     */
+
     public function updateEnergy(Request $request)
     {
         $request->validate(['level' => 'required|integer|min:1|max:5']);
-        
         $request->user()->forceFill(['energy_level' => $request->level])->save();
-        
+
         return response()->json(['success' => true]);
     }
 
     /**
-     * Atualiza o plano de segurança pessoal do utilizador.
-     * Persiste os 6 campos estruturados como JSON, permitindo exibição organizada na página de crise.
+     * Persists the structured safety plan (6 fields) as JSON.
+     * Used by the crisis page to display an organized personal safety resource.
      */
     public function updateSafetyPlan(Request $request): RedirectResponse
     {
@@ -264,8 +219,7 @@ class ProfileController extends Controller
             'environment_safety'    => 'nullable|string|max:1000',
         ]);
 
-        // Remove campos vazios para não guardar ruído no JSON
-        $plan = array_filter($validated, fn($v) => !is_null($v) && $v !== '');
+        $plan = array_filter($validated, fn ($v) => !is_null($v) && $v !== '');
 
         $request->user()->forceFill([
             'safety_plan' => !empty($plan) ? json_encode($plan) : null,
@@ -275,23 +229,23 @@ class ProfileController extends Controller
     }
 
     /**
-     * Calculate current logging streak as a fallback.
+     * Fallback streak calculation when the cached `current_streak` column is stale.
+     * Walks backwards from today checking for consecutive daily log entries.
      */
     private function calculateStreak($user): int
     {
-        $streak = 0;
         $logs = DailyLog::where('user_id', $user->id)
             ->orderBy('log_date', 'desc')
             ->pluck('log_date')
             ->toArray();
 
         if (empty($logs)) {
-            return $streak;
+            return 0;
         }
 
+        $streak = 0;
         $checkDate = Carbon::today();
-        
-        // If there's no log for today, check if streak is maintained by yesterday's log
+
         if ($logs[0] != $checkDate->format('Y-m-d')) {
             $checkDate = Carbon::yesterday();
         }
@@ -308,21 +262,15 @@ class ProfileController extends Controller
         return $streak;
     }
 
-    /**
-     * Record a completed breathing exercise via Gamification Service.
-     */
     public function logBreathing(GamificationService $gamification)
     {
         $gamification->trackAction(Auth::user(), 'breathe');
         return response()->json(['success' => true, 'flames' => 5]);
     }
 
-    /**
-     * Update notification and quiet hours preferences.
-     */
     public function updateNotificationPrefs(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        $request->validate([
             'wants_weekly_summary' => 'boolean',
             'quiet_hours_start' => 'nullable|date_format:H:i',
             'quiet_hours_end' => 'nullable|date_format:H:i',
@@ -330,8 +278,8 @@ class ProfileController extends Controller
 
         $user = $request->user();
         $user->wants_weekly_summary = $request->has('wants_weekly_summary');
-        
-        // Require both start and end times to enable quiet hours
+
+        // Both start and end are required to enable quiet hours
         if ($request->quiet_hours_start && $request->quiet_hours_end) {
             $user->quiet_hours_start = $request->quiet_hours_start;
             $user->quiet_hours_end = $request->quiet_hours_end;
@@ -345,9 +293,6 @@ class ProfileController extends Controller
         return back()->with('status', 'notification-prefs-updated');
     }
 
-    /**
-     * Atualiza as preferências de acessibilidade visual e cognitiva do utilizador.
-     */
     public function updateAccessibility(Request $request): RedirectResponse
     {
         $validated = $request->validate([
