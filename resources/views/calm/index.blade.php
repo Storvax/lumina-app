@@ -54,88 +54,88 @@
             {{-- GRELHA DE CARTÕES COMPLETA --}}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-12">
                 
-                {{-- 1. Grounding (Original) --}}
-                <a href="{{ route('calm.grounding') }}" id="card-grounding" class="group bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all relative overflow-hidden">
+                {{-- 1. Grounding (Emerald) --}}
+                <a href="{{ route('calm.grounding') }}" id="card-grounding" class="group bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-50 dark:bg-emerald-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div class="relative z-10">
-                        <div class="w-12 h-12 md:w-14 md:h-14 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-focus-2-line"></i></div>
+                        <div class="w-12 h-12 md:w-14 md:h-14 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-focus-2-line"></i></div>
                         <h3 class="text-lg md:text-xl font-bold text-slate-800 dark:text-white mb-2">Grounding 5-4-3-2-1</h3>
                         <p class="text-slate-500 dark:text-slate-400 text-xs md:text-sm mb-4">Técnica guiada para travar a ansiedade e voltar ao corpo.</p>
-                        <span class="text-emerald-600 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Iniciar Exercício <i class="ri-arrow-right-line"></i></span>
+                        <span class="text-emerald-600 dark:text-emerald-400 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Iniciar Exercício <i class="ri-arrow-right-line"></i></span>
                     </div>
                 </a>
 
-                {{-- 2. Modo Crise (Original) --}}
-                <a href="{{ route('calm.crisis') }}" id="card-crisis" class="group bg-rose-50 dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-rose-100 dark:border-rose-900/30 shadow-sm hover:shadow-xl transition-all relative overflow-hidden">
+                {{-- 2. Modo Crise (Rose) --}}
+                <a href="{{ route('calm.crisis') }}" id="card-crisis" class="group bg-rose-50/50 dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-rose-100 dark:border-rose-900/30 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-rose-100/50 dark:bg-rose-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div class="relative z-10">
-                        <div class="w-12 h-12 md:w-14 md:h-14 bg-rose-200/50 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-alarm-warning-line"></i></div>
+                        <div class="w-12 h-12 md:w-14 md:h-14 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-alarm-warning-line"></i></div>
                         <h3 class="text-lg md:text-xl font-bold text-rose-900 dark:text-white mb-2">Modo Crise</h3>
                         <p class="text-rose-700/70 dark:text-slate-400 text-xs md:text-sm mb-4">Ecrã escuro, sem distrações, apenas o teu plano de segurança.</p>
-                        <span class="text-rose-600 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Ativar Agora <i class="ri-arrow-right-line"></i></span>
+                        <span class="text-rose-600 dark:text-rose-400 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Ativar Agora <i class="ri-arrow-right-line"></i></span>
                     </div>
                 </a>
 
-                {{-- 3. Paisagens Sonoras (Original) --}}
-                <a href="{{ route('calm.sounds') }}" class="group bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all relative overflow-hidden text-left w-full block">
+                {{-- 3. Paisagens Sonoras (Blue) --}}
+                <a href="{{ route('calm.sounds') }}" class="group bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all relative overflow-hidden text-left w-full block">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 dark:bg-blue-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div class="relative z-10">
-                        <div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-rainy-line"></i></div>
+                        <div class="w-12 h-12 md:w-14 md:h-14 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-rainy-line"></i></div>
                         <h3 class="text-lg md:text-xl font-bold text-slate-800 dark:text-white mb-2">Paisagens Sonoras</h3>
                         <p class="text-slate-500 dark:text-slate-400 text-xs md:text-sm mb-4">Ouve o som da chuva, lareira ou ondas de Portugal.</p>
-                        <span class="text-blue-600 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Ouvir <i class="ri-play-circle-line"></i></span>
+                        <span class="text-blue-600 dark:text-blue-400 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Ouvir <i class="ri-play-circle-line"></i></span>
                     </div>
                 </a>
 
-                {{-- 4. Diário de Combustão (NOVO) --}}
-                <a href="{{ route('calm.burn') }}" class="group bg-slate-900 rounded-3xl p-6 md:p-8 border border-slate-800 shadow-sm hover:shadow-xl hover:border-orange-500/50 transition-all relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                {{-- 4. Diário de Combustão (Orange) --}}
+                <a href="{{ route('calm.burn') }}" class="group bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 dark:bg-orange-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div class="relative z-10">
-                        <div class="w-12 h-12 md:w-14 md:h-14 bg-orange-500/20 text-orange-500 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-fire-fill"></i></div>
-                        <h3 class="text-lg md:text-xl font-bold text-white mb-2">Diário de Combustão</h3>
-                        <p class="text-slate-400 text-xs md:text-sm mb-4">Um espaço seguro para desabafar e destruir. Nada é guardado.</p>
-                        <span class="text-orange-500 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Deixar ir <i class="ri-arrow-right-line"></i></span>
+                        <div class="w-12 h-12 md:w-14 md:h-14 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-fire-fill"></i></div>
+                        <h3 class="text-lg md:text-xl font-bold text-slate-800 dark:text-white mb-2">Diário de Combustão</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs md:text-sm mb-4">Um espaço seguro para desabafar e destruir. Nada é guardado.</p>
+                        <span class="text-orange-600 dark:text-orange-400 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Deixar ir <i class="ri-arrow-right-line"></i></span>
                     </div>
                 </a>
 
-                {{-- 5. Cofre de Luz (NOVO) --}}
-                <a href="{{ route('calm.vault') }}" class="group bg-slate-900 rounded-3xl p-6 md:p-8 border border-amber-500/20 shadow-lg hover:shadow-xl hover:border-amber-500/50 transition-all relative overflow-hidden">
-                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(251,191,36,0.15),_transparent_50%)]"></div>
+                {{-- 5. Cofre de Luz (Amber) --}}
+                <a href="{{ route('calm.vault') }}" class="group bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-amber-50 dark:bg-amber-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div class="relative z-10">
-                        <div class="w-12 h-12 md:w-14 md:h-14 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-safe-2-fill"></i></div>
-                        <h3 class="text-lg md:text-xl font-bold text-amber-100 mb-2">Cofre de Luz</h3>
-                        <p class="text-amber-200/60 text-xs md:text-sm mb-4">Guarda aqui os teus melhores dias para leres nos piores.</p>
-                        <span class="text-amber-500 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Abrir Cofre <i class="ri-arrow-right-line"></i></span>
+                        <div class="w-12 h-12 md:w-14 md:h-14 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-safe-2-fill"></i></div>
+                        <h3 class="text-lg md:text-xl font-bold text-slate-800 dark:text-white mb-2">Cofre de Luz</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs md:text-sm mb-4">Guarda aqui os teus melhores dias para leres nos piores.</p>
+                        <span class="text-amber-600 dark:text-amber-400 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Abrir Cofre <i class="ri-arrow-right-line"></i></span>
                     </div>
                 </a>
 
-                {{-- 6. Sintonia - Coração da Comunidade (NOVO) --}}
-                <a href="{{ route('calm.heartbeat') }}" class="group bg-rose-950/40 rounded-3xl p-6 md:p-8 border border-rose-900/50 shadow-sm hover:shadow-xl transition-all relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                {{-- 6. Sintonia (Pink) --}}
+                <a href="{{ route('calm.heartbeat') }}" class="group bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-pink-50 dark:bg-pink-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div class="relative z-10">
-                        <div class="w-12 h-12 md:w-14 md:h-14 bg-rose-900/50 text-rose-500 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6 shadow-[0_0_15px_rgba(225,29,72,0.3)]"><i class="ri-heart-pulse-fill"></i></div>
-                        <h3 class="text-lg md:text-xl font-bold text-rose-100 mb-2">Sintonia</h3>
-                        <p class="text-rose-400/60 text-xs md:text-sm mb-4">Encosta o telemóvel ao peito e sente o bater de coração da comunidade.</p>
-                        <span class="text-rose-500 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Sentir Agora <i class="ri-arrow-right-line"></i></span>
+                        <div class="w-12 h-12 md:w-14 md:h-14 bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-heart-pulse-fill"></i></div>
+                        <h3 class="text-lg md:text-xl font-bold text-slate-800 dark:text-white mb-2">Sintonia</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs md:text-sm mb-4">Encosta o telemóvel ao peito e sente o bater de coração da comunidade.</p>
+                        <span class="text-pink-600 dark:text-pink-400 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Sentir Agora <i class="ri-arrow-right-line"></i></span>
                     </div>
                 </a>
 
-                {{-- 7. Respiração Cega - MOBILE ONLY (NOVO) --}}
-                <a href="{{ route('calm.breathe') }}" class="block md:hidden group bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all relative overflow-hidden">
+                {{-- 7. Respiração Cega (Teal - Apenas Mobile) --}}
+                <a href="{{ route('calm.breathe') }}" class="block md:hidden group bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-teal-50 dark:bg-teal-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div class="relative z-10">
-                        <div class="w-12 h-12 md:w-14 md:h-14 bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-smartphone-line"></i></div>
+                        <div class="w-12 h-12 md:w-14 md:h-14 bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6"><i class="ri-smartphone-line"></i></div>
                         <h3 class="text-lg md:text-xl font-bold text-slate-800 dark:text-white mb-2">Respiração Cega</h3>
                         <p class="text-slate-500 dark:text-slate-400 text-xs md:text-sm mb-4">Fecha os olhos. Deixa a vibração do telemóvel guiar a tua respiração.</p>
-                        <span class="text-teal-600 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Sentir Agora <i class="ri-arrow-right-line"></i></span>
+                        <span class="text-teal-600 dark:text-teal-400 font-bold text-xs md:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">Sentir Agora <i class="ri-arrow-right-line"></i></span>
                     </div>
                 </a>
 
-                {{-- 8. Reflexo do Tempo (NOVO - Ocupa as 3 colunas) --}}
+                {{-- 8. Reflexo do Tempo (Banner IA) --}}
                 <div class="col-span-1 md:col-span-3 mt-2">
-                    <a href="{{ route('calm.reflection') }}" class="group relative rounded-[2rem] p-8 md:p-10 bg-slate-900 border border-indigo-500/20 overflow-hidden block shadow-2xl">
-                        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/40 via-slate-900 to-slate-950 pointer-events-none"></div>
-                        <div class="absolute -right-20 -top-20 w-64 h-64 bg-violet-600/20 rounded-full blur-[80px] pointer-events-none"></div>
+                    <a href="{{ route('calm.reflection') }}" class="group relative rounded-[2rem] p-8 md:p-10 bg-slate-900 border border-indigo-500/20 overflow-hidden block shadow-2xl hover:shadow-indigo-900/20 transition-all hover:-translate-y-1">
+                        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/40 via-slate-900 to-slate-950 pointer-events-none transition-opacity group-hover:opacity-80"></div>
+                        <div class="absolute -right-20 -top-20 w-64 h-64 bg-violet-600/20 rounded-full blur-[80px] pointer-events-none group-hover:bg-violet-500/30 transition-colors"></div>
                         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div>
                                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-[10px] font-black uppercase tracking-widest mb-4"><i class="ri-sparkling-fill"></i> Inteligência Artificial</div>
@@ -146,8 +146,8 @@
                         </div>
                     </a>
                 </div>
-            </div>
 
+            </div>
             {{-- SECÇÃO DA PLAYLIST DA COMUNIDADE --}}
             <div id="section-playlist" class="bg-white dark:bg-slate-800 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-10 border border-slate-100 dark:border-slate-700 shadow-sm">
                 <div class="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6 md:mb-8">
