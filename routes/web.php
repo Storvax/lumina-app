@@ -256,8 +256,8 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
     | Diário do Pacto (integrado na comunidade)
     |--------------------------------------------------------------------------
     */
-    Route::get('/comunidade/pacto', [ForumController::class, 'pact'])->name('pact.index');
-    Route::post('/comunidade/pacto/responder', [ForumController::class, 'storePact'])->name('pact.store');
+    Route::get('/comunidade/pacto', [ForumController::class, 'pact'])->name('forum.pact');
+    Route::post('/comunidade/pacto/responder', [ForumController::class, 'storePact'])->name('forum.pact.store');
 });
 
 /*
