@@ -38,6 +38,7 @@ class User extends Authenticatable implements FilamentUser
         'public_key',
         'encrypted_private_key',
         'onboarding_tours',
+        'company_id',
     ];
 
     protected $hidden = [
@@ -194,5 +195,19 @@ class User extends Authenticatable implements FilamentUser
     public function pactAnswers()
     {
         return $this->hasMany(PactAnswer::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * Terapeutas atribuídos a este paciente (relação N:M).
+     */
+    public function therapists()
+    {
+        return $this->belongsToMany(Therapist::class, 'patient_therapist')
+            ->withTimestamps();
     }
 }

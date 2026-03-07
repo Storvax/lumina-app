@@ -17,6 +17,7 @@ class Post extends Model
         'user_id',
         'title',
         'content',
+        'audio_path',
         'tag',
         'is_sensitive',
         'support_count',

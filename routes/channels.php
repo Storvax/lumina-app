@@ -54,3 +54,14 @@ Broadcast::channel('silent-room', function ($user) {
         'avatar' => $user->avatar,
     ];
 });
+
+// Canal da sessão terapêutica (co-regulação somática)
+// Apenas participantes da sessão (paciente ou terapeuta) podem subscrever.
+Broadcast::channel('session.{sessionId}', function ($user, $sessionId) {
+    $session = BuddySession::find($sessionId);
+    if (!$session) return false;
+
+    return $user->id === $session->user_id
+        || $user->id === $session->buddy_id
+        || $user->role === 'therapist';
+});

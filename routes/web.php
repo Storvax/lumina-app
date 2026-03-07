@@ -169,8 +169,17 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
         Route::post('/perfil/tags', 'updateTags')->name('profile.tags');
         Route::post('/perfil/jornada', 'storeMilestone')->name('profile.milestones.store');
         Route::delete('/perfil/jornada/{milestone}', 'destroyMilestone')->name('profile.milestones.destroy');
+        Route::get('/perfil/passaporte', 'exportPassport')->name('profile.passport');
         Route::post('/api/user/tour-completed', [App\Http\Controllers\OnboardingController::class, 'markTourCompleted'])->name('tour.completed');
     });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Triagem Terapêutica (Smart Match)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/terapia', [\App\Http\Controllers\TherapyController::class, 'index'])->name('therapy.index');
+    Route::post('/terapia/triagem', [\App\Http\Controllers\TherapyController::class, 'matchChat'])->name('therapy.match');
 
     /*
     |--------------------------------------------------------------------------
@@ -260,6 +269,26 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
             'pactAnswers' => []
         ]);
     })->name('forum.pact');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Portal do Terapeuta (protegido por TherapistMiddleware)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'verified', \App\Http\Middleware\TherapistMiddleware::class])->group(function () {
+    Route::get('/terapeuta', [\App\Http\Controllers\TherapistController::class, 'dashboard'])->name('therapist.dashboard');
+    Route::post('/terapeuta/missao', [\App\Http\Controllers\TherapistController::class, 'assignMission'])->name('therapist.assign');
+    Route::post('/terapeuta/somatico', [\App\Http\Controllers\TherapistController::class, 'triggerSomaticSync'])->name('therapist.somatic');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Dashboard Corporativo B2B (protegido por CorporateMiddleware)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'verified', \App\Http\Middleware\CorporateMiddleware::class])->group(function () {
+    Route::get('/empresa', [\App\Http\Controllers\CorporateController::class, 'dashboard'])->name('corporate.dashboard');
 });
 
 require __DIR__.'/auth.php';
