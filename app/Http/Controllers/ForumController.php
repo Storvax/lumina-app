@@ -94,6 +94,7 @@ class ForumController extends Controller
 
     /**
      * Regista uma nova publicação aplicando a triagem IA multicamada.
+     * Suporta upload opcional de áudio (whispers) para desabafos de voz.
      */
     public function store(Request $request)
     {
@@ -101,16 +102,23 @@ class ForumController extends Controller
             'title' => 'required|max:100',
             'content' => 'required|max:1000',
             'tag' => 'required|in:hope,vent,anxiety',
-            'is_sensitive' => 'sometimes|accepted'
+            'is_sensitive' => 'sometimes|accepted',
+            'audio_file' => 'nullable|file|mimes:webm,mp3,wav|max:10240',
         ]);
 
         $fullText = $validated['title'] . ' ' . $validated['content'];
         $analysis = $this->nlpService->analyzeForumPost($fullText);
 
+        $audioPath = null;
+        if ($request->hasFile('audio_file')) {
+            $audioPath = $request->file('audio_file')->store('whispers', 'public');
+        }
+
         $post = Post::create([
             'user_id' => Auth::id(),
             'title' => $validated['title'],
             'content' => $validated['content'],
+            'audio_path' => $audioPath,
             'tag' => $validated['tag'],
             'is_sensitive' => $request->has('is_sensitive') || $analysis['is_sensitive'],
             'risk_level' => $analysis['risk_level'],

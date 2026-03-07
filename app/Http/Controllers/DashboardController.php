@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use App\Services\GamificationService;
 use App\Services\RecommendationService;
 use App\Models\DailyLog;
@@ -105,6 +106,10 @@ class DashboardController extends Controller
             ];
         });
 
+        // Insight IA personalizado — só disponível com >= 3 registos nos últimos 7 dias
+        // para garantir contexto emocional suficiente para uma análise relevante
+        $aiInsight = $this->getAiInsight($user);
+
         return view('dashboard', compact(
             'dailyMissions',
             'progressData',
@@ -116,7 +121,8 @@ class DashboardController extends Controller
             'emotionalDate',
             'recommendations',
             'communityStats',
-            'globalImpact'
+            'globalImpact',
+            'aiInsight'
         ));
     }
 
@@ -193,5 +199,70 @@ class DashboardController extends Controller
         // Seleccao deterministica por dia para evitar mudanca em cada reload
         $dayIndex = (int) now()->format('z');
         return $pool[$dayIndex % count($pool)];
+    }
+
+    /**
+     * Gera um insight IA personalizado baseado nos registos emocionais recentes.
+     * Exige >= 3 entradas em 7 dias para garantir contexto clínico minimamente fiável.
+     * Cache de 24h para evitar chamadas redundantes à API.
+     *
+     * @return array|null Null se dados insuficientes ou falha na API
+     */
+    private function getAiInsight($user): ?array
+    {
+        $weekLogs = DailyLog::where('user_id', $user->id)
+            ->where('log_date', '>=', now()->subDays(7)->toDateString())
+            ->orderBy('log_date')
+            ->get(['mood_level', 'tags', 'log_date']);
+
+        if ($weekLogs->count() < 3) {
+            return null;
+        }
+
+        return Cache::remember("ai_insight_{$user->id}", 86400, function () use ($weekLogs, $user) {
+            // Sumarizar os dados emocionais para o prompt sem enviar notas pessoais
+            $logSummary = $weekLogs->map(fn ($log) => sprintf(
+                '%s: humor %d/5, tags: %s',
+                $log->log_date->format('d/m'),
+                $log->mood_level,
+                implode(', ', $log->tags ?? ['sem tags'])
+            ))->implode('; ');
+
+            try {
+                $response = Http::withToken(config('services.openai.api_key'))
+                    ->timeout(15)
+                    ->post('https://api.openai.com/v1/chat/completions', [
+                        'model' => config('services.openai.model', 'gpt-4o-mini'),
+                        'messages' => [
+                            [
+                                'role' => 'system',
+                                'content' => 'És um companheiro emocional empático. Analisa os dados emocionais do utilizador e devolve UM JSON com 3 campos: "message" (1-2 frases empáticas sobre a tendência emocional, em PT-PT), "action_text" (texto curto para um botão de acção sugerida), "action_url" (uma das rotas: /zona-calma, /diario, /mural, /zona-calma/reflexao). Nunca dês diagnósticos clínicos. Responde APENAS com JSON válido.',
+                            ],
+                            [
+                                'role' => 'user',
+                                'content' => "Registos da semana de {$user->name}: {$logSummary}",
+                            ],
+                        ],
+                        'max_tokens' => 150,
+                        'temperature' => 0.7,
+                    ]);
+
+                if ($response->failed()) {
+                    return null;
+                }
+
+                $content = $response->json('choices.0.message.content');
+                $parsed = json_decode($content, true);
+
+                // Validar estrutura mínima do JSON devolvido pela IA
+                if (!$parsed || !isset($parsed['message'], $parsed['action_text'], $parsed['action_url'])) {
+                    return null;
+                }
+
+                return $parsed;
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                return null;
+            }
+        });
     }
 }

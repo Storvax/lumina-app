@@ -309,4 +309,37 @@ class ProfileController extends Controller
 
         return back()->with('status', 'accessibility-updated');
     }
+
+    /**
+     * Gera o Passaporte Emocional: síntese dos últimos 30 dias.
+     * Calcula média de humor e tags mais frequentes para dar ao
+     * utilizador uma visão consolidada do seu percurso recente.
+     */
+    public function exportPassport(): View
+    {
+        $user = Auth::user();
+
+        $logs = DailyLog::where('user_id', $user->id)
+            ->where('log_date', '>=', Carbon::today()->subDays(30)->toDateString())
+            ->orderBy('log_date')
+            ->get();
+
+        $averageMood = $logs->isNotEmpty()
+            ? round($logs->avg('mood_level'), 1)
+            : null;
+
+        // Agregar tags e ordenar por frequência descendente
+        $tagCounts = [];
+        foreach ($logs as $log) {
+            foreach ($log->tags ?? [] as $tag) {
+                $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
+            }
+        }
+        arsort($tagCounts);
+        $topTags = array_slice(array_keys($tagCounts), 0, 5);
+
+        $totalLogs = $logs->count();
+
+        return view('profile.passport', compact('user', 'logs', 'averageMood', 'topTags', 'totalLogs'));
+    }
 }
