@@ -347,6 +347,40 @@
 
             </div>
 
+            {{-- ================================================================
+            CARTÃO: PASSAPORTE EMOCIONAL (Ponte Clínica)
+            ================================================================ --}}
+            <div class="bg-white dark:bg-slate-800 rounded-[2rem] p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden mt-8">
+                {{-- Efeito de fundo --}}
+                <div class="absolute top-0 right-0 w-48 h-48 bg-teal-50 dark:bg-teal-900/10 rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
+                
+                <div class="relative z-10 flex flex-col md:flex-row gap-6 md:items-center justify-between">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 flex items-center justify-center text-2xl shrink-0 shadow-sm">
+                            <i class="ri-folder-shield-2-line"></i>
+                        </div>
+                        <div>
+                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
+                                <i class="ri-stethoscope-line"></i> Uso Clínico
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-1">Passaporte Emocional</h3>
+                            <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
+                                Vais à tua primeira consulta de psicologia? Descarrega um relatório visual e anónimo dos teus últimos 30 dias para entregares ao teu terapeuta. Poupa tempo de triagem.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="shrink-0 flex flex-col items-center">
+                        <a href="{{ route('profile.passport') }}" target="_blank" class="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-lg shadow-slate-900/20 active:scale-95 flex items-center gap-2 text-sm w-full md:w-auto justify-center">
+                            <i class="ri-file-download-line text-lg"></i> Gerar PDF
+                        </a>
+                        <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-medium flex items-center gap-1">
+                            <i class="ri-lock-2-line"></i> 100% Privado
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             {{-- SECÇÃO LARGURA TOTAL: IMPACTO REAL DA COMUNIDADE --}}
             @php
                 // Mock de Variáveis de Impacto
