@@ -94,19 +94,21 @@ class ForumController extends Controller
 
     /**
      * Regista uma nova publicação aplicando a triagem IA multicamada.
-     * Suporta upload opcional de áudio (whispers) para desabafos de voz.
+     * Suporta "Whispered Wall": o utilizador pode publicar texto OU áudio,
+     * mas o título é sempre obrigatório para indexação e acessibilidade.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'title' => 'required|max:100',
-            'content' => 'required|max:1000',
+            'content' => 'nullable|required_without:audio_file|string|max:1000',
             'tag' => 'required|in:hope,vent,anxiety',
             'is_sensitive' => 'sometimes|accepted',
-            'audio_file' => 'nullable|file|mimes:webm,mp3,wav|max:10240',
+            'audio_file' => 'nullable|required_without:content|file|mimes:webm,mp3,wav,ogg|max:10240',
         ]);
 
-        $fullText = $validated['title'] . ' ' . $validated['content'];
+        // NLP só analisa texto; publicações apenas com áudio passam sem triagem automática
+        $fullText = $validated['title'] . ' ' . ($validated['content'] ?? '');
         $analysis = $this->nlpService->analyzeForumPost($fullText);
 
         $audioPath = null;
@@ -117,7 +119,7 @@ class ForumController extends Controller
         $post = Post::create([
             'user_id' => Auth::id(),
             'title' => $validated['title'],
-            'content' => $validated['content'],
+            'content' => $validated['content'] ?? null,
             'audio_path' => $audioPath,
             'tag' => $validated['tag'],
             'is_sensitive' => $request->has('is_sensitive') || $analysis['is_sensitive'],
@@ -188,7 +190,10 @@ class ForumController extends Controller
     }
 
     /**
-     * Processa reações emocionais a uma publicação e notifica o autor (respeitando o shadowban).
+     * Toggle puro de reações emocionais por tipo.
+     * Cada tipo (hug, candle, ear) funciona de forma independente:
+     * se já existe para este utilizador, remove; caso contrário, cria.
+     * Previne spam e garante integridade via unicidade user+post+type.
      */
     public function react(Request $request, Post $post)
     {
@@ -199,30 +204,27 @@ class ForumController extends Controller
         $request->validate(['type' => 'required|in:hug,candle,ear']);
         $user = Auth::user();
 
-        $existingReaction = PostReaction::where('user_id', $user->id)
-                                        ->where('post_id', $post->id)
-                                        ->first();
+        $existing = PostReaction::where('user_id', $user->id)
+                                ->where('post_id', $post->id)
+                                ->where('type', $request->type)
+                                ->first();
 
-        if ($existingReaction) {
-            if ($existingReaction->type == $request->type) {
-                $existingReaction->delete(); 
-                $action = 'removed';
-            } else {
-                $existingReaction->update(['type' => $request->type]); 
-                $action = 'updated';
-            }
+        if ($existing) {
+            $existing->delete();
+            $action = 'removed';
         } else {
             PostReaction::create([
                 'user_id' => $user->id,
                 'post_id' => $post->id,
-                'type' => $request->type
+                'type' => $request->type,
             ]);
             $action = 'added';
 
+            // Notificar o autor apenas em novas reações (não no toggle-off)
             if ($post->user_id !== $user->id) {
                 $this->gamification->trackAction($user, 'reaction');
 
-                // Previne fugas de shadowban (O utilizador bloqueado interage e ninguém vê o alerta)
+                // Shadowban: utilizador fantasma não dispara notificações
                 if (!$user->isShadowbanned()) {
                     $customMessage = match($request->type) {
                         'hug' => 'Alguém deixou-te um abraço apertado na tua história.',
@@ -242,7 +244,7 @@ class ForumController extends Controller
                 'hug' => $post->reactions()->where('type', 'hug')->count(),
                 'candle' => $post->reactions()->where('type', 'candle')->count(),
                 'ear' => $post->reactions()->where('type', 'ear')->count(),
-            ]
+            ],
         ]);
     }
 
@@ -286,7 +288,7 @@ class ForumController extends Controller
 
         $uniqueRecipients = $recipients->unique('id');
         
-        // Bloqueio de alerta se o remetente for um fantasma
+        // Shadowban: utilizador fantasma não dispara notificações
         if ($uniqueRecipients->count() > 0 && !Auth::user()->isShadowbanned()) {
             $customMessage = $request->parent_id 
                 ? 'Alguém respondeu diretamente ao teu comentário.' 
@@ -456,10 +458,8 @@ class ForumController extends Controller
     }
 
     /**
-     * Generates an empathetic AI-powered summary of a post via OpenAI.
-     * Returns cached result if already generated to avoid redundant API calls.
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * Gera um resumo empático via OpenAI, com cache no campo ai_summary
+     * para evitar chamadas redundantes à API.
      */
     public function summarize(Post $post)
     {
@@ -515,16 +515,14 @@ class ForumController extends Controller
     }
 
     /**
-     * Displays today's pact prompt with community answers.
-     * Uses active_date for deterministic daily rotation.
-     *
-     * @return \Illuminate\View\View
+     * Exibe o pacto do dia com respostas comunitárias.
+     * Rotação determinística por active_date; fallback cíclico se nenhum estiver agendado.
      */
     public function pact()
     {
         $todayPrompt = PactPrompt::where('active_date', now()->toDateString())->first();
 
-        // Fallback: rotate through all prompts if none is specifically scheduled for today
+        // Fallback cíclico: roda entre todos os prompts por dia do ano
         if (!$todayPrompt) {
             $prompts = PactPrompt::orderBy('id')->get();
             $todayPrompt = $prompts->isNotEmpty()
@@ -552,10 +550,8 @@ class ForumController extends Controller
     }
 
     /**
-     * Stores the user's answer to today's pact prompt.
-     * One answer per user per prompt per day via updateOrCreate on created_at date.
-     *
-     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     * Guarda a resposta do utilizador ao pacto do dia.
+     * updateOrCreate garante uma única resposta por prompt por utilizador.
      */
     public function storePact(Request $request)
     {
