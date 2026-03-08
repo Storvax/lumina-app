@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Bootstrap any application services.
+     * Inicializa serviços globais: HTTPS, políticas de password e rate limiting.
      */
     public function boot(): void
     {
@@ -27,20 +28,29 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
+        // Política de passwords forte aplicada globalmente via Password::defaults().
+        // Garante consistência entre registo, reset e alteração de password
+        // sem depender de cada controller definir regras individualmente.
+        Password::defaults(function () {
+            return Password::min(8)->mixedCase()->numbers()->symbols();
+        });
+
         $this->configureRateLimiting();
     }
 
     /**
-     * Define os rate limiters da aplicação.
-     *
-     * Cada limiter é ajustado ao tipo de ação que protege:
-     * - Criação de conteúdo: limite moderado para uso normal, evita spam.
-     * - Ações sensíveis: limite baixo para operações de alto impacto.
-     * - Denúncias: limite muito baixo para evitar abuso do sistema de moderação.
+     * Rate limiters calibrados por tipo de ação:
+     * - Conteúdo: moderado (uso normal sem spam).
+     * - Operações sensíveis: restrito (reset de password, denúncias).
+     * - Privacidade: muito restrito (exportação GDPR).
      */
     protected function configureRateLimiting(): void
     {
-        // Criação de conteúdo no fórum (posts e comentários).
+        // Recuperação de password — 1 pedido/minuto para mitigar enumeração de emails.
+        RateLimiter::for('password-reset', function (Request $request) {
+            return Limit::perMinute(1)->by($request->input('email', $request->ip()));
+        });
+
         RateLimiter::for('content-creation', function (Request $request) {
             return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
         });
