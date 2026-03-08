@@ -35,7 +35,7 @@
              @endauth>
              
         @if($post->is_pinned)
-            <div class="absolute -top-3 -left-3 z-30 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg transform -rotate-12" aria-label="{{ __('Publicação Fixada') }}" title="{{ __('Publicação Fixada') }}">
+            <div class="absolute -top-3 -left-3 z-30 w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg transform -rotate-12" aria-label="{{ __('Publicação Fixada') }}" title="{{ __('Publicação Fixada') }}">
                 <i class="ri-pushpin-fill" aria-hidden="true"></i>
             </div>
         @endif
@@ -56,16 +56,18 @@
 
             <a href="{{ route('forum.show', $post) }}" class="absolute inset-0 z-0 focus-visible:ring-4 focus-visible:ring-indigo-500 rounded-3xl outline-none" aria-label="{{ __('Ler publicação completa:') }} {{ $post->title }}"></a>
 
+            {{-- O NOVO BOTÃO DE REVELAR: Gigante, acessível e semântico --}}
             @if($post->is_sensitive)
-                <div role="button" tabindex="0" 
+                <button type="button" 
                      aria-label="{{ __('Mostrar Conteúdo Sensível') }}"
-                     onkeydown="if(['Enter', ' '].includes(event.key)) { event.preventDefault(); this.click(); }"
                      onclick="event.preventDefault(); this.parentElement.classList.add('revealed'); setTimeout(() => this.style.display = 'none', 300);"
-                     class="overlay-warning absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 backdrop-blur-md p-6 text-center cursor-pointer transition-opacity duration-300 rounded-3xl focus-visible:ring-4 focus-visible:ring-rose-500 outline-none">
-                    <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center mb-3 shadow-inner"><i class="ri-eye-close-line text-xl" aria-hidden="true"></i></div>
-                    <p class="font-bold text-slate-800 text-sm">{{ __('Conteúdo Sensível') }}</p>
-                    <span class="text-[10px] font-bold text-indigo-600 border border-indigo-200 bg-white px-4 py-1.5 rounded-full mt-3 shadow-sm">{{ __('Pressiona para revelar') }}</span>
-                </div>
+                     class="overlay-warning absolute inset-0 z-[40] w-full h-full flex flex-col items-center justify-center bg-white/70 backdrop-blur-md p-6 text-center cursor-pointer transition-all duration-300 rounded-3xl focus-visible:ring-4 focus-visible:ring-rose-500 outline-none group/sensitive">
+                    <div class="w-14 h-14 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center mb-4 shadow-sm group-hover/sensitive:scale-110 transition-transform"><i class="ri-eye-close-line text-2xl" aria-hidden="true"></i></div>
+                    <p class="font-bold text-slate-800 text-base mb-1">{{ __('Conteúdo Sensível') }}</p>
+                    <span class="text-xs font-bold text-indigo-600 bg-white border border-indigo-100 px-5 py-2.5 rounded-full mt-2 shadow-sm group-hover/sensitive:bg-indigo-50 transition-colors flex items-center gap-2">
+                        {{ __('Toca para revelar') }} <i class="ri-lock-unlock-line"></i>
+                    </span>
+                </button>
             @endif
 
             <div class="{{ $post->is_sensitive ? 'blur-content' : '' }} flex flex-col h-full relative z-10 pointer-events-none">
@@ -95,11 +97,11 @@
                                 <button @click="open = !open" 
                                         @click.outside="open = false" 
                                         @keydown.escape.window="open = false"
-                                        class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors z-30 relative focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none"
+                                        class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors z-30 relative focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none"
                                         aria-label="{{ __('Opções da publicação') }}" 
                                         aria-haspopup="true" 
                                         :aria-expanded="open">
-                                    <i class="ri-more-2-fill" aria-hidden="true"></i>
+                                    <i class="ri-more-2-fill text-lg" aria-hidden="true"></i>
                                 </button>
 
                                 <div x-show="open" 
@@ -112,12 +114,12 @@
                                     
                                     @if(Auth::user()->isModerator())
                                         <form action="{{ route('forum.pin', $post) }}" method="POST"> @csrf @method('PATCH')
-                                            <button type="submit" class="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 focus-visible:bg-indigo-50 outline-none" role="menuitem">
+                                            <button type="submit" class="w-full text-left px-4 py-3 min-h-[44px] text-sm font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 focus-visible:bg-indigo-50 outline-none" role="menuitem">
                                                 <i class="ri-pushpin-line" aria-hidden="true"></i> {{ $post->is_pinned ? __('Desafixar') : __('Fixar no Topo') }}
                                             </button>
                                         </form>
                                         <form action="{{ route('forum.lock', $post) }}" method="POST"> @csrf @method('PATCH')
-                                            <button type="submit" class="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-2 focus-visible:bg-amber-50 outline-none" role="menuitem">
+                                            <button type="submit" class="w-full text-left px-4 py-3 min-h-[44px] text-sm font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-2 focus-visible:bg-amber-50 outline-none" role="menuitem">
                                                 <i class="{{ $post->is_locked ? 'ri-lock-unlock-line' : 'ri-lock-line' }}" aria-hidden="true"></i> {{ $post->is_locked ? __('Destrancar') : __('Trancar') }}
                                             </button>
                                         </form>
@@ -125,13 +127,13 @@
                                     @endif
 
                                     @if(Auth::user()->isModerator() || Auth::id() === $post->user_id)
-                                        <button onclick="openDeleteModal({{ $post->id }})" class="w-full text-left px-4 py-2 text-xs font-bold text-rose-500 hover:bg-rose-50 flex items-center gap-2 focus-visible:bg-rose-50 outline-none" role="menuitem">
+                                        <button onclick="openDeleteModal({{ $post->id }})" class="w-full text-left px-4 py-3 min-h-[44px] text-sm font-bold text-rose-500 hover:bg-rose-50 flex items-center gap-2 focus-visible:bg-rose-50 outline-none" role="menuitem">
                                             <i class="ri-delete-bin-line" aria-hidden="true"></i> {{ __('Eliminar') }}
                                         </button>
                                     @endif
 
                                     @if(Auth::id() !== $post->user_id && !Auth::user()->isModerator())
-                                        <button onclick="openReportModal({{ $post->id }})" class="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-2 focus-visible:bg-amber-50 outline-none" role="menuitem">
+                                        <button onclick="openReportModal({{ $post->id }})" class="w-full text-left px-4 py-3 min-h-[44px] text-sm font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-2 focus-visible:bg-amber-50 outline-none" role="menuitem">
                                             <i class="ri-flag-line" aria-hidden="true"></i> {{ __('Denunciar') }}
                                         </button>
                                     @endif
@@ -146,19 +148,24 @@
                     {{ $post->title }}
                 </h3>
                 
+                {{-- MURAL SUSSURRADO (Leitor de Áudio Bónus) --}}
+                @if(isset($post->audio_path) && $post->audio_path)
+                    <div class="mb-4 mt-2 bg-slate-50 border border-slate-100 rounded-2xl p-2 pointer-events-auto">
+                        <audio src="{{ asset('storage/' . $post->audio_path) }}" controls class="w-full h-10" preload="none"></audio>
+                    </div>
+                @endif
+
                 {{-- LÓGICA DE RESUMO IA COM ALPINE JS --}}
                 <div x-data="{ 
-                        viewMode: 'original', // original | loading | summary
+                        viewMode: 'original', 
                         summary: null,
                         async fetchSummary() {
                             this.viewMode = 'loading';
                             try {
-                                // O Claude fará a rota e o Controller para isto
                                 const response = await axios.post(`/mural/{{ $post->id }}/summarize`);
                                 this.summary = response.data.summary;
                                 this.viewMode = 'summary';
                             } catch (error) {
-                                console.error('Erro na IA:', error);
                                 this.viewMode = 'original';
                                 window.showAlert('Ops', 'Não foi possível resumir o texto agora. Tenta mais tarde.', 'error');
                             }
@@ -171,11 +178,10 @@
                             {{ Str::limit($post->content, 250) }}
                         </div>
                         
-                        {{-- Só mostramos o botão se o texto for longo (> 200 caracteres) --}}
                         @if(strlen($post->content) > 200)
                             <div class="absolute bottom-[-15px] left-0 w-full h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
                             <button @click.prevent="fetchSummary()" 
-                                    class="relative -mt-2 mb-4 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-bold flex items-center gap-1.5 hover:bg-indigo-100 transition-colors pointer-events-auto">
+                                    class="relative -mt-2 mb-4 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-bold flex items-center gap-1.5 hover:bg-indigo-100 transition-colors pointer-events-auto min-h-[44px]">
                                 <i class="ri-sparkling-fill text-indigo-400"></i> Simplificar Leitura
                             </button>
                         @endif
@@ -187,69 +193,53 @@
                             <i class="ri-loader-4-line animate-spin text-indigo-500 text-lg"></i>
                             <span class="text-sm font-bold text-slate-700">A ler com atenção...</span>
                         </div>
-                        <div class="space-y-2 mt-3 w-full">
-                            <div class="h-2 bg-slate-200 rounded-full animate-pulse w-3/4"></div>
-                            <div class="h-2 bg-slate-200 rounded-full animate-pulse w-full"></div>
-                            <div class="h-2 bg-slate-200 rounded-full animate-pulse w-5/6"></div>
-                        </div>
                     </div>
 
-                    {{-- TEXTO RESUMIDO (O que a IA devolve) --}}
-                    <div x-show="viewMode === 'summary'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" class="mb-6 relative">
+                    {{-- TEXTO RESUMIDO --}}
+                    <div x-show="viewMode === 'summary'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" class="mb-6 relative pointer-events-auto">
                         <div class="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100/50">
                             <div class="flex items-center justify-between mb-3 border-b border-indigo-100 pb-2">
                                 <span class="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-1"><i class="ri-sparkling-fill"></i> Pontos Principais</span>
-                                <button @click.prevent="viewMode = 'original'" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition-colors">Ler original</button>
+                                <button @click.prevent="viewMode = 'original'" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition-colors min-h-[44px] px-2 -mr-2 -my-2">Ler original</button>
                             </div>
-                            
-                            {{-- O conteúdo do resumo (HTML) virá do Backend já com as tags <ul> e <li> do Markdown renderizado --}}
-                            <div class="text-sm text-slate-700 leading-relaxed space-y-2 prose prose-sm prose-p:my-1 prose-li:my-0.5" x-html="summary">
-                            </div>
+                            <div class="text-sm text-slate-700 leading-relaxed space-y-2 prose prose-sm" x-html="summary"></div>
                         </div>
                     </div>
 
                 </div>
 
+                {{-- AÇÕES (Tamanho Tátil Melhorado) --}}
                 <div class="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto pointer-events-auto">
                     @if($post->is_locked)
-                        <p class="text-xs text-amber-600 font-bold bg-amber-50 px-3 py-1.5 rounded-lg w-full text-center"><i class="ri-lock-line" aria-hidden="true"></i> {{ __('Comentários desativados') }}</p>
+                        <p class="text-xs text-amber-600 font-bold bg-amber-50 px-3 py-3 rounded-lg w-full text-center flex items-center justify-center gap-2"><i class="ri-lock-line"></i> {{ __('Comentários desativados') }}</p>
                     @else
-                        <div class="flex gap-1.5">
+                        <div class="flex gap-2">
                             <button onclick="event.preventDefault(); react({{ $post->id }}, 'hug', this)" 
-                                    class="group/btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-100 transition-all focus-visible:ring-2 focus-visible:ring-rose-500 outline-none" 
+                                    class="group/btn flex items-center justify-center gap-1.5 px-3 py-2 min-h-[44px] min-w-[50px] rounded-xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-100 transition-all focus-visible:ring-2 focus-visible:ring-rose-500 outline-none" 
                                     aria-label="{{ __('Enviar abraço. Total atual:') }} {{ $post->reactions->where('type', 'hug')->count() }}">
                                 <span class="text-base group-hover/btn:scale-125 transition-transform" aria-hidden="true">🫂</span> 
-                                <span class="count-hug text-xs font-bold text-slate-500 group-hover/btn:text-rose-600">{{ $post->reactions->where('type', 'hug')->count() }}</span>
+                                <span class="count-hug text-sm font-bold text-slate-500 group-hover/btn:text-rose-600">{{ $post->reactions->where('type', 'hug')->count() }}</span>
                             </button>
                             
                             <button onclick="event.preventDefault(); react({{ $post->id }}, 'candle', this)" 
-                                    class="group/btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-100 transition-all focus-visible:ring-2 focus-visible:ring-amber-500 outline-none" 
+                                    class="group/btn flex items-center justify-center gap-1.5 px-3 py-2 min-h-[44px] min-w-[50px] rounded-xl bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-100 transition-all focus-visible:ring-2 focus-visible:ring-amber-500 outline-none" 
                                     aria-label="{{ __('Acender vela. Total atual:') }} {{ $post->reactions->where('type', 'candle')->count() }}">
                                 <span class="text-base group-hover/btn:scale-125 transition-transform" aria-hidden="true">🕯️</span> 
-                                <span class="count-candle text-xs font-bold text-slate-500 group-hover/btn:text-amber-600">{{ $post->reactions->where('type', 'candle')->count() }}</span>
+                                <span class="count-candle text-sm font-bold text-slate-500 group-hover/btn:text-amber-600">{{ $post->reactions->where('type', 'candle')->count() }}</span>
                             </button>
                             
                             <button onclick="event.preventDefault(); react({{ $post->id }}, 'ear', this)" 
-                                    class="group/btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-100 transition-all focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none" 
+                                    class="group/btn flex items-center justify-center gap-1.5 px-3 py-2 min-h-[44px] min-w-[50px] rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-100 transition-all focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none" 
                                     aria-label="{{ __('Oferecer ouvidos. Total atual:') }} {{ $post->reactions->where('type', 'ear')->count() }}">
                                 <span class="text-base group-hover/btn:scale-125 transition-transform" aria-hidden="true">👂</span> 
-                                <span class="count-ear text-xs font-bold text-slate-500 group-hover/btn:text-indigo-600">{{ $post->reactions->where('type', 'ear')->count() }}</span>
+                                <span class="count-ear text-sm font-bold text-slate-500 group-hover/btn:text-indigo-600">{{ $post->reactions->where('type', 'ear')->count() }}</span>
                             </button>
                         </div>
                         
                         <div class="flex items-center gap-2">
-                            <span class="flex items-center gap-1.5 text-slate-400 text-xs font-medium bg-white px-2 py-1 rounded-md shadow-sm border border-slate-100" aria-label="{{ $post->comments->count() }} {{ __('comentários') }}">
-                                <i class="ri-chat-1-line" aria-hidden="true"></i> {{ $post->comments->count() }}
+                            <span class="flex items-center gap-1.5 text-slate-400 text-sm font-bold bg-white px-3 py-2 min-h-[44px] rounded-xl shadow-sm border border-slate-100" aria-label="{{ $post->comments->count() }} {{ __('comentários') }}">
+                                <i class="ri-chat-1-line text-lg" aria-hidden="true"></i> {{ $post->comments->count() }}
                             </span>
-
-                            @auth
-                                <button @click.prevent="savePost()" 
-                                        class="text-slate-400 hover:text-indigo-600 transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none rounded-md p-1"
-                                        :class="saved ? 'text-indigo-600' : ''"
-                                        :aria-label="saved ? '{{ __('Remover dos guardados') }}' : '{{ __('Guardar para ler mais tarde') }}'">
-                                    <i :class="saved ? 'ri-bookmark-fill' : 'ri-bookmark-line'" class="text-lg" aria-hidden="true"></i>
-                                </button>
-                            @endauth
                         </div>
                     @endif
                 </div>
@@ -257,7 +247,6 @@
         </div>
     </article>
 @empty
-    {{-- column-span: all garante que o bloco ocupa todas as colunas do layout masonry --}}
     <div class="py-20 text-center" style="column-span: all;">
         <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300" aria-hidden="true">
             <i class="ri-leaf-line text-4xl"></i>
@@ -265,7 +254,7 @@
         <h3 class="text-xl font-bold text-slate-700 mb-2">{{ __('Sem histórias por agora') }}</h3>
         <p class="text-slate-500 mb-6">{{ __('Sê a primeira pessoa a partilhar e a acender uma luz.') }}</p>
         @auth
-            <button onclick="togglePostModal()" class="inline-flex items-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700 px-5 py-2.5 rounded-full text-sm font-bold transition-all active:scale-95 focus-visible:ring-4 focus-visible:ring-indigo-500 focus-visible:outline-none">
+            <button onclick="togglePostModal()" class="inline-flex items-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-3 rounded-full text-sm font-bold transition-all active:scale-95 focus-visible:ring-4 focus-visible:ring-indigo-500 min-h-[44px]">
                 <i class="ri-quill-pen-line" aria-hidden="true"></i> {{ __('Escrever a primeira história') }}
             </button>
         @endauth

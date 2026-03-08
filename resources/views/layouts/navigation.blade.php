@@ -20,8 +20,7 @@
                         Fogueira
                     </x-nav-link>
                     <x-nav-link :href="route('calm.index')" :active="request()->routeIs('calm.*')">
-                        Zona Calmas
-                    </x-nav-link>
+                        Zona Calma </x-nav-link>
                 </div>
             </div>
 
@@ -34,7 +33,7 @@
 
                 <div class="relative mr-4" x-data="{ open: false, hasNew: {{ Auth::user()->unreadNotifications->count() > 0 ? 'true' : 'false' }} }" x-on:new-notification.window="hasNew = true">
                     <button @click="open = !open; if(open) { axios.post('{{ route('notifications.read') }}'); hasNew = false; }" 
-                            class="relative p-2 text-slate-400 hover:text-indigo-600 transition-colors focus:outline-none">
+                            class="relative p-2 text-slate-400 hover:text-indigo-600 transition-colors focus:outline-none min-h-[44px] min-w-[44px]">
                         <i class="ri-notification-3-line text-xl"></i>
                         
                         <span x-show="hasNew" x-cloak
@@ -52,7 +51,7 @@
                         
                         <div class="px-5 py-4 border-b border-slate-50 flex justify-between items-center">
                             <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">A tua comunidade</h3>
-                            <button @click="open = false" class="text-slate-300 hover:text-rose-400 transition-colors"><i class="ri-close-line"></i></button>
+                            <button @click="open = false" class="text-slate-300 hover:text-rose-400 transition-colors p-2 min-h-[44px] min-w-[44px]"><i class="ri-close-line"></i></button>
                         </div>
                 
                         <div class="max-h-80 overflow-y-auto custom-scrollbar">
@@ -100,8 +99,11 @@
                         </x-dropdown-link>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();">
-                                {{ __('Log Out') }}
+                            <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();" class="!text-rose-600 hover:!bg-rose-50 hover:!text-rose-800 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <i class="ri-logout-box-r-line"></i>
+                                    <span>Terminar Sessão</span>
+                                </div>
                             </x-dropdown-link>
                         </form>
                     </x-slot>
@@ -109,11 +111,11 @@
             </div>
 
             <div class="-me-2 flex items-center gap-2 sm:hidden">
-                <a href="{{ route('calm.crisis') }}" class="flex items-center justify-center w-9 h-9 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg hover:bg-rose-100 transition-all">
-                    <i class="ri-alarm-warning-line text-lg"></i>
+                <a href="{{ route('calm.crisis') }}" class="flex items-center justify-center w-11 h-11 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg hover:bg-rose-100 transition-all focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <i class="ri-alarm-warning-line text-xl"></i>
                 </a>
 
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none transition duration-150 ease-in-out">
+                <button @click="open = ! open" class="inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -150,8 +152,11 @@
                 <x-responsive-nav-link :href="route('profile.edit')">Definições</x-responsive-nav-link>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <x-responsive-nav-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();">
-                        {{ __('Log Out') }}
+                    <x-responsive-nav-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();" class="!text-rose-600 hover:!bg-rose-50 hover:!text-rose-800 transition-colors">
+                        <div class="flex items-center gap-2">
+                            <i class="ri-logout-box-r-line"></i>
+                            <span>Terminar Sessão</span>
+                        </div>
                     </x-responsive-nav-link>
                 </form>
             </div>
