@@ -9,7 +9,8 @@ use Illuminate\Http\Request;
 class EmailVerificationNotificationController extends Controller
 {
     /**
-     * Send a new email verification notification.
+     * Reenvia o email de verificação via queue (QueuedVerifyEmail).
+     * O envio assíncrono é garantido pelo override no model User.
      */
     public function store(Request $request): RedirectResponse
     {
