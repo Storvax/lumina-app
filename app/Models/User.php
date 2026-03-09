@@ -6,14 +6,12 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use NotificationChannels\WebPush\HasPushSubscriptions;
-use App\Notifications\QueuedVerifyEmail;
 use Carbon\Carbon;
 
-class User extends Authenticatable implements FilamentUser, MustVerifyEmail
+class User extends Authenticatable implements FilamentUser
 {
     use HasFactory, Notifiable, SoftDeletes, HasPushSubscriptions;
 
@@ -100,15 +98,6 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function isShadowbanned()
     {
         return $this->shadowbanned_until && $this->shadowbanned_until->isFuture();
-    }
-
-    /**
-     * Override do envio de verificação para usar queue (database).
-     * Evita 504 em produção quando o SMTP externo excede o timeout do proxy.
-     */
-    public function sendEmailVerificationNotification(): void
-    {
-        $this->notify(new QueuedVerifyEmail);
     }
 
     public function posts()

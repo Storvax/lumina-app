@@ -32,21 +32,21 @@ Route::get('/offline', fn () => view('offline'))->name('offline');
 Route::get('/comunidade/impacto', [CommunityReportController::class, 'index'])->name('community.report');
 Route::get('/pesquisar', [SearchController::class, 'index'])->name('search.index');
 Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
-Route::get('/salas/silencio', [RoomController::class, 'silentRoom'])->middleware(['auth', 'verified', 'onboarding'])->name('rooms.silent');
+Route::get('/salas/silencio', [RoomController::class, 'silentRoom'])->middleware(['auth', 'onboarding'])->name('rooms.silent');
 
 /*
 |--------------------------------------------------------------------------
 | Onboarding — acessível a utilizadores autenticados que ainda não completaram o processo
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::controller(OnboardingController::class)->prefix('bem-vindo')->name('onboarding.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
     });
 });
 
-Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
+Route::middleware(['auth', 'onboarding'])->group(function () {
 
 
     Route::post('/users/{user}/oferecer-apoio', [\App\Http\Controllers\GamificationController::class, 'sendGentleChallenge'])
@@ -265,7 +265,7 @@ Route::middleware(['auth', 'verified', 'onboarding'])->group(function () {
 | Portal do Terapeuta (protegido por TherapistMiddleware)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', \App\Http\Middleware\TherapistMiddleware::class])->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\TherapistMiddleware::class])->group(function () {
     Route::get('/terapeuta', [\App\Http\Controllers\TherapistController::class, 'dashboard'])->name('therapist.dashboard');
     Route::post('/terapeuta/missao', [\App\Http\Controllers\TherapistController::class, 'assignMission'])->name('therapist.assign');
     Route::post('/terapeuta/somatico', [\App\Http\Controllers\TherapistController::class, 'triggerSomaticSync'])->name('therapist.somatic');
@@ -276,7 +276,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\TherapistMiddleware:
 | Dashboard Corporativo B2B (protegido por CorporateMiddleware)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', \App\Http\Middleware\CorporateMiddleware::class])->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\CorporateMiddleware::class])->group(function () {
     Route::get('/empresa', [\App\Http\Controllers\CorporateController::class, 'dashboard'])->name('corporate.dashboard');
 });
 
