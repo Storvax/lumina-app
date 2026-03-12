@@ -191,9 +191,6 @@ Route::middleware(['auth', 'onboarding'])->group(function () {
         return response()->json(['status' => 'success']);
     })->name('notifications.read');
 
-    Route::get('/download-db', function () {
-        return response()->download(database_path('database.sqlite'));
-    });
 
     /*
     |--------------------------------------------------------------------------
