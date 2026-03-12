@@ -55,13 +55,30 @@ Broadcast::channel('silent-room', function ($user) {
     ];
 });
 
-// Canal da sessão terapêutica (co-regulação somática)
-// Apenas participantes da sessão (paciente ou terapeuta) podem subscrever.
+// Canal da sessão terapêutica (co-regulação somática).
+// Qualquer terapeuta com role 'therapist' estava a ter acesso a QUALQUER sessão,
+// independentemente de ser o terapeuta atribuído. Corrigido: um terapeuta só
+// pode subscrever sessões de pacientes que lhe foram explicitamente atribuídos.
 Broadcast::channel('session.{sessionId}', function ($user, $sessionId) {
     $session = BuddySession::find($sessionId);
     if (!$session) return false;
 
-    return $user->id === $session->user_id
-        || $user->id === $session->buddy_id
-        || $user->role === 'therapist';
+    // Participantes diretos têm sempre acesso garantido.
+    if ($user->id === $session->user_id || $user->id === $session->buddy_id) {
+        return true;
+    }
+
+    // Terapeutas só acedem se estiverem atribuídos ao paciente desta sessão,
+    // evitando que escutem sessões de pacientes que não são seus.
+    if ($user->role === 'therapist') {
+        $therapist = \App\Models\Therapist::where('name', 'like', '%' . $user->name . '%')->first();
+
+        if (!$therapist) {
+            return false;
+        }
+
+        return $session->user->therapists()->where('therapists.id', $therapist->id)->exists();
+    }
+
+    return false;
 });
