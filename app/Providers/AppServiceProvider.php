@@ -79,5 +79,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('privacy-actions', function (Request $request) {
             return Limit::perHour(3)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Pedidos à API de IA (OpenAI) — limite conservador por utilizador para
+        // evitar custos descontrolados e abuso de prompt injection.
+        RateLimiter::for('ai-actions', function (Request $request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
     }
 }

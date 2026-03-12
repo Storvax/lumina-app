@@ -76,7 +76,7 @@ Route::middleware(['auth', 'onboarding'])->group(function () {
             Route::post('/save', 'toggleSave')->name('save');
             Route::post('/subscrever', 'toggleSubscription')->name('subscribe');
             Route::post('/checkin', 'postCheckin')->name('checkin');
-            Route::post('/summarize', 'summarize')->name('summarize');
+            Route::post('/summarize', 'summarize')->middleware('throttle:ai-actions')->name('summarize');
             Route::patch('/pin', 'togglePin')->name('pin');
             Route::patch('/lock', 'toggleLock')->name('lock');
         });
@@ -179,7 +179,7 @@ Route::middleware(['auth', 'onboarding'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::get('/terapia', [\App\Http\Controllers\TherapyController::class, 'index'])->name('therapy.index');
-    Route::post('/terapia/triagem', [\App\Http\Controllers\TherapyController::class, 'matchChat'])->name('therapy.match');
+    Route::post('/terapia/triagem', [\App\Http\Controllers\TherapyController::class, 'matchChat'])->middleware('throttle:ai-actions')->name('therapy.match');
 
     /*
     |--------------------------------------------------------------------------
@@ -239,7 +239,7 @@ Route::middleware(['auth', 'onboarding'])->group(function () {
         Route::get('/respiracao', 'breathe')->name('breathe');
         Route::get('/sintonia', 'heartbeat')->name('heartbeat');
         Route::get('/reflexao', [CalmZoneController::class, 'reflection'])->name('reflection');
-        Route::post('/reflexao/enviar', [CalmZoneController::class, 'sendReflection'])->name('reflection.send');
+        Route::post('/reflexao/enviar', [CalmZoneController::class, 'sendReflection'])->middleware('throttle:ai-actions')->name('reflection.send');
         Route::get('/cofre', 'vault')->name('vault');
         Route::post('/cofre', 'storeVaultItem')->name('vault.store');
 
