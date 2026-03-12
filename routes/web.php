@@ -30,7 +30,7 @@ use App\Http\Controllers\CommunityReportController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/offline', fn () => view('offline'))->name('offline');
 Route::get('/comunidade/impacto', [CommunityReportController::class, 'index'])->name('community.report');
-Route::get('/pesquisar', [SearchController::class, 'index'])->name('search.index');
+Route::get('/pesquisar', [SearchController::class, 'index'])->middleware(['auth', 'onboarding'])->name('search.index');
 Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');
 Route::get('/salas/silencio', [RoomController::class, 'silentRoom'])->middleware(['auth', 'onboarding'])->name('rooms.silent');
 
@@ -170,6 +170,7 @@ Route::middleware(['auth', 'onboarding'])->group(function () {
         Route::post('/perfil/jornada', 'storeMilestone')->name('profile.milestones.store');
         Route::delete('/perfil/jornada/{milestone}', 'destroyMilestone')->name('profile.milestones.destroy');
         Route::get('/perfil/passaporte', 'exportPassport')->name('profile.passport');
+        Route::patch('/perfil/acessibilidade', 'updateAccessibility')->name('profile.accessibility');
         Route::post('/api/user/tour-completed', [App\Http\Controllers\OnboardingController::class, 'markTourCompleted'])->name('tour.completed');
     });
 

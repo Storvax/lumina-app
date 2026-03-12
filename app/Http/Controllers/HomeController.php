@@ -69,13 +69,6 @@ class HomeController extends Controller
             }
         }
 
-        // 4. Recursos da Biblioteca (Top 3 mais votados)
-        $featuredResources = \App\Models\Resource::withCount('votes')
-            ->where('is_approved', true)
-            ->orderByDesc('votes_count')
-            ->take(3)
-            ->get();
-
         return view('welcome', compact('recentPosts', 'userMood', 'moodSuggestion', 'communityStats'));
     }
 }

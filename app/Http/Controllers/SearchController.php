@@ -23,7 +23,12 @@ class SearchController extends Controller
         $query    = trim($request->input('q', ''));
         $emotion  = $request->input('emotion');
         $type     = $request->input('type');
-        $safe     = $request->boolean('safe', true);
+
+        // Utilizadores não-moderadores não podem desativar o filtro de conteúdo sensível —
+        // previne acesso a posts marcados como sensíveis por via do parâmetro de URL.
+        $safe = $request->user()?->isModerator()
+            ? $request->boolean('safe', true)
+            : true;
 
         $posts     = collect();
         $resources = collect();

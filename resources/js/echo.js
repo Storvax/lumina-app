@@ -9,8 +9,8 @@ const reverbKey = config.key || import.meta.env.VITE_REVERB_APP_KEY;
 if (reverbKey) {
     window.Pusher = Pusher;
 
-    // 🚀 Ativar logs do Pusher para vermos exatamente o que ele faz na consola (F12)
-    Pusher.logToConsole = true;
+    // Logs de WebSocket apenas em desenvolvimento — nunca expor em produção.
+    Pusher.logToConsole = import.meta.env.DEV;
 
     const isProduction = window.location.protocol === 'https:';
     const host = config.host || import.meta.env.VITE_REVERB_HOST || window.location.hostname;
@@ -39,12 +39,12 @@ if (reverbKey) {
         },
     });
 
-    // 📡 Listener global para detetar as mudanças de estado do WebSocket em tempo real
-    window.Echo.connector.pusher.connection.bind('state_change', function(states) {
-        console.log(`[Echo Status]: Mudou de '${states.previous}' para '${states.current}'`);
-    });
-
-    console.log(`Echo configurado para apontar a: ${isProduction ? 'wss' : 'ws'}://${host}`);
+    if (import.meta.env.DEV) {
+        window.Echo.connector.pusher.connection.bind('state_change', function(states) {
+            console.log(`[Echo Status]: Mudou de '${states.previous}' para '${states.current}'`);
+        });
+        console.log(`Echo configurado para apontar a: ${isProduction ? 'wss' : 'ws'}://${host}`);
+    }
 } else {
     console.warn('Echo: REVERB_APP_KEY não configurado. WebSocket desativado.');
 }

@@ -2,8 +2,21 @@
 
 namespace App\Providers;
 
+use App\Models\Comment;
+use App\Models\DailyLog;
+use App\Models\Message;
+use App\Models\Post;
+use App\Models\SelfAssessment;
+use App\Models\VaultItem;
+use App\Policies\CommentPolicy;
+use App\Policies\DailyLogPolicy;
+use App\Policies\MessagePolicy;
+use App\Policies\PostPolicy;
+use App\Policies\SelfAssessmentPolicy;
+use App\Policies\VaultItemPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -36,6 +49,22 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->configureRateLimiting();
+        $this->configurePolicies();
+    }
+
+    /**
+     * Registo explícito de policies para os models com dados sensíveis.
+     * Embora o Laravel 12 faça auto-discovery, o registo explícito documenta
+     * a intenção e previne regressões silenciosas em refactors futuros.
+     */
+    protected function configurePolicies(): void
+    {
+        Gate::policy(Post::class, PostPolicy::class);
+        Gate::policy(Comment::class, CommentPolicy::class);
+        Gate::policy(Message::class, MessagePolicy::class);
+        Gate::policy(DailyLog::class, DailyLogPolicy::class);
+        Gate::policy(VaultItem::class, VaultItemPolicy::class);
+        Gate::policy(SelfAssessment::class, SelfAssessmentPolicy::class);
     }
 
     /**
