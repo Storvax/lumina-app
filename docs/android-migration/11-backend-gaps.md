@@ -2,7 +2,51 @@
 
 ## Contexto
 
-O backend Laravel atual foi construído exclusivamente para servir páginas web. Para suportar uma app Android nativa, é necessário resolver vários gaps estruturais. Este documento lista cada gap, a solução proposta, e a prioridade.
+O backend Laravel atual foi construído exclusivamente para servir páginas web. Para suportar
+uma app Android nativa, é necessário resolver vários gaps estruturais. Este documento lista
+cada gap, a solução proposta, e a prioridade.
+
+Este documento é complementar a [10-backend-reutilizacao.md](10-backend-reutilizacao.md),
+que identifica o que **pode** ser reutilizado — este identifica o que **não** pode ser
+reutilizado diretamente e precisa de trabalho novo ou adaptação.
+
+Referências cruzadas:
+- [01-estado-atual.md](01-estado-atual.md) — baseline da arquitetura atual
+- [04-fase-inicial.md](04-fase-inicial.md) — escopo da Fase 1 que consume estes gaps
+- [12-autenticacao-seguranca.md](12-autenticacao-seguranca.md) — gaps de auth em profundidade
+- [16-gamificacao-servidor.md](16-gamificacao-servidor.md) — gaps de gamificação em profundidade
+- [23-roadmap-fases.md](23-roadmap-fases.md) — roadmap que prioriza a resolução dos gaps
+- [25-riscos-decisoes.md](25-riscos-decisoes.md) — riscos derivados destes gaps
+
+---
+
+## Observações do estado atual
+
+Descobertas concretas da análise do código que fundamentam os gaps identificados:
+
+1. **`routes/api.php` não existe.** Verificado — todo o routing está em `routes/web.php`.
+   Nenhum endpoint retorna JSON puro por design (apenas respostas ad-hoc para AJAX).
+
+2. **Apenas 2 FormRequests** existem: `LoginRequest` e `ProfileUpdateRequest` em
+   `app/Http/Requests/`. Toda a outra validação é inline nos controllers com `$request->validate()`.
+
+3. **`fcm_token` não existe** em nenhuma tabela ou migration. O campo proposto como singular
+   na tabela `users` não suporta múltiplos dispositivos.
+
+4. **8 rate limiters** em `AppServiceProvider` (ref. [10-backend-reutilizacao.md](10-backend-reutilizacao.md)
+   secção 11) mas nenhum com prefixo `api`. Os limiters existentes são reutilizáveis mas falta
+   um rate limiter global para a API.
+
+5. **`DashboardController::index()`** agrega 15+ data points numa única view Blade:
+   `dailyMissions`, `progressData`, `greeting`, `pendingMilestone`, `emotionalTags`,
+   `encouragement`, `todayLog`, `emotionalDate`, `recommendations`, `communityStats`,
+   `globalImpact`, `aiInsight`. Não existe equivalente API.
+
+6. **`ForumController::index()`** já usa cursor pagination para AJAX web — este padrão
+   é reutilizável para a API de fórum.
+
+7. **`ProfileController`** tem 12+ operações (tags, milestones, safety plan, energy, breathing,
+   notification prefs, accessibility, passport) — cada uma precisa de endpoint API dedicado.
 
 ---
 
@@ -406,31 +450,335 @@ $exceptions->render(function (Throwable $e, Request $request) {
 
 ---
 
+## Gap 15: Session flash para gamificação (CRÍTICO)
+
+**Estado atual:** `GamificationService::trackAction()` usa `session()->flash()` em 3 locais
+para feedback de gamificação:
+- `session()->flash('gamification.flames', $amount)` — após cada award de flames
+- `session()->flash('gamification.badge', ['name' => ..., 'icon' => ..., 'image' => ...])` — após achievement unlock
+- `session()->flash('gamification.mission', $mission->title)` — após mission completion
+
+O método retorna `void`. Os controllers web lêem estes valores da sessão na próxima view.
+
+**Problema:** Requests API são stateless. `session()->flash()` escreve numa sessão que nunca
+é lida pelo response da API. O feedback de gamificação é **silenciosamente perdido** — o user
+completa uma ação mas nunca vê as flames ganhas, badges desbloqueados, ou missões completadas.
+
+**Solução:** Modificar `trackAction()` para retornar um `GamificationResult` DTO que acumula
+todos os eventos de gamificação da operação:
+
+```php
+class GamificationResult {
+    public int $flames_earned = 0;
+    public int $total_flames;
+    public string $flame_level;
+    public int $current_streak;
+    public ?array $achievement_unlocked = null;  // {name, icon, image}
+    public ?string $mission_completed = null;     // título da missão
+}
+```
+
+**Backwards compatibility:** Manter as chamadas `session()->flash()` para os controllers web
+que as lêem. Os API controllers usam o valor de retorno. Zero breaking changes.
+
+**Prioridade:** Fase 0 (pré-requisito para qualquer ação com gamificação na API)
+
+Ref. [16-gamificacao-servidor.md](16-gamificacao-servidor.md) para detalhes da transformação.
+
+---
+
+## Gap 16: Safety plan endpoint (MÉDIO)
+
+**Estado atual:** Safety plan armazenado como JSON no campo `User.safety_plan`. O
+`ProfileController::updateSafetyPlan()` valida 6 campos (`warning_signs`, `coping_strategies`,
+`reasons_to_live`, `support_contacts`, `professional_contacts`, `environment_safety` — todos
+nullable, max 1000 chars) e retorna redirect.
+
+**Problema:** Sem endpoint API. O safety plan é funcionalidade crítica de segurança emocional
+(ref. [04-fase-inicial.md](04-fase-inicial.md)) e precisa de estar disponível desde a Fase 1.
+
+**Solução:**
+- `GET /api/v1/profile/safety-plan` — retorna o plano atual (ou objeto vazio)
+- `PUT /api/v1/profile/safety-plan` — atualiza com validação dos 6 campos
+- FormRequest dedicado: `UpdateSafetyPlanRequest`
+- Safety plan é pré-cacheado em Room DB para acesso offline
+  (ref. [13-offline-sync.md](13-offline-sync.md))
+
+**Prioridade:** Fase 1
+
+---
+
+## Gap 17: Accessibility settings endpoint (BAIXO)
+
+**Estado atual:** 3 campos no User model: `a11y_dyslexic_font` (boolean), `a11y_reduced_motion`
+(boolean), `a11y_text_size` (enum: sm/base/lg/xl). `ProfileController::updateAccessibility()`
+valida inline e retorna redirect.
+
+**Problema:** Sem endpoint API. A app Android precisa de sincronizar preferências de
+acessibilidade com o servidor para consistência cross-device.
+
+**Solução:**
+- `PUT /api/v1/profile/accessibility` — atualiza os 3 campos
+- A app sincroniza na login e envia updates quando o user muda preferências
+- A app também respeita system preferences do Android (ref.
+  [05-adaptacoes-nativas.md](05-adaptacoes-nativas.md) secção 10)
+
+**Prioridade:** Fase 1
+
+---
+
+## Gap 18: Energy level tracking (BAIXO)
+
+**Estado atual:** `ProfileController::updateEnergy()` já retorna JSON (`{'success': true}`),
+valida `level` como integer 1-5, e guarda em `User.energy_level`. Funciona via rota web.
+
+**Problema:** O endpoint já é quase API-ready mas está registado em `routes/web.php` com
+session middleware.
+
+**Solução:** Registar endpoint equivalente em `routes/api.php`:
+- `PUT /api/v1/profile/energy` com body `{ "level": 3 }`
+- A lógica do controller é idêntica — apenas muda o routing
+
+**Prioridade:** Fase 1
+
+---
+
+## Gap 19: Breathing log gamification (BAIXO)
+
+**Estado atual:** `ProfileController::logBreathing()` já retorna JSON (`{'success': true,
+'flames': 5}`) e chama `GamificationService::trackAction('breathe')`. Funciona via rota web.
+
+**Problema:** Está em `routes/web.php`. Além disso, o response não inclui o envelope de
+gamificação completo (apenas `flames: 5` hardcoded, não inclui streak, mission progress, etc.).
+
+**Solução:**
+- Registar em `routes/api.php`: `POST /api/v1/calm-zone/breathe`
+- Usar o `GamificationResult` DTO (Gap 15) para retornar envelope completo
+- Rate limited: `throttle:gamification` (5/min) + daily cap de 3 rewards
+
+**Depende de:** Gap 15 (session flash)
+
+**Prioridade:** Fase 1
+
+---
+
+## Gap 20: Onboarding flow (ALTO)
+
+**Estado atual:** `OnboardingController` tem 3 campos: `intent` (enum: crisis/talk/write/learn/explore),
+`mood` (1-5), `preference` (enum: read/listen/talk/create). O `store()` guarda os valores,
+marca `onboarding_completed_at`, e retorna `redirect()` para rota contextual baseada no intent.
+
+O `EnsureOnboardingCompleted` middleware faz `redirect()->route('onboarding.index')` se
+`onboarding_completed_at` é null.
+
+**Problema:** Dois sub-problemas:
+1. O endpoint retorna redirect HTML, não JSON
+2. O middleware retorna redirect, não 403 JSON
+
+**Solução:**
+- `POST /api/v1/onboarding` com body `{ "intent": "write", "mood": 3, "preference": "listen" }`
+- Response retorna screen identifier (não URL): `{ "data": { "suggested_screen": "diary" } }`
+- Middleware API: `EnsureOnboardingCompletedApi` retorna 403 com
+  `{ "error": { "code": "onboarding_required" } }`
+- FormRequest: `StoreOnboardingRequest` com regras de validação
+
+**Prioridade:** Fase 0 (pré-requisito para navegação inicial da app)
+
+---
+
+## Gap 21: Dashboard aggregation endpoint (ALTO)
+
+**Estado atual:** `DashboardController::index()` faz 15+ queries/computações e passa tudo
+para uma view Blade:
+
+| Variável | Fonte | Cache |
+|---------|-------|-------|
+| `dailyMissions` | GamificationService::assignDailyMissions() | 10min |
+| `todayLog` | DailyLog::where(log_date, today) | Sem cache |
+| `progressData` | Contagem semanal de logs | Sem cache |
+| `greeting` | Saudação baseada na hora | Sem cache |
+| `pendingMilestone` | User milestone mais recente | Sem cache |
+| `emotionalTags` | User.emotional_tags | Sem cache |
+| `encouragement` | Mensagem motivacional aleatória | Sem cache |
+| `emotionalDate` | Formato de data emocional | Sem cache |
+| `recommendations` | RecommendationService | Sem cache |
+| `communityStats` | Contagens agregadas | 15min |
+| `globalImpact` | Estatísticas globais | 15min |
+| `aiInsight` | OpenAI CBT insight | 24h |
+
+**Problema:** Sem endpoint API. É a primeira tela que o user vê — crítico para a Fase 1.
+
+**Solução:**
+- `GET /api/v1/dashboard` retorna `DashboardResource` com todos os dados agregados
+- Cache: 5min por user (key: `dashboard:{user_id}`)
+- AI insight: já cacheado 24h server-side (reutilizável)
+- Community stats: já cacheados 15min (reutilizável)
+- ETag para conditional requests (`If-None-Match`)
+
+**Prioridade:** Fase 1
+
+---
+
+## Gap 22: Emotional passport (MÉDIO)
+
+**Estado atual:** `ProfileController::exportPassport()` agrega últimos 30 dias: média de mood,
+top 5 tags por frequência, total de logs, e todas as entradas. Retorna view Blade.
+
+**Problema:** Sem endpoint API. O passaporte emocional é funcionalidade de Fase 2 na app
+(ref. [04-fase-inicial.md](04-fase-inicial.md)) — resumo na app, PDF server-side via browser.
+
+**Solução:**
+- `GET /api/v1/profile/passport` retornando JSON:
+  ```json
+  {
+    "data": {
+      "average_mood": 3.7,
+      "top_tags": [{"tag": "gratidão", "count": 12}, ...],
+      "total_logs": 28,
+      "period_days": 30,
+      "logs": [...]
+    }
+  }
+  ```
+- PDF: gerado server-side, download via share intent no browser
+  (ref. [06-web-first-admin.md](06-web-first-admin.md) secção 5)
+
+**Prioridade:** Fase 2
+
+---
+
+## Gap 23: Search API (MÉDIO)
+
+**Estado atual:** `SearchController::index()` pesquisa posts, resources, e rooms. Mínimo 2
+caracteres. Respeita `ShadowbanScope`. Moderadores têm filtro `safe`. Retorna view HTML.
+
+**Problema:** Sem endpoint API. A pesquisa é funcionalidade transversal usada em múltiplas
+telas da app.
+
+**Solução:**
+- `GET /api/v1/search?q=ansiedade&type=posts&emotion=tristeza`
+- Parâmetros: `q` (min 2 chars), `type` (posts/resources/rooms, nullable = todos),
+  `emotion` (filtro por tag emocional, nullable)
+- Cursor pagination para resultados
+- `ShadowbanScope` funciona automaticamente (ref.
+  [10-backend-reutilizacao.md](10-backend-reutilizacao.md))
+
+**Prioridade:** Fase 2
+
+---
+
+## Gap 24: Multiple FCM tokens per user (MÉDIO)
+
+**Estado atual:** O campo `fcm_token` não existe. A proposta inicial (Gap 9) sugere um campo
+único na tabela `users` — mas um user pode ter múltiplos dispositivos Android.
+
+**Problema:** Campo único `fcm_token` não suporta:
+- Mesmo user em 2 dispositivos Android
+- Cleanup de tokens expirados
+- Tracking de último uso por dispositivo
+
+**Solução:** Criar tabela `device_tokens`:
+```
+device_tokens:
+  id, user_id, token, device_name, platform, created_at, last_used_at
+```
+
+Endpoints:
+- `POST /api/v1/devices` — registar token (com device_name e platform)
+- `DELETE /api/v1/devices/{id}` — remover token (logout de dispositivo)
+- `GET /api/v1/devices` — listar dispositivos ativos (para gestão de sessões)
+
+**Atualização ao Gap 9:** Substituir `fcm_token` na tabela `users` por tabela `device_tokens`.
+As notifications consultam `$notifiable->deviceTokens()` em vez de `$notifiable->fcm_token`.
+
+**Prioridade:** Fase 2 (quando FCM for implementado)
+
+---
+
+## Mapa de dependências entre gaps
+
+```
+Gap 1 (API layer) ──────► bloqueia TODOS os outros gaps
+    │
+    ▼
+Gap 2 (Sanctum) ────────► bloqueia Gaps 10, 15-24
+    │
+    ├──► Gap 5 (Response format) ──► Gap 15 (Gamification envelope)
+    │                                     │
+    │                                     ▼
+    │                               Gap 19 (Breathing gamification)
+    │
+    ├──► Gap 3 (Resources) ────────► Gaps 21 (Dashboard), 22 (Passport), 23 (Search)
+    │
+    ├──► Gap 12 (Error handling) ──► Gap 20 (Onboarding 403)
+    │
+    └──► Gap 9 (FCM) ─────────────► Gap 24 (Multiple device tokens)
+```
+
+**Caminho crítico:** Gap 1 → Gap 2 → Gap 5 → Gap 15 → todos os endpoints de mutação.
+
+Sem resolver o caminho crítico, nenhuma funcionalidade Android com gamificação funciona
+correctamente.
+
+---
+
 ## Resumo de gaps por prioridade
 
 ### Fase 0 (pré-requisito, antes de qualquer funcionalidade Android)
-1. ✅ Criar `routes/api.php` com prefixo v1
-2. ✅ Instalar e configurar Sanctum
-3. ✅ Criar API controllers base
-4. ✅ Criar API Resources
-5. ✅ Criar Form Requests para API
-6. ✅ Padronizar formato de resposta
-7. ✅ Error handling para API
-8. ✅ Rate limiting para API
-9. ✅ Definir versionamento (v1)
+
+| # | Gap | Criticidade | Depende de |
+|---|-----|------------|-----------|
+| 1 | Criar `routes/api.php` com prefixo v1 | CRÍTICO | — |
+| 2 | Instalar e configurar Sanctum | CRÍTICO | Gap 1 |
+| 3 | Criar API Resources | ALTO | Gap 1 |
+| 4 | Criar Form Requests para API | ALTO | Gap 1 |
+| 5 | Padronizar formato de resposta (envelope) | ALTO | Gap 1 |
+| 7 | Definir versionamento (v1) | MÉDIO | Gap 1 |
+| 11 | Rate limiting global para API | MÉDIO | Gap 1 |
+| 12 | Error handling para API (JSON) | ALTO | Gap 1 |
+| 15 | Session flash → GamificationResult DTO | CRÍTICO | Gap 5 |
+| 20 | Onboarding flow API | ALTO | Gap 12 |
 
 ### Fase 1
-10. Upload de ficheiros (simples, multipart)
+
+| # | Gap | Criticidade | Depende de |
+|---|-----|------------|-----------|
+| 8 | Upload de ficheiros (simples, multipart) | MÉDIO | Gap 1 |
+| 16 | Safety plan endpoint | MÉDIO | Gap 2 |
+| 17 | Accessibility settings endpoint | BAIXO | Gap 2 |
+| 18 | Energy level tracking | BAIXO | Gap 2 |
+| 19 | Breathing log gamification | BAIXO | Gap 15 |
+| 21 | Dashboard aggregation endpoint | ALTO | Gap 3 |
 
 ### Fase 2
-11. Push notifications (FCM)
-12. Cursor-based pagination
-13. Idempotência
-14. Upload robusto (resumable/chunked)
+
+| # | Gap | Criticidade | Depende de |
+|---|-----|------------|-----------|
+| 6 | Cursor-based pagination | MÉDIO | Gap 1 |
+| 9 | Push notifications (FCM) | ALTO | Gap 24 |
+| 13 | Idempotência | BAIXO | Gap 1 |
+| 14 | Upload robusto (resumable/chunked) | MÉDIO | Gap 8 |
+| 22 | Emotional passport | MÉDIO | Gap 3 |
+| 23 | Search API | MÉDIO | Gap 3 |
+| 24 | Multiple FCM tokens (device_tokens) | MÉDIO | Gap 2 |
 
 ### Fase 3
-15. WebSocket auth para tokens
-16. Broadcasting via Sanctum
+
+| # | Gap | Criticidade | Depende de |
+|---|-----|------------|-----------|
+| 10 | WebSocket auth para tokens | MÉDIO | Gap 2 |
+
+---
+
+## Riscos
+
+| ID | Risco | Probabilidade | Impacto | Mitigação |
+|----|-------|--------------|---------|-----------|
+| RISK-11-01 | Dashboard aggregation endpoint lento (15+ queries por request) | Média | Médio | Cache agressivo (5min/user), queries paralelas, considerar materializar dados |
+| RISK-11-02 | Modificar `GamificationService` para retornar DTO pode quebrar controllers web que lêem session flash | Média | Alto | Manter `session()->flash()` E retornar valor. API lê return, web lê session. Zero breaking changes |
+| RISK-11-03 | Single `fcm_token` implementado antes de `device_tokens` — requer migração posterior | Baixa | Baixo | Implementar `device_tokens` desde o início (não implementar campo singular) |
+| RISK-11-04 | 10 novos gaps (15-24) aumentam significativamente o escopo da Fase 0/1 | Alta | Médio | Gaps 17, 18 são de esforço mínimo (mover rota). Gaps 15 e 20 são críticos mas de escopo limitado. Priorizar pelo caminho crítico |
+| RISK-11-05 | FormRequests inline nos controllers podem ter regras de validação não documentadas | Média | Baixo | Auditar cada controller web antes de criar FormRequest API equivalente |
 
 ---
 
