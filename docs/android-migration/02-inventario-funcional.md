@@ -1,5 +1,19 @@
 # 02 — Inventário Funcional Completo
 
+## Contexto
+
+Este documento é um inventário rota a rota do sistema Lumina atual. Serve de referência
+para decidir quais os endpoints a criar na camada API Android e para identificar o que
+precisa de reconceção.
+
+Todas as rotas listadas são de `routes/web.php` e `routes/auth.php` (session-based).
+Não existe `routes/api.php` — essa camada ainda não existe.
+
+Cada secção indica o **perfil primário** de utilizador (B2C, PRO, Corporate, Admin/Mod,
+Público) para facilitar a priorização Android.
+
+---
+
 ## Convenções deste documento
 
 - **Resposta**: Tipo de resposta atual do controller (`view` = HTML, `json` = JSON, `redirect` = redirect, `broadcast` = WebSocket event, `file` = download)
@@ -10,7 +24,22 @@
 
 ---
 
+## 0. Rotas públicas (sem autenticação)
+
+**Perfil:** Público (qualquer visitante)
+
+| Funcionalidade | Rota | Método | Resposta | Notas |
+|---------------|------|--------|----------|-------|
+| Landing page | `GET /` | HomeController@index | view | Página pública de entrada |
+| Offline fallback | `GET /offline` | — | view | Placeholder PWA; service worker não implementado |
+| Lista de salas de chat | `GET /fogueira` | RoomController@index | view | **Ambiguidade:** pública sem auth — ver secção de ambiguidades |
+| Relatório de impacto | `GET /comunidade/impacto` | CommunityReportController@index | view | Métricas anónimas públicas |
+
+---
+
 ## 1. Autenticação e onboarding
+
+**Perfil:** B2C (todos os utilizadores)
 
 ### Autenticação (Laravel Breeze)
 
@@ -36,6 +65,8 @@
 
 ## 2. Dashboard
 
+**Perfil:** B2C
+
 | Funcionalidade | Rota | Método | Resposta | Notas |
 |---------------|------|--------|----------|-------|
 | Página principal | `GET /dashboard` | DashboardController@index | view | Agregação: mood, flames, streaks, missions, insights AI |
@@ -53,6 +84,8 @@
 ---
 
 ## 3. Fórum — Mural da Esperança
+
+**Perfil:** B2C (posts, reações, comentários) + Admin/Mod (pin, lock, shadowban)
 
 | Funcionalidade | Rota | Método | Resposta | Rate limit | Notas |
 |---------------|------|--------|----------|-----------|-------|
@@ -87,6 +120,8 @@
 
 ## 4. Chat — A Fogueira
 
+**Perfil:** B2C (mensagens, reações) + Admin/Mod (mute, pin, crisis mode)
+
 | Funcionalidade | Rota | Método | Resposta | Notas |
 |---------------|------|--------|----------|-------|
 | Listar salas | `GET /fogueira` | RoomController@index | view | Salas públicas |
@@ -116,6 +151,8 @@
 
 ## 5. Diário — O Teu Diário
 
+**Perfil:** B2C (privado por utilizador)
+
 | Funcionalidade | Rota | Método | Resposta | Notas |
 |---------------|------|--------|----------|-------|
 | Ver diário + histórico | `GET /diario` | DailyLogController@index | view | Hoje + últimos 7 dias |
@@ -138,6 +175,8 @@
 
 ## 6. Perfil — Santuário
 
+**Perfil:** B2C (cada utilizador gere o seu próprio perfil)
+
 | Funcionalidade | Rota | Método | Resposta | Notas |
 |---------------|------|--------|----------|-------|
 | Ver perfil | `GET /perfil` | ProfileController@show | view | Pseudónimo, flames, milestones, achievements |
@@ -156,6 +195,8 @@
 ---
 
 ## 7. Zona Calma
+
+**Perfil:** B2C
 
 | Funcionalidade | Rota | Método | Resposta | Notas |
 |---------------|------|--------|----------|-------|
@@ -178,6 +219,8 @@
 
 ## 8. Buddy System — Ouvinte
 
+**Perfil:** B2C (qualquer utilizador pode ser ouvinte ou pedir ouvinte)
+
 | Funcionalidade | Rota | Método | Resposta | Rate limit | Notas |
 |---------------|------|--------|----------|-----------|-------|
 | Dashboard | `GET /ouvinte/dashboard` | BuddyController@dashboard | view | — | Visão geral + pedidos |
@@ -191,6 +234,8 @@
 
 ## 9. Biblioteca
 
+**Perfil:** B2C
+
 | Funcionalidade | Rota | Método | Resposta | Rate limit |
 |---------------|------|--------|----------|-----------|
 | Listar recursos | `GET /biblioteca` | LibraryController@index | view | — |
@@ -200,6 +245,8 @@
 ---
 
 ## 10. Auto-avaliação
+
+**Perfil:** B2C (privado por utilizador)
 
 | Funcionalidade | Rota | Método | Resposta | Notas |
 |---------------|------|--------|----------|-------|
@@ -212,6 +259,8 @@
 
 ## 11. The Wall (Galeria artística)
 
+**Perfil:** B2C
+
 | Funcionalidade | Rota | Método | Resposta | Rate limit |
 |---------------|------|--------|----------|-----------|
 | Galeria | `GET /the-wall` | WallController@index | view | — |
@@ -220,6 +269,8 @@
 ---
 
 ## 12. Privacidade e GDPR
+
+**Perfil:** B2C (cada utilizador gere os seus dados)
 
 | Funcionalidade | Rota | Método | Resposta | Rate limit | Notas |
 |---------------|------|--------|----------|-----------|-------|
@@ -231,6 +282,8 @@
 
 ## 13. Pesquisa global
 
+**Perfil:** B2C
+
 | Funcionalidade | Rota | Método | Resposta | Notas |
 |---------------|------|--------|----------|-------|
 | Pesquisar | `GET /pesquisar` | SearchController@index | view | Agrega posts, recursos, salas |
@@ -238,6 +291,8 @@
 ---
 
 ## 14. Comunidade
+
+**Perfil:** B2C (pacto e impacto são funcionalidades comunitárias abertas a todos)
 
 | Funcionalidade | Rota | Método | Resposta | Notas |
 |---------------|------|--------|----------|-------|
@@ -247,7 +302,12 @@
 
 ---
 
-## 15. Terapia (PRO)
+## 15. Terapia — triagem B2C
+
+**Perfil:** B2C (utilizador que procura acesso a terapia profissional)
+**Nota:** Este módulo é diferente do Portal Terapeuta (secção 16). Aqui o utilizador B2C
+faz uma triagem com AI para encontrar o terapeuta certo. O controller é `TherapyController`,
+distinto do `TherapistController`.
 
 | Funcionalidade | Rota | Método | Resposta | Notas |
 |---------------|------|--------|----------|-------|
@@ -257,6 +317,9 @@
 ---
 
 ## 16. Portal Terapeuta (PRO)
+
+**Perfil:** PRO — terapeutas registados com role `therapist`
+**Android:** Web-first. Não entra na app Android na fase inicial.
 
 | Funcionalidade | Rota | Método | Resposta | Middleware |
 |---------------|------|--------|----------|-----------|
@@ -268,6 +331,9 @@
 
 ## 17. Portal Corporate (B2B)
 
+**Perfil:** Corporate — utilizadores com `company_id` preenchido
+**Android:** Web-only. Dashboard analítico não adequado a mobile.
+
 | Funcionalidade | Rota | Método | Resposta | Middleware |
 |---------------|------|--------|----------|-----------|
 | Dashboard empresa | `GET /empresa` | CorporateController@dashboard | view | CorporateMiddleware |
@@ -275,6 +341,8 @@
 ---
 
 ## 18. Gamificação
+
+**Perfil:** B2C (a maior parte da gamificação é acionada por outros controllers; este é o endpoint explícito)
 
 | Funcionalidade | Rota | Método | Resposta | Rate limit |
 |---------------|------|--------|----------|-----------|
@@ -296,6 +364,8 @@
 ---
 
 ## 19. Notificações e utilidades
+
+**Perfil:** B2C
 
 | Funcionalidade | Rota | Método | Resposta |
 |---------------|------|--------|----------|
@@ -343,6 +413,81 @@
 | Rotas com middleware especial | ~5 (Therapist, Corporate) |
 | Rotas públicas (sem auth) | ~5 |
 | Total de rotas estimadas | ~85 |
+
+---
+
+## 23. Rotas em falta ou incompletas no inventário
+
+Durante a análise foram identificadas rotas presentes no código mas ausentes ou incompletas
+neste inventário. Listadas aqui para garantir cobertura total antes de construir a API.
+
+| Rota | Controller | Estado no inventário | Notas |
+|------|-----------|---------------------|-------|
+| `GET /` | HomeController@index | ❌ Faltava | Adicionada em secção 0 |
+| `GET /offline` | View | ❌ Faltava | Adicionada em secção 0 |
+| `GET /fogueira` | RoomController@index | ❌ Faltava (estava separado) | Adicionada em secção 0 como pública |
+| `GET /comunidade/impacto` | CommunityReportController@index | ⚠️ Estava em secção 14 incompleta | Pública, sem auth |
+| `GET /terapia`, `POST /terapia/triagem` | TherapyController | ⚠️ Confundido com TherapistController | Clarificado em secção 15 |
+| Listagem de notificações | NotificationController | ❓ Não confirmada | Pode não existir como rota GET separada |
+| Listagem de achievements | AchievementController | ❓ Não confirmada | Controller existe mas rota GET não documentada |
+| `POST /api/user/tour-completed` | OnboardingController@markTourCompleted | ✅ Presente em secção 1 | Único endpoint `/api/` no sistema atual — importante assinalar |
+
+**Nota sobre AchievementController e notificações:** A existência de rotas GET para listar
+achievements e notificações individualmente não foi confirmada com certeza. Possível que
+estas funcionalidades sejam apenas renderizadas via dashboard. A confirmar antes de construir
+endpoints API.
+
+---
+
+## 24. Ambiguidades e suposições explícitas
+
+### Suposições
+
+| # | Suposição | Impacto |
+|---|-----------|---------|
+| S1 | Os campos `onboarding_intent`, `onboarding_mood`, `onboarding_preference`, `onboarding_completed_at` existem como colunas na tabela `users` via migration mas não estão nos `fillable` do modelo | O endpoint API de onboarding precisa de confirmar estes campos antes de implementação |
+| S2 | `TherapyController` (triagem B2C) e `TherapistController` (portal PRO) são controllers distintos | Relevante para definir quais endpoints criar na API: o de triagem é B2C; o portal é web-first |
+| S3 | O Buddy System é exclusivamente B2C — qualquer utilizador pode ser ouvinte ou pedir ouvinte, sem restrição de plano | Não há evidência de restricção de plano PRO no BuddyController |
+| S4 | Os moderadores têm acesso às rotas de moderação do fórum e chat (pin, lock, shadowban, mute) mesmo via app | O middleware `CheckBanned` e as policies de role já estão implementados |
+| S5 | A galeria The Wall e a playlist da Zona Calma são B2C puras, sem restrição de plano | Não há middleware de plano nestes controllers |
+
+### Ambiguidades
+
+| # | Ambiguidade | Impacto para Android |
+|---|-------------|---------------------|
+| A1 | `GET /fogueira` (lista de salas de chat) é pública sem middleware de auth | Se intencional: o endpoint API deve ser público. Se for bug de middleware, deve ser corrigido antes da API. |
+| A2 | `GET /comunidade/impacto` é pública — qualquer visitante pode ver métricas | Endpoint API deve manter estado público. Considerar rate limiting |
+| A3 | Não está claro se existe uma rota `GET /notifications` separada ou se as notificações são sempre carregadas como parte do dashboard | Impacta o design do endpoint de notificações na API |
+| A4 | O `AchievementController` existe mas a rota de listagem não foi confirmada no `routes/web.php` | Pode ser que achievements sejam só consultados via dashboard |
+| A5 | A rota `/api/user/tour-completed` existe já em `/api/` (não em `/web/`) — porquê apenas esta rota no `/api/`? | Pode ser um artefacto histórico. A nova API deve ser criada em `/api/v1/` de forma consistente |
+
+---
+
+## 25. Impacto para a migração — síntese
+
+| Categoria | Quantidade | Notas |
+|-----------|-----------|-------|
+| Rotas candidatas a endpoint API Android (B2C) | ~65 | Auth, dashboard, fórum, chat, diário, perfil, zona calma, buddy, biblioteca, wall, GDPR, gamificação, auto-avaliação, pesquisa, comunidade |
+| Rotas web-first (não entram na API) | ~5 | Portal terapeuta, portal corporate, admin Filament |
+| Rotas que precisam de reconceção para API | ~10 | Auth (session→token), onboarding (redirect→JSON), uploads, WebSocket auth, export GDPR |
+| Rotas com broadcasting real-time | 6 | Precisam de implementação nativa de WebSocket client na app |
+| Rotas com integração AI | 6 | Podem ter latência; a app precisa de loading states e timeouts |
+| Rotas com rate limiting web | ~15 | O rate limiting deve ser portado para middleware de API com os mesmos limites |
+| Rotas públicas sem auth | 4 | Landing, offline, fogueira (a confirmar), impacto comunitário |
+
+### Observações críticas para a API
+
+1. **Autenticação:** Todas as rotas protegidas por `auth` passam a usar `auth:sanctum`.
+2. **Respostas:** Controllers atuais devolvem `view`, `redirect`, e `json` de forma mista.
+   A API deve devolver exclusivamente `json` com estrutura consistente.
+3. **Rate limiting:** Os grupos existentes (`content-creation`, `suggestions`, `buddy-actions`,
+   `reports`, `gamification`, `privacy-actions`) devem ser preservados na API com os mesmos
+   limites.
+4. **Broadcasting:** Os 6 eventos de real-time (MessageSent, MessageReacted, etc.) requerem
+   que o cliente Android implemente WebSocket nativo (OkHttp) com autenticação por token
+   Sanctum em vez de sessão Laravel.
+5. **AI endpoints:** Os 6 endpoints com OpenAI têm timeout de 3-5s server-side. A app deve
+   mostrar loading states adequados e tratar timeouts graciosamente.
 
 ---
 
