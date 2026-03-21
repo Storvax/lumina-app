@@ -1,5 +1,19 @@
 # 01 — Estado Atual do Produto e Arquitetura
 
+## Contexto
+
+Este documento regista o estado atual do produto Lumina antes de qualquer decisão de
+implementação Android. Serve de referência para perceber o que se está a migrar — não o
+que se quer construir.
+
+Todas as observações aqui registadas derivam de leitura direta do código-fonte (modelos,
+controllers, serviços, rotas, migrations). Suposições explícitas são assinaladas como tal.
+
+O objetivo desta fase é documentar com precisão suficiente para que as decisões da migração
+Android assentem em factos do produto atual, não em memória ou em pressupostos.
+
+---
+
 ## Stack tecnológica
 
 | Componente | Tecnologia | Versão/Detalhe |
@@ -32,6 +46,43 @@
 - **Supervisor**: Gestão de processos (queues, reverb)
 - **GitHub Actions**: CI/CD configurado (`.github/`)
 - **Nixpacks**: Configuração para deploy serverless (`nixpacks.toml`)
+
+## Distinção de perfis de utilizador
+
+O sistema tem quatro perfis distintos. Esta distinção é crítica para perceber o que entra
+na app Android e o que fica em web.
+
+### B2C — Utilizador comum
+- **Role:** `user`
+- **Acesso:** Dashboard, Diário, Fórum (Mural), Chat (Fogueira), Zona Calma, Buddy System
+  (como ouvinte ou como utilizador que pede ouvinte), Biblioteca, The Wall, Gamificação,
+  Auto-avaliação (PHQ-9/GAD-7), Perfil/Santuário, GDPR
+- **Autenticação:** Breeze session-based (atualmente). Necessita de Sanctum para Android.
+- **Impacto Android:** Segmento principal. Toda a app Android serve este perfil.
+
+### PRO — Terapeuta
+- **Role:** `therapist` (campo `role` no User) + relação N:M com utilizadores via tabela
+  `patient_therapist`
+- **Middleware:** `TherapistMiddleware` — restringe acesso ao portal `/terapeuta`
+- **Acesso exclusivo:** Dashboard de terapeuta, atribuição de missões, Somatic Sync
+  (exercício somático enviado em real-time via `SomaticSyncTriggered`)
+- **Impacto Android:** Não entra na app Android na fase inicial. O portal de terapeuta é
+  uma interface de gestão adequada a desktop. Pode ser reconsiderado em fase posterior
+  com uma app dedicada ou vista separada.
+
+### Corporate — B2B
+- **Identificação:** Presença de `company_id` no User + middleware `CorporateMiddleware`
+- **Acesso exclusivo:** Dashboard de empresa `/empresa` com métricas anónimas agregadas
+- **Impacto Android:** Permanece web-first. Dashboard analítico não adequado a mobile.
+
+### Admin / Moderador
+- **Roles:** `admin` e `moderator`
+- **Acesso:** Filament backoffice (admin panel completo) + ações de moderação no fórum
+  e chat (pin, lock, shadowban, mute)
+- **Impacto Android:** Filament fica web-only. Ações leves de moderação (shadowban, mute
+  de utilizadores no chat) podem existir na app para moderadores, mas não é prioridade.
+
+---
 
 ## Dimensão do projeto
 
@@ -102,6 +153,35 @@
 ### Scopes
 - **ShadowbanScope** — Global scope que oculta conteúdo de utilizadores shadowbanned
 
+## Campos do modelo User — agrupados por propósito
+
+O modelo User tem 42+ campos fillable. Agrupados por área funcional:
+
+| Grupo | Campos |
+|-------|--------|
+| Identidade | `name`, `email`, `password`, `avatar`, `bio` + `pseudonym` (computed via SHA-256 do email, nunca exposto diretamente) |
+| Papel e segmento | `role` (admin/moderator/user), `company_id` (identifica Corporate) |
+| Segurança / moderação | `shadowbanned_until`, `banned_at`, `hibernated_at` |
+| Chat | `read_receipts_enabled` (boolean), `chat_view_mode` (compact/comfortable) |
+| Gamificação | `flames` (total acumulado), `current_streak` (dias consecutivos), `last_activity_at` |
+| Notificações | `wants_weekly_summary` (boolean), `quiet_hours_start`, `quiet_hours_end` |
+| Privacidade / GDPR | `diary_retention_days` (auto-purge do diário) |
+| Acessibilidade | `a11y_dyslexic_font` (boolean), `a11y_reduced_motion` (boolean), `a11y_text_size` |
+| Encriptação E2E | `public_key`, `encrypted_private_key` — **campos existem mas implementação está pendente** |
+| Tags emocionais | `emotional_tags` (array JSON) |
+| Onboarding | `onboarding_tours` (array JSON de tours completados) |
+
+**Suposição explícita:** Os campos `onboarding_intent`, `onboarding_mood`, `onboarding_preference`
+e `onboarding_completed_at` são usados no `OnboardingController` mas não estão listados
+explicitamente nos fillable do model. Provavelmente existem como colunas na tabela `users`
+via migration. A confirmar antes de construir o endpoint API de onboarding.
+
+**Nível de bonfire** (computed attribute `bonfire_level`):
+- spark: < 50 flames
+- flame: 50–199
+- bonfire: 200–499
+- beacon: 500+
+
 ## Controllers e métodos (resumo)
 
 | Controller | Métodos públicos | Notas |
@@ -145,6 +225,112 @@
 | MessageRead | `private-chat.{roomId}` | Read receipt |
 | RoomStatusUpdated | `private-chat.{roomId}` | Crisis mode toggle |
 | SomaticSyncTriggered | `private-session.{sessionId}` | Exercício somático B2B |
+
+## Fluxos de negócio críticos
+
+Estes fluxos são relevantes para perceber onde a lógica de negócio reside e o que a app
+Android precisa de replicar ou consumir via API.
+
+### Onboarding routing contextual
+
+O onboarding é um wizard de 3 perguntas que determina para onde o utilizador vai
+logo após completar o registo:
+
+```
+intent=crisis    → /zona-calma/crise
+intent=talk      → /fogueira (lista de salas de chat)
+intent=write     → /diario
+intent=learn     → /biblioteca
+(qualquer outro) → /dashboard
+```
+
+**Impacto Android:** O onboarding deve ser nativo (Compose Pager). O routing contextual
+precisa de ser reproduzido na app — o backend devolve os dados, a app decide a navegação.
+
+---
+
+### Crisis detection — 3 camadas (`CBTAnalysisService`)
+
+Ativo em `ForumController@store` e `ChatController@send`. Funciona em cascata:
+
+**Camada 1 — Keywords (zero latência):**
+Palavras-chave hardcoded: `suicidio`, `suicídio`, `morte`, `sangue`, `cortar`, `abuso`,
+`violencia`, `matar`, `morrer`. Devolve `level: "critical"`.
+
+**Camada 2 — Intent patterns (zero latência):**
+Frases de intenção: "não aguento mais", "quero desaparecer", "ninguém se importa",
+"seria melhor sem mim", "não vale a pena", "cansado de viver", "não consigo continuar",
+"quero acabar com isto", "não vejo saída", "já não faz sentido", "estou a mais",
+"não tenho força", "quem me dera não acordar", "desistir de tudo". Devolve `level: "high"`.
+
+**Camada 3 — GPT-4o-mini (máx. 3s timeout):**
+Retorna `{is_sensitive, risk_level: "low"|"medium"|"high", sentiment: "positive"|"neutral"|"distress"}`.
+
+**Regra de segurança:** As camadas 1 e 2 nunca são revertidas por AI. Se a AI classificar
+como "low" mas camadas 1/2 detetaram, a classificação é forçada para "high".
+
+**Impacto Android:** Este serviço é server-side e transparente para a app. Os endpoints
+de criação de post e envio de mensagem devolvem os campos `is_sensitive`, `risk_level`,
+`sentiment` já calculados. A app consome e renderiza em conformidade (blur, warning).
+
+---
+
+### Gamification flow
+
+```
+Ação do utilizador (diário, reação, comentário, post, respiração)
+  → Controller
+  → GamificationService::addFlames($user, $amount)
+  → GamificationService::assignDailyMissions($user)
+  → Verificação de achievements
+  → Notificação (se achievement desbloqueado)
+```
+
+Pontos por ação: diary (+10), reaction (+2), comment/reply (+5), breathe (+5), first_post (+20).
+
+Streak: reset gentil — volta a 1, não a 0. Sem mecânicas de culpa.
+
+**Impacto Android:** A app não calcula gamificação localmente. Todos os triggers são
+server-side. A app atualiza o estado de gamificação após resposta da API (optimistic UI
+pode ser usada para feedback imediato).
+
+---
+
+### Dashboard aggregation
+
+O `DashboardController` agrega dados de múltiplas fontes:
+
+| Dado | Fonte | Cache |
+|------|-------|-------|
+| Missões do dia | `GamificationService::assignDailyMissions()` | 10 min |
+| AI insight personalizado | OpenAI (≥3 logs em 7 dias) | 24h |
+| Flames e streak | User model | Sem cache |
+| Notificações não lidas | User notifications | Sem cache |
+| Posts recomendados | `RecommendationService` | — |
+| Último mood | DailyLog | 5 min |
+
+O insight AI só é gerado se o utilizador tiver ≥3 entradas de diário nos últimos 7 dias.
+Devolve `{message, action_text, action_url}` — a `action_url` aponta para `/zona-calma`,
+`/diario`, `/mural`, ou `/zona-calma/reflexao`.
+
+**Impacto Android:** Um endpoint `/api/v1/dashboard` deve agregar estes dados. O cache
+deve ser preservado. A app deve lidar com ausência de AI insight graciosamente.
+
+---
+
+### GDPR deletion flow
+
+```
+DELETE /profile
+  → ProfileController@destroy
+  → Job na queue (async)
+  → Purge de posts, logs, mensagens, reactions
+  → Respeitando diary_retention_days (purge apenas logs fora do período de retenção)
+  → Soft-delete do User
+```
+
+**Impacto Android:** O endpoint API deve existir. A app deve fazer logout e limpar
+storage local após confirmação de eliminação.
 
 ## Canais WebSocket (4)
 
@@ -203,20 +389,55 @@
 ## Conclusões para a migração Android
 
 ### O que está forte
-- Lógica de negócio bem definida nos Services e Controllers
-- Modelos de dados maduros com 57+ migrations
-- Real-time funcional via Reverb
-- Gamificação e crisis detection implementados
-- GDPR e privacidade considerados desde o início
 
-### O que precisa de trabalho significativo
-- **Camada API inexistente** — É o gap mais crítico. Não existe `routes/api.php`, não existem API Resources, não existe autenticação por tokens.
-- **Autenticação session-based** — Incompatível com mobile nativo. Precisa de Sanctum.
-- **Respostas mistas** — Controllers retornam views E JSON de forma inconsistente. Precisam de separação clara.
-- **Sem paginação cursor-based** — Paginação atual é offset-based, inadequada para feeds mobile.
-- **Sem versionamento de API** — Necessário para evoluir backend sem quebrar a app.
-- **Uploads não preparados para mobile** — Sem pre-signed URLs, sem endpoints dedicados.
-- **Push notifications** — VAPID parcial, FCM inexistente.
+- **Lógica de negócio encapsulada** — 7 Services isolados e reutilizáveis. Não precisam
+  de alteração para servir uma API. `CBTAnalysisService`, `GamificationService`,
+  `RecommendationService` são server-side por natureza e ficam intactos.
+- **Modelos de dados maduros** — 69 migrations, modelo bem definido. Não há necessidade
+  de redesenho de schema para suportar Android.
+- **Real-time funcional** — Reverb está operacional. Precisa de adaptação de auth
+  (tokens em vez de sessões), mas o mecanismo base existe.
+- **Crisis detection robusto** — Camadas 1 e 2 são zero-latência e independentes de API
+  externa. A app Android recebe os resultados já calculados.
+- **GDPR e privacidade desde o início** — Retenção, export, hibernação, pseudónimos.
+  A app apenas chama os endpoints; a lógica está no backend.
+- **Gamificação server-side** — Anti-cheat por design. A app não calcula pontos.
+
+### O que precisa de trabalho antes da app funcionar
+
+| Gap | Criticidade | Notas |
+|-----|-------------|-------|
+| Camada API inexistente (`routes/api.php`) | **Bloqueante** | Zero endpoints disponíveis para Android |
+| Autenticação session-based | **Bloqueante** | Incompatível com mobile nativo. Requer Sanctum |
+| Sem API Resources | **Bloqueante** | Respostas não têm formato JSON consistente |
+| Controllers com mix view/json/redirect | **Alto** | Precisam de controllers API separados |
+| Sem paginação cursor-based | **Alto** | Paginação offset inadequada para feeds mobile |
+| Sem versionamento de API | **Alto** | Sem `/api/v1/`, evolução do backend quebra app |
+| Uploads não preparados para mobile | **Médio** | Sem endpoints dedicados, sem compressão |
+| Push notifications (FCM inexistente) | **Médio** | VAPID parcial para web, FCM em falta |
+| WebSocket auth baseada em sessão | **Médio** | Reverb requer sessão; Android precisa de token |
+| E2E encryption incompleta | **Baixo** | Chaves existem no modelo, implementação pendente |
+
+### Prioridade de resolução dos gaps
+
+```
+1. API layer (routes/api.php + versionamento)
+2. Laravel Sanctum (autenticação por tokens)
+3. API Resources (serialização JSON consistente)
+4. Form Requests para API (validação)
+5. Paginação cursor-based para feeds
+6. WebSocket auth com tokens Sanctum
+7. FCM para push notifications
+8. Endpoints de upload dedicados
+```
+
+### Impacto geral para a migração
+
+- O backend está **arquiteturalmente pronto** para servir uma API — a lógica existe,
+  falta apenas a camada de exposição.
+- A migração Android não exige reescrever lógica de negócio — exige construir a API
+  que expõe o que já existe.
+- Os portais PRO e Corporate ficam em web. A app Android serve exclusivamente o perfil B2C.
 
 ---
 
