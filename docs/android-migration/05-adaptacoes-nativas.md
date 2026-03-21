@@ -2,9 +2,25 @@
 
 ## Contexto
 
-Migrar de web (Blade + Tailwind + Alpine.js) para Android nativo não é apenas trocar tecnologias. O paradigma de interação muda fundamentalmente: touch em vez de mouse, gestos em vez de clicks, ciclo de vida da app em vez de refresh de página, conectividade intermitente em vez de always-online.
+Migrar de web (Blade + Tailwind + Alpine.js) para Android nativo não é apenas trocar tecnologias.
+O paradigma de interação muda fundamentalmente: touch em vez de mouse, gestos em vez de clicks,
+ciclo de vida da app em vez de refresh de página, conectividade intermitente em vez de always-online.
 
-Este documento identifica todas as adaptações necessárias para que a Lumina funcione como uma app verdadeiramente nativa.
+O estado actual do web (ref. [01-estado-atual.md](01-estado-atual.md)) apresenta gaps fundamentais
+que justificam estas adaptações:
+- **Sem offline** — todas as ações requerem rede, sem Service Worker implementado
+- **Sem haptic feedback** — exercícios de respiração e grounding não têm componente tátil
+- **Sem gravação de áudio nativa** — posts de áudio passam por Web API limitada
+- **Sem push nativo** — VAPID parcial para web, FCM inexistente
+- **Sem encriptação at-rest** — dados sensíveis (diário, cofre, safety plan) não encriptados no browser
+- **Sem biometria** — autenticação biométrica impossível em web
+
+Cada adaptação neste documento existe porque o paradigma web não oferece o equivalente.
+A abordagem não é "fazer o mesmo mas em Kotlin" — é repensar cada interação para o contexto
+nativo onde o utilizador pode estar em crise emocional, offline, ou com atenção fragmentada.
+
+Este documento identifica todas as adaptações necessárias para que a Lumina funcione como uma
+app verdadeiramente nativa.
 
 ---
 
@@ -45,6 +61,16 @@ Este documento identifica todas as adaptações necessárias para que a Lumina f
 - Exercícios de respiração devem pausar quando o utilizador sai da app
 - Timer de grounding deve preservar estado se app vai para background brevemente
 - Sons devem continuar em background (MediaSession + Foreground Service)
+
+**Crise em background — cenários específicos:**
+
+| Cenário | Comportamento |
+|---------|-------------|
+| Utilizador estava a ver safety plan e app é killed pelo sistema | Safety plan está em Room DB — restore imediato ao reabrir. SavedStateHandle preserva posição de scroll |
+| Utilizador ativou Safe House (Casa Segura) | App fecha, clear recents, clear notificações. Ao reabrir: landing normal (login), NÃO retoma tela sensível |
+| Exercício de respiração em andamento e app vai para background brevemente | Pausar animação e timer. Retomar ao voltar (ViewModel preserva estado via StateFlow) |
+| Exercício de respiração e app é killed | Perda aceitável — exercício reinicia. Não justifica persistência complexa |
+| Sons relaxantes em playback e app vai para background | Sons continuam (Foreground Service + MediaSession). Notification com controls de pausa/stop |
 
 ---
 
@@ -106,6 +132,13 @@ Este documento identifica todas as adaptações necessárias para que a Lumina f
 - Tom acolhedor, sem alarme
 - Auto-dismiss quando rede volta
 
+**Sync conflict resolution (Fase 1):** server-timestamp wins. Se o servidor rejeitar (409 Conflict),
+a versão do servidor prevalece e a app atualiza o estado local.
+
+**SyncQueue:** operações offline são armazenadas em `SyncQueueEntity` (Room DB) e processadas
+por `SyncWorker` (WorkManager) quando a rede volta. Ref. [08-arquitetura-android.md](08-arquitetura-android.md)
+secção "Sync e resolução de conflitos" e [13-offline-sync.md](13-offline-sync.md) secção 5.
+
 ---
 
 ## 5. Auto-save e prevenção de perda de dados
@@ -137,9 +170,14 @@ Este documento identifica todas as adaptações necessárias para que a Lumina f
   - `lumina_community` — Default, para interações do fórum/chat
   - `lumina_wellness` — Baixa prioridade, para lembretes gentis
   - `lumina_missions` — Default, para missões e gamificação
-- **Quiet hours** — Respeitar as `quiet_hours_start/end` do utilizador, usar DND do sistema
+- **Quiet hours** — Enforcement server-side primário (não enviar FCM). Client-side backup:
+  se FCM chegar durante quiet hours (race condition), a app filtra localmente com base em
+  `quiet_hours_start/end` do modelo User
 - **Deep links nas notificações** — Abrir diretamente a tela relevante
 - **Notification grouping** — Agrupar múltiplas interações do fórum
+- **Complementaridade WebSocket + FCM:** WebSocket para foreground real-time (chat);
+  FCM para background push. Deduplicação por UUID da mensagem.
+  Ref. [14-realtime-chat-notificacoes.md](14-realtime-chat-notificacoes.md) para arquitetura completa
 
 ---
 
@@ -155,9 +193,23 @@ Este documento identifica todas as adaptações necessárias para que a Lumina f
 - **Image caching** — Coil com disk cache (avatars, imagens do Wall)
 - **Pagination** — Cursor-based para feeds infinitos
 - **Memory management** — Evitar manter dados grandes em memória
-- **Baseline Profiles** — Para otimizar startup e scroll performance
-- **R8 (ProGuard)** — Minificação e tree-shaking em release
+- **Baseline Profiles** — Gerar via Macrobenchmark library. Profiles para: startup flow
+  (login → dashboard), scroll do fórum feed, abertura da Zona Calma. Impacto esperado:
+  30-40% melhoria em cold start
+- **R8 full mode** — Minificação e tree-shaking em release. Keep rules para: modelos Retrofit
+  (Kotlinx Serialization), Room entities, Hilt generated code.
+  Ref. [07-stack-android.md](07-stack-android.md) secção "Build optimization"
 - **APK size** — Alvo < 15MB (download), < 30MB (instalado)
+
+**Alvos de performance:**
+
+| Métrica | Alvo | Crítico para |
+|---------|------|-------------|
+| Cold start | < 2s | Primeira impressão |
+| Tempo-até-Zona-Calma | < 500ms | Utilizador em crise |
+| Scroll (fórum, listas) | 60fps estável | UX fluida |
+| API response time (P95) | < 1s | Percepção de rapidez |
+| Build time incremental | < 30s | Produtividade do developer |
 
 ---
 
@@ -265,6 +317,102 @@ Este documento identifica todas as adaptações necessárias para que a Lumina f
 | `CALL_PHONE` | Chamada de emergência (crisis plan) | No momento de uso |
 
 **Princípio:** Pedir permissões apenas no momento de uso, com explicação contextual e tom acolhedor.
+
+---
+
+## 13. Segurança nativa
+
+### O que muda vs web
+
+| Aspeto | Web (atual) | Android (nativo) |
+|--------|------------|-----------------|
+| Autenticação | Session cookies (Breeze) | Sanctum tokens em EncryptedSharedPreferences |
+| Token storage | Cookie jar do browser | Android Keystore (AES-256-GCM) |
+| Biometria | Impossível | BiometricPrompt (fingerprint + face) |
+| Screenshots de dados sensíveis | Não controlável | FLAG_SECURE em telas sensíveis |
+| Encriptação at-rest | Não implementada | Campo-level encryption em Room DB |
+| Safe House | Double Escape → redirect Google | Double-tap → close app + clear recents + clear notificações |
+
+### FLAG_SECURE
+
+Impede screenshots e gravação de ecrã em telas com dados sensíveis:
+- Diário (leitura/escrita)
+- Safety Plan
+- Chat privado (buddy)
+- Vault (cofre pessoal)
+- Login (campo password)
+
+### Encriptação at-rest
+
+Dados sensíveis encriptados campo a campo em Room DB com AES-256-GCM via AndroidX Security:
+diary notes, vault items, safety plan, chat messages (cache).
+Dados não-sensíveis (perfil, gamificação, metadata) não encriptados — protegidos pelo sandboxing
+do Android.
+
+Ref. [08-arquitetura-android.md](08-arquitetura-android.md) secção "Arquitetura de segurança"
+e [12-autenticacao-seguranca.md](12-autenticacao-seguranca.md) para policy completa.
+
+---
+
+## 14. Áudio e media
+
+### O que muda vs web
+
+| Aspeto | Web (atual) | Android (nativo) |
+|--------|------------|-----------------|
+| Sons relaxantes | Web Audio API (limitada) | ExoPlayer/Media3 (múltiplos streams, mixer de volume) |
+| Gravação de áudio | Não implementada nativamente | MediaRecorder (posts de áudio ≤60s, reflexão por voz) |
+| Background audio | Impossível | MediaSession + Foreground Service |
+| Playlist externa | Links simples | Deep links Spotify/YouTube Music |
+| Notification controls | Não disponível | MediaStyle notification (play/pause/stop) |
+
+### Exercícios que precisam de adaptação de áudio
+
+| Exercício | Adaptação |
+|-----------|----------|
+| Sons relaxantes (Zona Calma) | Múltiplos streams simultâneos com mixer de volume independente por som. Foreground Service para continuar em background |
+| Respiração guiada | Áudio opcional com contagem. Sync com animação visual + haptic |
+| Heartbeat/sintonia | Padrão de vibração sincronizado com áudio de batimento cardíaco |
+| Reflexão por voz | MediaRecorder para gravação + upload. Compressão AAC (M4A), 128kbps |
+| Posts de áudio (Fórum, Fase 2) | Gravação ≤60s. Playback inline com ExoPlayer. Waveform visual |
+
+### Especificações técnicas
+
+- **Reprodução:** Media3 (ExoPlayer successor). API unificada, suporte oficial Google,
+  MediaSession para notification controls integrados
+- **Gravação:** MediaRecorder (API simples, suficiente para voz, sem necessidade de raw PCM)
+- **Compressão:** AAC (M4A), bitrate 128kbps — suficiente para voz, tamanho reduzido para upload
+- **Background:** Foreground Service obrigatório para playback em background (Android 8+)
+
+Ref. [15-audio-media-uploads.md](15-audio-media-uploads.md) para detalhes técnicos completos.
+
+---
+
+## 15. Riscos e dependências das adaptações
+
+| Risco | Probabilidade | Impacto | Mitigação |
+|-------|-------------|---------|-----------|
+| WebSocket lifecycle management (reconexão, concorrência FCM, token expiry durante conexão longa) | Alta | Alto | Exponential backoff, FCM como fallback, auth refresh no reconnect. Ref. [08-arquitetura-android.md](08-arquitetura-android.md) |
+| Offline sync para diary (conflitos web+app simultâneo) | Média | Médio | Server-timestamp wins (Fase 1). Merge strategy em Fase 4+ se multi-device se tornar comum |
+| Haptic compatibility entre fabricantes | Baixa | Baixo | Usar apenas APIs standard (`HapticFeedbackType`, `VibrationEffect`). Testar em Samsung e Xiaomi como minimum |
+| FLAG_SECURE + clear recents em fabricantes custom (Samsung One UI, MIUI) | Baixa | Médio | Testar Safe House em 3+ OEMs. Fallback: se clear recents falhar, pelo menos fechar app + clear notificações |
+| MediaRecorder qualidade inconsistente entre dispositivos | Média | Baixo | Normalizar com bitrate fixo (128kbps AAC). Testar em gama baixa |
+| Baseline Profiles dificuldade de gerar corretamente | Média | Baixo | Seguir codelabs oficiais. Impacto é optimização, não funcionalidade — pode ser adiado |
+| Notification channels mal configurados | Baixa | Médio | Testar em Android 8 (min SDK) e Android 15 (target). Channels não podem ser alterados após criação — acertar na primeira versão |
+
+---
+
+## 16. Prioridades de adaptação
+
+| Prioridade | Áreas | Fase |
+|-----------|-------|------|
+| **P0 (essencial Fase 1)** | Navegação (1), Ciclo de vida (2), Offline (4), Auto-save (5), Acessibilidade (8), Segurança emocional (9), Temas (11), Permissões (12), Segurança nativa (13) | 1A-1B |
+| **P1 (importante Fase 2)** | Touch/haptics avançados (3), Notificações FCM completas (6), Performance optimization com Baseline Profiles (7), Áudio/media (14) | 2 |
+| **P2 (desejável Fase 3+)** | Internacionalização preparação para multi-idioma (10), Dynamic color Material 3 (11) | 3+ |
+
+**Nota:** P0 significa que a adaptação é bloqueante para a Fase 1 — sem ela, a app não funciona
+ou a experiência é inaceitável. P1 é importante para a completude da experiência mas pode ser
+implementado incrementalmente. P2 é desejável e melhora a experiência mas não bloqueia nenhuma feature.
 
 ---
 
