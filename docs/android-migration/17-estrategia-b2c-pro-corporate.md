@@ -8,6 +8,150 @@ A Lumina opera em 3 frentes:
 3. **Corporate** — RH/Empresas (clima emocional, risco de burnout, wellness programs)
 
 Cada frente tem necessidades, frequência de uso, e paradigmas de interação diferentes.
+Este documento liga todas as decisões anteriores sobre o que cada perfil vê na app Android.
+
+Refs:
+- [04-fases-iniciais.md](04-fases-iniciais.md) — faseamento da migração Android
+- [06-web-first-admin.md](06-web-first-admin.md) — funcionalidades web-only (admin, corporate, PRO)
+- [09-modularizacao.md](09-modularizacao.md) — feature modules condicionais por role
+- [10-backend-reutilizacao.md](10-backend-reutilizacao.md) — middlewares por role (TherapistMiddleware, CorporateMiddleware)
+- [11-backend-gaps.md](11-backend-gaps.md) — gaps específicos por role (API endpoints PRO)
+- [12-autenticacao-seguranca.md](12-autenticacao-seguranca.md) — auth flow per role, data classification
+- [25-riscos-decisoes.md](25-riscos-decisoes.md) — decisões D-06 (Play Store), D-08 (single vs multi app)
+
+---
+
+## Observações do estado atual
+
+1. **User.role** — 5 valores: `admin`, `moderator`, `therapist`, `hr_admin`, `regular`
+   (`app/Models/User.php` fillable)
+2. **TherapistMiddleware** — verifica `$user->role === 'therapist'` (`app/Http/Middleware/TherapistMiddleware.php`)
+3. **CorporateMiddleware** — verifica `$user->role === 'hr_admin' && $user->company_id`
+   (`app/Http/Middleware/CorporateMiddleware.php`)
+4. **patient_therapist** pivot table — relação many-to-many entre `User` e `Therapist`
+   (`User::therapists()` belongsToMany)
+5. **Corporate privacy threshold** — dados agregados ocultos se < 5 utilizadores ativos
+   (`CorporateController:35`)
+6. **Filament admin** — `canAccessPanel()` retorna `isAdmin() || isModerator()`
+   (moderadores têm acesso limitado ao painel)
+7. **SelfAssessment model** — PHQ-9 e GAD-7 com severity levels
+   (`minimal`, `mild`, `moderate`, `moderately_severe`, `severe`)
+8. **BuddySession model** — `status`, `rating`, `started_at`, `completed_at` + escalation route
+9. **Pseudonym system** — `getPseudonymAttribute()` usa SHA-256 determinístico (formato "Lumina-XXXXXX").
+   Mesmo pseudonym em todas as interações comunitárias
+
+---
+
+## Experiência B2C por estado emocional
+
+### Princípio
+
+A app adapta-se ao estado emocional do utilizador. Não restringe acesso — **reprioriza**.
+Um utilizador em crise precisa de ajuda rápida, não de gamificação. Um utilizador bem-disposto
+beneficia de estímulos sociais e missões.
+
+### Três modos adaptativos
+
+| Modo | Trigger | Cor dominante | Features proeminentes | Features atenuadas |
+|------|---------|-------------|---------------------|-------------------|
+| **Normal** | mood > 2, streak ativo | Amber/emerald (cores Lumina standard) | Gamificação, missões, comunidade, badges | — |
+| **Low mood** | mood ≤ 2 na última entry OU streak quebrado | Soft blue (`blue-50/100`) | Calm Zone, diário, sons, cofre | Gamificação (pressão reduzida), notificações sociais |
+| **Crisis** | Safety plan aberto/editado OU CBTAnalysisService trigger | Gentle rose (`rose-50/100`) | SOS FAB (sempre visível), Calm Zone one-tap, safety plan one-tap | Comunidade, gamificação, desafios |
+
+### Transições
+
+```kotlin
+sealed class EmotionalMode {
+    object Normal : EmotionalMode()
+    object LowMood : EmotionalMode()
+    object Crisis : EmotionalMode()
+}
+
+// Derivado do último estado conhecido
+val emotionalMode: StateFlow<EmotionalMode> = combine(
+    userStateRepository.lastMoodLevel,
+    userStateRepository.isStreakActive,
+    userStateRepository.isSafetyPlanActive
+) { mood, streakActive, crisisActive ->
+    when {
+        crisisActive -> EmotionalMode.Crisis
+        mood != null && mood <= 2 -> EmotionalMode.LowMood
+        !streakActive && mood != null && mood <= 3 -> EmotionalMode.LowMood
+        else -> EmotionalMode.Normal
+    }
+}.stateIn(viewModelScope, SharingStarted.Eagerly, EmotionalMode.Normal)
+```
+
+### Manual override
+
+- Botão "Preciso de ajuda" acessível em qualquer ecrã (SOS FAB ou menu)
+- Toque ativa Crisis mode manualmente
+- Saída: "Estou melhor" (bottom sheet gentil) ou timeout de 2h
+
+### Comportamento por modo
+
+**Normal mode:**
+- Bottom bar standard: Dashboard, Mural, Fogueira, Calm Zone, Perfil
+- Cards proeminentes: missão do dia, flames, streak
+- Notificações: todas ativas (respeitando quiet hours)
+
+**Low mood mode:**
+- Bottom bar reordenada: Calm Zone promovida para segunda posição
+- Card proeminente: "Respira fundo. Estamos aqui." com link para exercício
+- Gamificação: mostrar progresso mas sem pressão ("Sem pressa, o teu ritmo é perfeito")
+- Notificações sociais: suavizadas (delay de 30min para non-critical)
+
+**Crisis mode:**
+- SOS FAB permanente (canto inferior direito, 64dp, cor rose-500)
+- Toque no FAB: bottom sheet com opções:
+  - "Ligar para linha de crise" (tel: SNS 24)
+  - "Ver o meu plano de crise"
+  - "Ir para a Zona Calma"
+  - "Falar com alguém" (chat/buddy)
+- Comunidade rebaixada (não removida — nunca restringir acesso)
+- Zero gamificação visível — flames e badges temporariamente ocultos
+
+### Regra absoluta
+
+**Nunca restringir acesso a funcionalidades baseado no estado emocional.**
+Apenas repriorizar a disposição e visibilidade. O utilizador pode sempre aceder
+a tudo — a app apenas facilita o caminho mais útil.
+
+---
+
+## Camadas de privacidade B2C
+
+### Modelo de três camadas
+
+| Camada | Dados | Visível para |
+|--------|-------|-------------|
+| **Público** | Pseudonym, flames count, bonfire level, posts publicados, reações dadas | Toda a comunidade |
+| **Privado** | Diary entries, vault items, safety plan, nome real, self-assessments, sessões terapia, mood history | Apenas o próprio utilizador (+ terapeuta atribuído para assessments) |
+| **Configurável** | Read receipts, quiet hours, presença online, chat participation | Controlado pelo utilizador em Definições → Privacidade |
+
+### Dados nunca expostos via API
+
+- `password`, `remember_token` — `$hidden` no User model
+- `encrypted_private_key` — apenas no auth response (ref. [12-autenticacao-seguranca.md](12-autenticacao-seguranca.md))
+- `shadowbanned_until` — interno, nunca no UserResource
+- `banned_at` — apenas via error response (403)
+
+### Pseudonym como identidade comunitária
+
+- Todo utilizador é identificado na comunidade pelo pseudonym ("Lumina-XXXXXX")
+- SHA-256 determinístico — mesmo pseudonym em posts, chat, reações, buddy sessions
+- Nome real visível **apenas** para:
+  - O próprio utilizador
+  - Terapeuta atribuído (via `patient_therapist` pivot)
+  - Admin (via Filament)
+- Moderadores veem nome real **apenas** em ações de moderação (server-side, não no broadcast)
+
+### GDPR alignment
+
+- Todos os dados privados exportáveis (`GET /api/v1/profile/export` → JSON/ZIP)
+- Todos os dados eliminháveis (`DELETE /api/v1/profile` → `ProcessGdprDeletion` job)
+- Passaporte emocional: resumo exportável sem dados brutos
+- Audit trail via `DataAccessLog` (ref. [12-autenticacao-seguranca.md](12-autenticacao-seguranca.md))
 
 ---
 
@@ -99,9 +243,28 @@ Tudo o que está documentado nos ficheiros 01-16 refere-se à experiência B2C:
 ### Decisão de implementação
 
 **Não implementar PRO na fase 1-3.** Reavaliar na fase 4 com base em:
-- Número de terapeutas ativos
-- Feedback de terapeutas sobre necessidade mobile
+- Número de terapeutas ativos (threshold: ≥ 50)
+- Feedback explícito de ≥ 5 terapeutas pedindo mobile
 - ROI vs manter web-only
+
+### PRO API contract preview
+
+Se PRO mobile for implementado, os endpoints necessários:
+
+| Endpoint | Método | Descrição | Response key |
+|----------|--------|-----------|-------------|
+| `/api/v1/therapist/patients` | GET | Lista de pacientes atribuídos | Lista com `name`, `pseudonym`, `last_mood`, `current_streak`, `risk_level` |
+| `/api/v1/therapist/patients/{id}/mood-history` | GET | Histórico de mood (30 dias) | Array de `{date, mood_level, tags}` para gráfico |
+| `/api/v1/therapist/patients/{id}/assessments` | GET | PHQ-9/GAD-7 history | Array de `{type, score, severity, created_at}` |
+| `/api/v1/therapist/missions` | POST | Atribuir missão terapêutica | `{mission_id, patient_id, assigned_date}` |
+| `/api/v1/therapist/somatic-sync` | POST | Trigger exercício somático (WebSocket) | `{session_id, exercise, bpm}` → `SomaticSyncTriggered` event |
+| `/api/v1/therapist/sessions` | GET | Buddy sessions (upcoming/past) | Lista com `{session_id, patient_pseudonym, status, started_at}` |
+
+**Scope:** read-heavy, action-light. Mobile PRO é para consulta rápida e ações pontuais,
+não para gestão clínica completa (que permanece web).
+
+**Response:** pacientes identificados por `pseudonym` (referência) + `name` (real). Terapeuta
+tem acesso ao nome real pela relação `patient_therapist`.
 
 ---
 
@@ -187,23 +350,143 @@ if (userProfile.features["therapist_mobile"] == true) {
 
 ## Moderação no contexto mobile
 
-### Ações de moderação disponíveis na app (role: moderator)
+### Ações disponíveis na app (role: moderator)
 
-| Ação | Onde | UI |
-|------|-----|------|
-| Pin post | Fórum | Ícone contextual no post |
-| Lock post | Fórum | Ícone contextual no post |
-| Shadowban user | Fórum | Long-press no username |
-| Mute user | Chat | Long-press na mensagem |
-| Toggle crisis mode | Chat | Botão no header da sala |
-| Delete message | Chat | Long-press na mensagem |
-| Pin message | Chat | Long-press na mensagem |
+| Ação | Onde | UI | Touch target |
+|------|-----|------|-------------|
+| Report review (simplificado) | Fórum, Chat | Swipe gesture no conteúdo flagged | 44x44dp |
+| Pin post | Fórum | Long-press → menu contextual | 44x44dp |
+| Delete message | Chat | Long-press → menu contextual | 44x44dp |
+| Mute user | Chat | Long-press na mensagem → "Silenciar" | 44x44dp |
+| Toggle crisis mode | Chat | Botão no header da sala | 48x48dp (ação crítica) |
+| Pin message | Chat | Long-press → menu contextual | 44x44dp |
 
-**Ações de moderação NÃO disponíveis na app:**
-- Review de reports (backoffice Filament)
-- Ban permanente (backoffice)
-- Gestão de feature flags (backoffice)
-- Analytics de moderação (backoffice)
+### Ações web-only (Filament)
+
+| Ação | Razão |
+|------|-------|
+| Shadowban user | Complexo, raro, requer contexto do histórico completo |
+| Lock/unlock posts | Operação bulk, desktop-first |
+| Ban permanente | Decisão pesada, requer revisão em Filament |
+| Moderation analytics/logs | Tabelas extensas, desktop-first |
+| Feature flag management | Operação técnica/admin |
+| User journey review | Timeline detalhada, requer ecrã grande |
+
+### Quick action bar (moderadores em chat)
+
+Quando um moderador está numa sala de chat, uma toolbar flutuante aparece no topo:
+
+```
+┌─────────────────────────────────────────────┐
+│  🔇 Mute  │  📌 Pin  │  🛡️ Crisis  │  🗑️ Del  │
+└─────────────────────────────────────────────┘
+```
+
+- Cada botão: **48x48dp** (acima do mínimo — ações frequentes e críticas)
+- Cor suave (não agressiva — moderadores também estão em contexto emocional)
+- Confirmação para ações destrutivas: dialog "Tens a certeza?" com undo de 5s (snackbar)
+- Crisis toggle: confirmação explícita "Ativar modo de crise nesta sala?"
+
+---
+
+## Role transition handling
+
+### Cenário
+
+Um utilizador regular torna-se terapeuta (admin atribui role via Filament).
+
+### Deteção
+
+```kotlin
+// No token refresh (periódico ou on-demand)
+val refreshResponse = authApi.refreshToken()
+val newRole = refreshResponse.user.role
+val storedRole = userDataStore.getRole()
+
+if (newRole != storedRole) {
+    userDataStore.setRole(newRole)
+    _roleTransitionEvent.emit(RoleTransition(from = storedRole, to = newRole))
+}
+```
+
+### UI de transição
+
+**Upgrade (regular → therapist):**
+- Bottom sheet: "A tua conta foi atualizada. Agora tens acesso a funcionalidades PRO."
+- Botão: "Explorar" → navega para tab PRO
+- Nova tab "PRO" aparece na bottom bar sem requerer restart da app
+- NavGraph atualizado dinamicamente (`therapistGraph()` adicionado)
+
+**Downgrade (therapist → regular):**
+- Bottom sheet: "O teu acesso PRO foi removido."
+- Tab PRO removida da bottom bar
+- Se user estava no ecrã PRO: redirect gentil para Dashboard
+- Dados PRO cacheados: removidos da Room DB
+
+**Moderator upgrade/downgrade:**
+- Upgrade: botões de moderação aparecem contextualmente nos posts/mensagens
+- Downgrade: botões desaparecem silenciosamente
+
+### Edge case: role duplo
+
+- Comunidade: sempre usa **pseudonym** (independentemente do role)
+- Dashboard PRO: mostra **nome real** dos pacientes (autorizado pela relação terapêutica)
+- Um terapeuta que também participa na comunidade como utilizador: pseudonym no fórum,
+  nome real no painel PRO. Separação clara.
+
+---
+
+## Acessibilidade por perfil
+
+### B2C — Compliance total
+
+| Requisito | Implementação |
+|-----------|-------------|
+| Touch targets | Mínimo 44x44dp em todos os elementos interativos (CLAUDE.md) |
+| Screen reader | TalkBack suportado em todos os ecrãs. Labels em PT-PT |
+| Haptic feedback | Configurável via `a11y_reduced_motion`. Off por default se ativo |
+| High contrast | Respeitar setting do sistema. Cores Lumina testadas com WCAG AA (ratio ≥ 4.5:1) |
+| Font scaling | `sp` units em todo o texto. Testar com 200% system font size |
+| Reduced motion | `a11y_reduced_motion = true` → sem animações, transições instantâneas |
+| Dyslexic font | `a11y_dyslexic_font = true` → OpenDyslexic como font family |
+
+### PRO (se implementado)
+
+| Aspeto | Consideração |
+|--------|-------------|
+| Lista de pacientes | TalkBack: row-by-row navigation. "Paciente {nome}, mood {level}, streak {dias}" |
+| Mood chart | Alternativa textual: "Últimos 7 dias: mood médio {X}. Tendência: {subindo/descendo/estável}" |
+| Ações rápidas | Swipe actions com labels: "Atribuir missão", "Iniciar somatic sync" |
+| Somatic sync trigger | Confirmação voiced: "Iniciar exercício de respiração a {bpm} batimentos?" |
+
+### Moderador
+
+| Aspeto | Consideração |
+|--------|-------------|
+| Quick action bar | Cada botão com `contentDescription` em PT-PT |
+| Confirmação destrutiva | Dialog voiced pelo TalkBack. Undo snackbar anunciado |
+| Crisis toggle | Double confirmation (voiced): "Ativar modo de crise? Confirma." |
+| Report review | Conteúdo flagged lido pelo TalkBack com aviso prévio: "Conteúdo reportado" |
+
+### Crisis mode — acessibilidade reforçada
+
+- Texto maior (upgrade de `bodyMedium` para `bodyLarge`)
+- Contraste alto automático (não depender do setting do sistema)
+- Layout simplificado: menos opções visíveis, caminho mais curto para ajuda
+- SOS FAB: `contentDescription = "Pedir ajuda urgente"`, anunciado com prioridade alta
+- Mínimo de interações entre o utilizador e a ajuda — máximo 2 toques
+
+---
+
+## Riscos
+
+| ID | Risco | Probabilidade | Impacto | Mitigação |
+|----|-------|--------------|---------|-----------|
+| RISK-17-01 | APK size aumenta com módulos condicionais (PRO, moderação) | Média | Baixo | Módulo PRO é lightweight (poucas telas). Se necessário: Android App Bundle com dynamic feature modules |
+| RISK-17-02 | Role change não detetado até token refresh (pode demorar horas) | Baixa | Médio | Adicionar WebSocket event para role changes no canal privado `App.Models.User.{id}`. Ou: refresh periódico a cada 4h |
+| RISK-17-03 | Moderator actions em mobile sem undo causam dano irreversível | Média | Médio | Undo snackbar de 5s para mute e pin. Crisis toggle com double confirmation. Delete com confirm dialog |
+| RISK-17-04 | Deteção de estado emocional baseada apenas na última diary entry é pouco fiável | Média | Alto | Combinar: mood da última entry + streak status + frequência de uso da Calm Zone + último assessment score. Fase 1: apenas mood + streak. Fase 2: modelo mais completo |
+| RISK-17-05 | Utilizador em low mood mode sente-se "vigiado" pela app | Baixa | Alto | Tom não-intrusivo. Nunca dizer "Detetámos que estás mal". Apenas repriorizar layout silenciosamente. Manual override sempre disponível: "Estou bem, obrigado" |
 
 ---
 
