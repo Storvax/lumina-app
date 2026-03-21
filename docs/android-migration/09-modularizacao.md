@@ -1,5 +1,25 @@
 # 09 — Estratégia de Modularização e Organização do Projeto Android
 
+## Contexto
+
+O sistema actual (ref. [01-estado-atual.md](01-estado-atual.md)) tem 32 modelos Eloquent,
+24+ controllers, ~85 rotas, e 7 services. A app Android vai expor ~65 destas rotas como
+endpoints API (ref. [02-inventario-funcional.md](02-inventario-funcional.md)) e mapear ~14 áreas
+funcionais (ref. [03-mapeamento-funcional.md](03-mapeamento-funcional.md)).
+
+A modularização é essencial mesmo para 1 developer porque:
+- **Build times**: compilação incremental — alterar `feature-diary` não recompila `feature-forum`
+- **Isolamento de features**: cada módulo é uma unidade testável e deployável conceptualmente
+- **Fases de rollout**: módulos alinham-se diretamente com as fases de desenvolvimento
+  (Fase 1A: core, 1B: features essenciais, 2: comunidade, 3: real-time)
+- **Prevenção de acoplamento**: sem modularização, é fácil criar dependências ocultas entre
+  features que depois são caras de separar
+
+Ref. [25-riscos-decisoes.md](25-riscos-decisoes.md) D-05 para justificação de modularização
+com equipa de 1 developer.
+
+---
+
 ## Princípio
 
 O projeto usa **modularização por feature** com módulos core partilhados. Cada feature module é auto-contido (tem as suas próprias telas, ViewModels, use cases, e repositories). Os módulos core fornecem infraestrutura partilhada (networking, database, design system, auth).
@@ -251,6 +271,117 @@ core-common    → (nenhuma dependência interna)
 
 **Regra:** Feature modules nunca dependem de outros feature modules (exceção: feature-buddy depende de feature-chat para reutilizar o UI de chat).
 
+### core-testing (testImplementation)
+
+```
+core-testing → core-domain, core-common, kotlinx-coroutines-test
+```
+
+Todos os feature modules: `testImplementation(project(":core:core-testing"))`
+
+---
+
+## Limites de dimensão de módulos
+
+| Tipo de módulo | Soft limit | Ação se exceder |
+|---------------|-----------|----------------|
+| Feature module | ~30 ficheiros | Considerar split por sub-feature |
+| Core module | ~50 ficheiros | Review, mas sem upper limit rígido |
+
+**Exemplo prático:** `feature-calm-zone` pode crescer significativamente (hub + 8 exercícios +
+cofre + playlist + safety plan). Se exceder ~30 ficheiros, considerar split em:
+- `feature-calm-zone` (hub + exercícios core: grounding, respiração, heartbeat)
+- `feature-calm-zone-vault` (cofre pessoal, gestão de items)
+
+Mas é prematuro dividir agora — iniciar como módulo único e dividir quando a complexidade
+o justificar. Dividir prematuramente adiciona overhead de configuração Gradle sem benefício real.
+
+---
+
+## Módulo `core-testing`
+
+Test utilities partilhados por todos os módulos:
+
+```
+core-testing/
+├── src/main/kotlin/pt/lumina/core/testing/
+│   ├── fake/
+│   │   ├── FakeDiaryRepository.kt
+│   │   ├── FakeProfileRepository.kt
+│   │   ├── FakeGamificationRepository.kt
+│   │   ├── FakeAuthRepository.kt
+│   │   └── FakeConnectivityMonitor.kt
+│   ├── rule/
+│   │   └── TestDispatcherRule.kt        ← Substitui Dispatchers.Main com TestDispatcher
+│   ├── assertion/
+│   │   └── StateFlowAssertions.kt       ← assertState {}, awaitState {}
+│   └── compose/
+│       └── ComposeTestHelpers.kt        ← findByContentDescription, assertTalkBackNavigable
+```
+
+**Dependências:**
+- `core-domain` (interfaces de repository)
+- `core-common` (extensions partilhadas)
+- `kotlinx-coroutines-test`
+- `junit-jupiter-api`
+
+**Uso:** `testImplementation(project(":core:core-testing"))` em todos os feature modules.
+Cada fake repository implementa a interface do domain com dados in-memory, permitindo
+testes de ViewModel sem mock framework.
+
+---
+
+## Dynamic Feature Delivery
+
+**Decisão: NÃO usar Dynamic Feature Delivery nas Fases 1-3.**
+
+| Critério | Estado | Conclusão |
+|----------|--------|-----------|
+| APK size alvo | < 15MB download | Bem abaixo do threshold de 150MB |
+| Complexidade de DFD | SplitInstallManager, deferred installation UX, fallback handling | Elevada |
+| Benefício | Nenhum com APK < 15MB | Zero |
+| Quando reconsiderar | APK > 30MB (ex: assets de áudio bundled na Fase 4+) | Fase 4+ |
+
+Dynamic Delivery exige: SplitInstallManager, UI de download em progresso, handling de módulos
+ainda não instalados, testes específicos. Esta complexidade não se justifica para um APK < 15MB.
+
+Ref. [25-riscos-decisoes.md](25-riscos-decisoes.md) R-04.
+
+---
+
+## Enforcement de dependências
+
+### Prevenção de dependências acidentais entre feature modules
+
+**Regra:** nenhum feature module pode depender de outro feature module (exceção documentada:
+`feature-buddy → feature-chat`).
+
+**Mecanismos de enforcement:**
+
+1. **Gradle `implementation` (não `api`)**: todas as dependências de feature modules usam
+   `implementation`, limitando a transitividade.
+
+2. **CI check**: script no pipeline que analisa `build.gradle.kts` de cada feature module
+   e rejeita PRs que adicionem `project(":feature:")` como dependência (exceto a exceção
+   documentada).
+
+3. **Module-graph plugin**: [com.jraska.module.graph.assertion](https://github.com/jraska/modules-graph-assert)
+   para visualizar e validar o grafo de dependências. Configuração:
+
+   ```kotlin
+   // root build.gradle.kts
+   moduleGraphAssert {
+       maxHeight = 4 // app → feature → core → core-common
+       restricted {
+           "feature-.*" dependsOn "feature-.*" // Proibir feature→feature
+       }
+       configurations = setOf("implementation")
+   }
+   ```
+
+4. **Excepção documentada:** `feature-buddy` depende de `feature-chat` porque reutiliza
+   o componente de chat 1:1. Esta dependência está explicitamente documentada e validada.
+
 ---
 
 ## Package naming
@@ -275,23 +406,52 @@ Base package: `pt.lumina`
 ## Convenções de build
 
 - **Gradle Kotlin DSL** (`.kts`) em todos os módulos
-- **Convention plugins** em `build-logic/` para partilhar configuração:
-  - `lumina.android.library` — Configuração base de módulo Android
-  - `lumina.android.feature` — Feature module com Compose + Hilt
-  - `lumina.android.application` — App module
-  - `lumina.jvm.library` — Módulos Kotlin puros (domain)
+- **Convention plugins** em `build-logic/` para partilhar configuração
 - **Version Catalog** (`gradle/libs.versions.toml`) para todas as dependências
+
+### Convention plugins — detalhe
+
+| Plugin | Aplica-se a | Configuração |
+|--------|------------|-------------|
+| `lumina.android.library` | Todos os core modules | minSdk 26, targetSdk 35, Kotlin 2.0+, Compose compiler, detekt + ktlint |
+| `lumina.android.feature` | Todos os feature modules | Extends `library` + Hilt plugin + Navigation Compose + Compose dependencies + `testImplementation(core-testing)` |
+| `lumina.android.application` | `app` module | Extends `feature` + signing configs (debug/release) + R8 rules + Baseline Profiles |
+| `lumina.jvm.library` | `core-domain`, módulos Kotlin puros | Kotlin JVM, sem Android dependencies, JUnit 5, detekt + ktlint |
+
+**Vantagem:** adicionar um novo feature module requer apenas:
+1. Criar o directório `feature/feature-new/`
+2. `build.gradle.kts` com 5 linhas (apply plugin + dependencies)
+3. Adicionar ao `settings.gradle.kts`
+
+Sem convention plugins, cada módulo teria ~40 linhas de configuração Gradle duplicada.
 
 ---
 
 ## Fases de criação de módulos
 
-| Fase | Módulos a criar |
-|------|----------------|
-| 1A (fundação) | app, core-*, feature-auth |
-| 1B (core) | feature-onboarding, feature-dashboard, feature-diary, feature-calm-zone, feature-profile, feature-gamification |
-| 2 (comunidade) | feature-forum, feature-assessment, feature-library, feature-wall, feature-search |
-| 3 (real-time) | feature-chat, feature-buddy |
+| Fase | Módulos a criar | Total módulos | Build time estimado (clean) | Build time incremental |
+|------|----------------|--------------|---------------------------|----------------------|
+| 1A (fundação) | app, core-network, core-database, core-domain, core-ui, core-auth, core-common, core-testing | 8 | ~40s | ~15s |
+| 1B (core features) | feature-auth, feature-onboarding, feature-dashboard, feature-diary, feature-calm-zone, feature-profile, feature-gamification | +7 (15 total) | ~60s | ~25s |
+| 2 (comunidade) | feature-forum, feature-assessment, feature-library, feature-wall, feature-search | +5 (20 total) | ~75s | ~20s |
+| 3 (real-time) | feature-chat, feature-buddy | +2 (22 total) | ~80s | ~15s |
+
+**Nota:** build times são estimativas baseadas em projectos comparáveis. Build time incremental
+assume alteração num único feature module. Com Gradle build cache e configuration cache habilitados
+(ref. [07-stack-android.md](07-stack-android.md)), o build incremental real deve ser inferior.
+
+---
+
+## Riscos
+
+| Risco | Probabilidade | Impacto | Mitigação |
+|-------|-------------|---------|-----------|
+| Over-modularization prematura (demasiados módulos cedo) | Média | Médio | Criar core + 2-3 features em 1A, resto incremental conforme necessidade real |
+| Room DB entities em core-database mas DAOs espalhados | Alta | Baixo | Convenção: entities SEMPRE em `core-database`. DAOs podem estar em feature modules se a query é específica da feature |
+| Convention plugins difíceis de manter | Baixa | Médio | Seguir exemplos do [NowInAndroid](https://github.com/android/nowinandroid) (referência oficial Google) |
+| Package naming `pt.lumina` vs domínio real | Baixa | Baixo | Confirmar domínio antes do primeiro release. Renomear packages é refactor pesado — decidir cedo |
+| Gradle sync lento com 20+ módulos | Média | Baixo | Configuration cache + Gradle daemon. Aceitável para < 25 módulos |
+| feature-buddy → feature-chat cria acoplamento | Baixa | Médio | Isolar interface de chat partilhada em `core-domain` se a dependência se tornar problemática |
 
 ---
 
