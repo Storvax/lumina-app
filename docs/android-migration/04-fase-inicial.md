@@ -1,5 +1,68 @@
 # 04 — Funcionalidades a Migrar na Fase Inicial
 
+## Contexto
+
+Este documento define o escopo da Fase 1 da app Android nativa. Baseia-se nas conclusões de:
+- [01-estado-atual.md](01-estado-atual.md): gaps bloqueantes (no API, no Sanctum, no offline)
+  e 7 services server-side reutilizáveis sem alteração
+- [02-inventario-funcional.md](02-inventario-funcional.md): ~65 rotas B2C candidatas a API
+- [03-mapeamento-funcional.md](03-mapeamento-funcional.md): priorização P0/P1 e dependências
+  entre módulos
+
+A app Android serve **exclusivamente o perfil B2C**. Portais PRO, Corporate, e Filament permanecem
+web-only (ref. [06-web-first-admin.md](06-web-first-admin.md)).
+Ref. [17-estrategia-b2c-pro-corporate.md](17-estrategia-b2c-pro-corporate.md) para posicionamento
+completo por perfil.
+
+---
+
+## Observações do estado atual
+
+- **7 services server-side reutilizáveis** sem alteração: CBTAnalysisService, GamificationService,
+  RecommendationService, ExperienceMatchingService, AnalyticsService, EncryptionService,
+  FeatureFlagService. A app consome-os via API.
+- **API layer é o gap bloqueante** — nenhum endpoint existe (`routes/api.php` não tem rotas).
+  Sanctum não está configurado. Todos os endpoints são novos.
+- **Crisis detection é server-side** (3 camadas: keywords → intent patterns → GPT-4o-mini com 3s timeout).
+  A Zona Calma pode ser offline-first para exercícios e depender de API apenas para safety plan sync.
+- **Onboarding routing é server-side** — lógica de routing contextual (intenção → dashboard adaptado)
+  deve ser replicada no app para navegação contextual pós-onboarding.
+- **Dashboard aggregation é server-side** — `DashboardController` agrega mood, flames, streak,
+  missões, AI insight, notificações. Necessário endpoint único `/api/v1/dashboard`.
+
+---
+
+## App única com módulos condicionais
+
+**Decisão: UMA ÚNICA APP para B2C.**
+
+- Não criar apps separadas por perfil.
+- Futuro PRO: módulo condicional ativado por role (`feature-therapist`, Fase 4+).
+  Ref. [09-modularizacao.md](09-modularizacao.md) para estratégia de modularização.
+- Justificação: simplifica distribuição no Play Store, gestão de versões, e codebase.
+  Modularização permite ativar/desativar módulos por role sem bloat no APK.
+
+---
+
+## O que NÃO migrar 1:1
+
+Estas funcionalidades existem no web mas **não devem ser copiadas** — exigem redesign:
+
+| Funcionalidade | Web (atual) | Android (redesign) | Tipo |
+|---------------|------------|-------------------|------|
+| Autenticação | Session cookies (Breeze) | Sanctum tokens + EncryptedSharedPreferences + BiometricPrompt | Reconceção |
+| Onboarding | Redirect-based routing (`OnboardingController`) | In-app navigation com Pager + animações + haptic. Lógica de routing replicada localmente | Reconceção |
+| Dashboard | Agregação em `DashboardController` com múltiplas queries | Endpoint único `/api/v1/dashboard` agregado. Room cache. Pull-to-refresh | Adaptação |
+| Chat (Fase 3) | Laravel Echo + Reverb (session-based) | OkHttp WebSocket nativo (token-based) | Reconceção total |
+| Acessibilidade | Toggles Lumina (dyslexic font, text size, reduced motion) | Respeitar system preferences Android + opções extra Lumina. TalkBack-first | Reconceção |
+| Passaporte emocional (Fase 2+) | Gerado server-side como view | Ver resumo na app + PDF gerado server-side via download/share | Adaptação |
+| Safe House | Double Escape → redirect Google | Double-tap → close app + clear recents + clear notificações | Reconceção |
+
+Ref. [03-mapeamento-funcional.md](03-mapeamento-funcional.md) para classificação completa
+(Direto, Adaptação, Reconceção, Novo, Web-first).
+
+---
+
 ## Princípio orientador
 
 A primeira fase deve entregar uma app que:
@@ -41,6 +104,7 @@ Antes de qualquer funcionalidade visível, a fase 1A resolve a infraestrutura:
 | Endpoint necessário | `POST /api/v1/onboarding` (novo) |
 | Offline | Não aplicável (primeiro uso requer rede) |
 | Prioridade | Crítica |
+| Risco | **Médio** — depende de replicar routing logic do backend (`OnboardingController` decide para onde redirecionar com base na intenção). Lógica deve ser mapeada e replicada no app |
 
 ### 2. Dashboard
 
@@ -53,6 +117,7 @@ Antes de qualquer funcionalidade visível, a fase 1A resolve a infraestrutura:
 | Endpoints necessários | `GET /api/v1/dashboard` (novo, agregado) |
 | Offline | Cache da última versão em Room DB |
 | Prioridade | Crítica |
+| Risco | **Alto** — depende de endpoint agregado que não existe. `DashboardController` agrega dados de múltiplas fontes (mood, flames, missões, AI insight). Se endpoint não pronto, dashboard mostra dados parciais (graceful degradation) |
 
 ### 3. Diário emocional
 
@@ -65,6 +130,7 @@ Antes de qualquer funcionalidade visível, a fase 1A resolve a infraestrutura:
 | Endpoints necessários | `GET /api/v1/diary`, `POST /api/v1/diary` (novos) |
 | Offline | Draft guardado em Room DB, sync quando houver rede |
 | Prioridade | Crítica |
+| Risco | **Baixo** — funcionalidade simples, offline-first. CRUD standard com Room DB |
 
 ### 4. Zona Calma (core)
 
@@ -77,6 +143,7 @@ Antes de qualquer funcionalidade visível, a fase 1A resolve a infraestrutura:
 | Endpoints necessários | `GET /api/v1/calm-zone/vault` (novo), `GET /api/v1/user/safety-plan` (novo) |
 | Offline | Exercícios funcionam 100% offline. Cofre e plano de crise cacheados localmente |
 | Prioridade | Crítica |
+| Risco | **Baixo** — exercícios core são 100% offline (sem dependência de API). Cofre e safety plan dependem de API para sync mas funcionam com cache. Tuning de animações/haptics pode consumir mais tempo do que estimado |
 
 **Exercícios incluídos na fase 1:**
 - Grounding 5-4-3-2-1 (100% offline, sem backend)
@@ -102,6 +169,7 @@ Antes de qualquer funcionalidade visível, a fase 1A resolve a infraestrutura:
 | Endpoints necessários | `GET /api/v1/profile`, `PATCH /api/v1/profile` (novos) |
 | Offline | Cache do perfil em Room DB |
 | Prioridade | Alta |
+| Risco | **Baixo** — CRUD standard. User model tem 42+ campos mas o perfil expõe apenas um subconjunto |
 
 **Adiado para fases seguintes:**
 - Safety plan editing
@@ -120,6 +188,7 @@ Antes de qualquer funcionalidade visível, a fase 1A resolve a infraestrutura:
 | Endpoints necessários | `GET /api/v1/missions` (novo), já incluído no dashboard aggregation |
 | Offline | Cache das missões do dia |
 | Prioridade | Alta |
+| Risco | **Médio** — gamificação é transversal (flames incrementam ao guardar diário, completar missão, etc.). Requer triggers consistentes em todos os features modules. Se triggers incorretos, flames dessincronizam |
 
 ---
 
@@ -180,27 +249,42 @@ Antes de qualquer funcionalidade visível, a fase 1A resolve a infraestrutura:
 
 ## Estimativa de endpoints API necessários para Fase 1
 
-| Endpoint | Método | Notas |
-|----------|--------|-------|
-| `POST /api/v1/auth/register` | POST | Registo |
-| `POST /api/v1/auth/login` | POST | Login → token |
-| `POST /api/v1/auth/logout` | POST | Revoke token |
-| `POST /api/v1/auth/forgot-password` | POST | Reset link |
-| `POST /api/v1/onboarding` | POST | Guardar respostas |
-| `GET /api/v1/dashboard` | GET | Dados agregados |
-| `GET /api/v1/diary` | GET | Histórico de entradas |
-| `POST /api/v1/diary` | POST | Nova entrada |
-| `GET /api/v1/profile` | GET | Dados do perfil |
-| `PATCH /api/v1/profile` | PATCH | Atualizar perfil |
-| `GET /api/v1/missions` | GET | Missões do dia |
-| `GET /api/v1/calm-zone/vault` | GET | Items do cofre |
-| `POST /api/v1/calm-zone/vault` | POST | Adicionar ao cofre |
-| `DELETE /api/v1/calm-zone/vault/{id}` | DELETE | Remover do cofre |
-| `GET /api/v1/user/safety-plan` | GET | Plano de segurança |
-| `GET /api/v1/notifications` | GET | Notificações |
-| `POST /api/v1/notifications/mark-read` | POST | Marcar como lidas |
+| Endpoint | Método | Feature | Backend gap (ref. 11) | Depende de |
+|----------|--------|---------|----------------------|-----------|
+| `POST /api/v1/auth/register` | POST | Auth | Sanctum não configurado | Sanctum setup |
+| `POST /api/v1/auth/login` | POST | Auth | Sanctum não configurado | Sanctum setup |
+| `POST /api/v1/auth/logout` | POST | Auth | Sanctum não configurado | Sanctum setup |
+| `POST /api/v1/auth/forgot-password` | POST | Auth | Endpoint não existe | Sanctum setup |
+| `POST /api/v1/auth/refresh` | POST | Auth | Endpoint não existe | Sanctum setup |
+| `POST /api/v1/onboarding` | POST | Onboarding | Endpoint não existe | Auth funcional |
+| `GET /api/v1/dashboard` | GET | Dashboard | Endpoint agregado não existe | Auth funcional |
+| `GET /api/v1/diary` | GET | Diário | Endpoint não existe | Auth funcional |
+| `POST /api/v1/diary` | POST | Diário | Endpoint não existe | Auth funcional |
+| `GET /api/v1/profile` | GET | Perfil | Endpoint não existe | Auth funcional |
+| `PATCH /api/v1/profile` | PATCH | Perfil | Endpoint não existe | Auth funcional |
+| `GET /api/v1/missions` | GET | Gamificação | Endpoint não existe | Auth funcional |
+| `GET /api/v1/calm-zone/vault` | GET | Zona Calma | Endpoint não existe | Auth funcional |
+| `POST /api/v1/calm-zone/vault` | POST | Zona Calma | Endpoint não existe | Auth funcional |
+| `DELETE /api/v1/calm-zone/vault/{id}` | DELETE | Zona Calma | Endpoint não existe | Auth funcional |
+| `GET /api/v1/user/safety-plan` | GET | Zona Calma | Endpoint não existe | Auth funcional |
+| `GET /api/v1/notifications` | GET | Transversal | Endpoint não existe | Auth funcional |
+| `POST /api/v1/notifications/mark-read` | POST | Transversal | Endpoint não existe | Auth funcional |
 
-**Total: ~17 endpoints para fase 1.**
+**Total: ~18 endpoints para Fase 1.** Todos dependem de Sanctum estar configurado no backend —
+este é o blocker #1. Ref. [11-backend-gaps.md](11-backend-gaps.md) para gap analysis completo.
+
+---
+
+## Riscos de atraso da Fase 1
+
+| Risco | Probabilidade | Impacto | Mitigação |
+|-------|-------------|---------|-----------|
+| Sanctum não configurado no backend | Alta (é gap conhecido) | **Crítico** — bloqueia TODOS os endpoints | Prioridade #1 do backend. Sem Sanctum, nenhum desenvolvimento Android avança para além de UI mockada |
+| Endpoint agregado de dashboard não pronto | Média | Alto | Dashboard pode mostrar dados parciais (graceful degradation): flames e streak de cache, missões de endpoint separado. Degradar com elegância |
+| Room DB schema não alinhado com API response | Média | Médio | Definir contratos API (DTOs) antes de implementar Room entities. Mappers absorvem diferenças. Mas diferenças grandes = mappers complexos |
+| Tuning de animações/haptics na Zona Calma | Alta | Baixo | Iterar após funcionalidade base estar pronta. Animações são polish, não blocker. Valores iniciais: baseados em apps de referência (Calm, Headspace) |
+| Lógica de onboarding routing difícil de replicar | Média | Médio | Mapear decision tree do `OnboardingController` antes de implementar. Se necessário, API pode devolver routing hints |
+| Gamificação triggers inconsistentes entre features | Média | Médio | Centralizar tracking em `GamificationRepository` único. Todos os features usam o mesmo entry point. Testar com cenários cross-feature |
 
 ---
 
