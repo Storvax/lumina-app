@@ -1,5 +1,14 @@
 # 26 — Recomendação Final de Abordagem
 
+## Contexto
+
+Este é o documento final do plano de migração Android da Lumina. Consolida as decisões tomadas
+ao longo de 26 documentos e fornece o checklist de readiness para começar a implementação.
+
+Refs: Todos os documentos de 01 a 25 — este documento serve como ponte entre planeamento e implementação.
+
+---
+
 ## Síntese executiva
 
 A Lumina tem um backend Laravel maduro com 32 modelos, 7 serviços, e lógica de negócio bem definida. O gap principal para mobile é a **ausência total de camada API** — não existe `routes/api.php`, não existe autenticação por tokens, e não existem API Resources.
@@ -62,6 +71,153 @@ Antes de escrever uma linha de Kotlin:
 
 ---
 
+## Consolidated risk summary (Top 10)
+
+Os 10 riscos mais severos que podem bloquear ou atrasar significativamente o projeto:
+
+| # | ID | Risco | Fase | Mitigação principal |
+|---|-----|-------|------|-------------------|
+| 1 | RISK-23-01 | Fase 0 demora mais que esperado | 0 | 3 endpoints mínimos primeiro. API controllers separados |
+| 2 | RISK-21-01 | Keystore perdido | Release | 3 backups + Google Play App Signing |
+| 3 | RISK-14-02 | Crisis mode falha | 3 | Testar extensively. Fallback: server-side throttle |
+| 4 | RISK-14-01 | WebSocket + Sanctum incompatível | 3 | Testar na Fase 0. Fallback: Pusher |
+| 5 | RISK-15-01 | Backend rejeita M4A do Android | 2 | Atualizar validação backend para aceitar M4A |
+| 6 | RISK-21-02 | Secret committed ao Git | Todas | .gitignore robusto + pre-commit hooks + GitHub secret scanning |
+| 7 | RISK-13-01 | Sync loop consome bateria | 1B | WorkManager constraints. Exponential backoff |
+| 8 | RISK-24-01 | Sanctum conflita com auth web | 0 | Guard separado. Testar web após instalar |
+| 9 | RISK-19-01 | Version drift entre máquinas | Todas | .sdkmanrc + .nvmrc + Gradle Wrapper |
+| 10 | RISK-20-04 | Trabalho perdido ao mudar de máquina | Todas | Regra: sempre commit+push antes de fechar |
+
+**Critical path:** RISK-23-01 → RISK-24-01 → RISK-14-01 (se Fase 0 atrasa, tudo atrasa)
+
+---
+
+## Implementation readiness checklist
+
+Antes de escrever a primeira linha de código, verificar que tudo está pronto:
+
+### Pré-requisitos de conta e identidade
+
+- [ ] **Password manager** configurado (1Password ou Bitwarden) com vault "Lumina Dev"
+- [ ] **Application ID** decidido: `pt.lumina.app` (proposto)
+- [ ] **Conta Firebase** criada (organizacional, não pessoal)
+- [ ] **Conta Google Play Developer** criada (25 USD, verificação completa)
+- [ ] **Domínio API** decidido: `api.lumina.pt` (proposto)
+
+### Pré-requisitos de repositório
+
+- [ ] `.gitattributes` criado (doc 20 secção 11)
+- [ ] `.gitignore` atualizado com entradas Android (doc 20 secção 5)
+- [ ] `.github/PULL_REQUEST_TEMPLATE.md` criado (doc 20 secção 10)
+- [ ] Branch protection rules no GitHub para `main` e `develop`
+- [ ] `.editorconfig` criado na raiz do repo
+
+### Pré-requisitos de ambiente
+
+- [ ] **Android Studio** instalado e configurado (doc 18, 19)
+- [ ] **JDK 17** via SDKMAN com `.sdkmanrc` na raiz
+- [ ] **Android SDK** API 35 (target) + API 34 (testing) + API 26 (min)
+- [ ] **Emulador** Pixel 7 API 34 configurado
+- [ ] **check-env.sh** validou tudo OK (doc 22)
+- [ ] **Windows Defender exclusions** adicionadas (se Windows, doc 22 secção 6.2)
+
+### Pré-requisitos de backend
+
+- [ ] Backend local a funcionar (`php artisan serve`)
+- [ ] `.env` com todos os segredos
+- [ ] `php artisan migrate --seed` executado
+
+### Pré-requisitos de segredos
+
+- [ ] **Release keystore** gerado e guardado em 3 locais (doc 21)
+- [ ] **google-services.json** obtido do Firebase Console
+- [ ] **keystore.properties** criado localmente (não no Git)
+- [ ] **GitHub Secrets** configurados para CI/CD
+
+---
+
+## Monitoring and analytics strategy
+
+### Firebase Crashlytics (desde a Fase 1A)
+
+- Integrar no scaffold. Crash-free rate target: > 99.5%
+- Custom keys: `user_role`, `emotional_mode`, `is_offline`
+- Non-fatal errors: network failures, sync conflicts, audio recording failures
+
+### Firebase Performance Monitoring (desde a Fase 1B)
+
+- Custom traces: `diary_save`, `dashboard_load`, `breathing_session`, `login_flow`
+- Network monitoring: automatic para Retrofit requests
+- Target: p95 < targets definidos no doc 23
+
+### Analytics (opt-in, desde a Fase 1B)
+
+**Princípio:** Analytics é opt-in e privacy-first. Nunca rastrear conteúdo do diário,
+mensagens de chat, ou dados de saúde. Apenas eventos de interação agregados.
+
+| Evento | Parâmetros | Fase |
+|--------|-----------|------|
+| `diary_created` | `mood_value`, `has_note`, `has_tags`, `is_offline` | 1B |
+| `breathing_completed` | `duration_seconds`, `completed_full_cycle` | 1B |
+| `grounding_completed` | `duration_seconds` | 1B |
+| `crisis_plan_viewed` | `is_offline` | 1B |
+| `safe_house_activated` | — | 1B |
+| `forum_post_created` | `has_audio`, `is_anonymous` | 2 |
+| `assessment_completed` | `type` (PHQ-9/GAD-7) | 2 |
+| `chat_message_sent` | `is_anonymous`, `is_sensitive` | 3 |
+| `crisis_mode_activated` | `room_id` (hashed) | 3 |
+| `buddy_session_started` | — | 3 |
+
+**Nunca rastrear:** Conteúdo de texto, mood values individuais ao longo do tempo (tracking individual),
+identificadores pessoais, mensagens de chat, resultados de PHQ-9/GAD-7.
+
+---
+
+## What NOT to do
+
+10 anti-patterns explícitos a evitar durante toda a implementação:
+
+### 1. Nunca usar WebView para funcionalidades core
+A app é nativa. Cada ecrã é Jetpack Compose. WebView apenas para conteúdo externo (links, termos de uso).
+
+### 2. Nunca calcular gamificação no client
+Flames, streaks, achievements, XP — tudo calculado pelo servidor. A app apenas exibe.
+Client-side calculation permite manipulação e causa inconsistências entre devices.
+
+### 3. Nunca usar SharedPreferences plain para dados sensíveis
+Tokens, session data, dados de saúde → sempre `EncryptedSharedPreferences` ou Room + SQLCipher.
+`SharedPreferences` plain é legível por qualquer app com root access.
+
+### 4. Nunca ignorar offline
+Toda a Zona Calma funciona offline. Diário tem auto-save local. Plano de crise acessível sem rede.
+Em momento de crise, o utilizador pode não ter internet.
+
+### 5. Nunca usar vermelho para erros
+Erros usam tons suaves (rose-500 com soft styling). Vermelho é agressivo para utilizadores
+em estado emocional vulnerável. Usar ícones + texto descritivo em vez de cor apenas.
+
+### 6. Nunca enviar notificações de streak-break
+"Não fizeste o teu diário hoje!" é uma mecânica de culpa. A Lumina nunca culpa.
+Streaks resetam silenciosamente para 1. Missões não completadas desaparecem sem aviso.
+
+### 7. Nunca priorizar PRO antes de B2C estar sólido
+PRO mobile (terapeutas) é Fase 4, condicional. Só avançar com validação de procura real
+(50+ terapeutas ativos, feedback positivo de 5+).
+
+### 8. Nunca hardcodar strings de UI
+Todas as strings em `strings.xml` (PT-PT). Facilita futura internacionalização e permite
+revisão centralizada do tom empático.
+
+### 9. Nunca ignorar acessibilidade
+TalkBack, touch targets 44dp+, contraste AA, contentDescriptions — desde o dia 1, não como "nice to have".
+Utilizadores com deficiência visual ou motora têm as mesmas necessidades de saúde mental.
+
+### 10. Nunca commitar segredos
+`.env`, `keystore.properties`, `google-services.json`, `*.jks` — nunca no Git.
+Um commit é para sempre (mesmo após revert, está no history).
+
+---
+
 ## Para o próximo prompt de implementação
 
 Quando for altura de começar a construir:
@@ -109,7 +265,16 @@ docs/android-migration/
 └── 26-recomendacao-final.md            ← Este ficheiro
 ```
 
-**27 ficheiros. ~6000+ linhas de planeamento. Zero linhas de código alterado.**
+**27 ficheiros. ~8000+ linhas de planeamento. Zero linhas de código alterado.**
+
+---
+
+## Riscos
+
+| ID | Risco | Probabilidade | Impacto | Mitigação |
+|----|-------|--------------|---------|-----------|
+| RISK-26-01 | Documentação fica outdated durante implementação (código diverge do plano) | Alta | Médio | Atualizar docs quando implementação diverge do plano. Incluir updates na PR checklist. Usar este plano como guia, não como contrato rígido |
+| RISK-26-02 | Analysis paralysis — excesso de planeamento impede o início da implementação | Média | Alto | O plano está completo. A próxima ação é implementar QW-01 (Sanctum + login endpoint). Não adicionar mais documentação — começar a construir |
 
 ---
 
