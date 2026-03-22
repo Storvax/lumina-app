@@ -2,7 +2,27 @@
 
 ## Contexto
 
-O desenvolvimento vai envolver trabalho em pelo menos 2 máquinas (casa + outra localização). É essencial que o ambiente seja reproduzível, consistente e rápido de configurar numa máquina nova.
+O desenvolvimento vai envolver trabalho em pelo menos 2 máquinas (casa + outra localização). É essencial
+que o ambiente seja reproduzível, consistente e rápido de configurar numa máquina nova.
+
+Refs:
+- [19-software-ferramentas.md](19-software-ferramentas.md) — lista detalhada de software e versões exatas
+- [20-git-sincronizacao.md](20-git-sincronizacao.md) — workflow Git para sincronização entre máquinas
+- [21-segredos-env.md](21-segredos-env.md) — segredos e .env por máquina
+- [22-bootstrap-novas-maquinas.md](22-bootstrap-novas-maquinas.md) — checklist rápida de onboarding
+- [07-stack-android.md](07-stack-android.md) — versões de libraries e stack Android
+- [08-arquitetura-android.md](08-arquitetura-android.md) — arquitetura que o IDE deve suportar
+
+---
+
+## Observações do estado atual
+
+1. **Sem `.editorconfig`** no repositório — configurações de IDE (indentação, charset, trailing whitespace)
+   podem divergir entre máquinas. Recomendação: criar `.editorconfig` ao iniciar o projeto Android
+2. **`composer.json`** requer `"php": "^8.2"` — a versão local deve corresponder
+3. **`package.json`** usa features Node 20 — `.nvmrc` com `20` recomendado na raiz
+4. **Sem `local.properties.example`** para o futuro projeto Android — deve ser criado com paths
+   placeholder para `sdk.dir`
 
 ---
 
@@ -259,6 +279,114 @@ jobs:
       - run: cd lumina-android && ./gradlew testDebugUnitTest
       - run: cd lumina-android && ./gradlew detekt  # Lint
 ```
+
+### Pre-commit hooks
+
+Para garantir qualidade antes de cada commit no projeto Android:
+
+```bash
+# .git/hooks/pre-commit (ou via Gradle task)
+#!/bin/bash
+cd lumina-android
+
+# Detekt (análise estática Kotlin)
+./gradlew detekt --no-daemon || exit 1
+
+# ktlint (formatação)
+./gradlew ktlintCheck --no-daemon || exit 1
+
+echo "Pre-commit checks passed."
+```
+
+**Alternativa:** Integrar via Gradle plugin para que `./gradlew check` execute tudo:
+- Detekt: `io.gitlab.arturbosch.detekt` plugin, config em `config/detekt/detekt.yml`
+- ktlint: `org.jlleitschuh.gradle.ktlint` plugin, alinhado com Kotlin official style
+
+---
+
+## 9. Troubleshooting
+
+### Windows: HAXM vs WHPX com Docker
+
+| Cenário | Aceleração emulador | Docker | Solução |
+|---------|-------------------|--------|---------|
+| Docker Desktop com Hyper-V | WHPX | ✅ | Usar WHPX (mais lento que HAXM mas compatível) |
+| Sem Docker, HAXM | HAXM | ❌ | Melhor performance de emulador |
+| WSL2 + Docker + Emulador | WHPX | ✅ | Funciona mas consome muita RAM (>16GB recomendado) |
+
+**Recomendação:** Se 16GB RAM, fechar Docker quando usar emulador. Se 32GB, podem coexistir.
+
+### Windows: Long paths
+
+```bash
+# Ativar suporte a paths > 260 caracteres (necessário para Gradle)
+git config --system core.longpaths true
+```
+
+Também ativar no Registry: `HKLM\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled = 1`
+
+### Windows: Spaces in username path
+
+Se o caminho de utilizador tem espaços (ex: `C:\Users\Alexandre Silva\`), Gradle pode falhar.
+Mitigação: definir `GRADLE_USER_HOME` para um path sem espaços:
+
+```bash
+setx GRADLE_USER_HOME "C:\gradle-home"
+```
+
+### macOS: Apple Silicon (M1/M2/M3)
+
+- Emulador ARM nativo: excelente performance, sem Rosetta
+- Alguns tools antigos (scrcpy mais velho, NDK) podem precisar de Rosetta 2:
+  ```bash
+  softwareupdate --install-rosetta
+  ```
+- JDK: usar build `aarch64` (Temurin ou Corretto ARM64)
+
+### Linux: KVM permissions
+
+```bash
+# Verificar suporte KVM
+egrep -c '(vmx|svm)' /proc/cpuinfo  # Deve retornar > 0
+
+# Instalar e configurar
+sudo apt install qemu-kvm libvirt-daemon-system
+sudo adduser $USER kvm
+# Logout e login necessário para aplicar o grupo
+```
+
+### Gradle: problemas comuns
+
+| Problema | Causa provável | Solução |
+|----------|---------------|---------|
+| `Could not resolve all dependencies` | Cache corrompido ou rede | `./gradlew --refresh-dependencies` |
+| `Java heap space` | JVM args insuficientes | Aumentar `-Xmx` em `gradle.properties` |
+| Build lento após sleep/hibernate | Daemon state stale | `./gradlew --stop` + rebuild |
+| `SDK location not found` | `local.properties` em falta | Criar com `sdk.dir=/path/to/sdk` |
+| Indexing lento no Android Studio | Monorepo grande + muitos ficheiros | Excluir `vendor/`, `node_modules/` das fontes indexadas |
+
+### Gradle: limpar tudo
+
+```bash
+# Nuclear option — limpar TODOS os caches Gradle
+./gradlew --stop
+rm -rf ~/.gradle/caches/
+rm -rf lumina-android/.gradle/
+rm -rf lumina-android/build/
+rm -rf lumina-android/app/build/
+# Rebuild: ./gradlew assembleDebug
+```
+
+---
+
+## Riscos
+
+| ID | Risco | Probabilidade | Impacto | Mitigação |
+|----|-------|--------------|---------|-----------|
+| RISK-18-01 | IDE settings divergem entre máquinas (formatter, inspections, indentação) | Alta | Médio | Criar `.editorconfig` no repo. Partilhar `detekt.yml` e ktlint config. Não commitar `.idea/` (excepto `codeStyles/`) |
+| RISK-18-02 | Emulador + Docker + IDE excedem 16GB RAM, causando swapping | Alta | Médio | Fechar Docker quando usar emulador. Ou usar device físico. 32GB resolve o problema |
+| RISK-18-03 | Windows HAXM/WHPX conflito com Docker Hyper-V impede usar emulador | Média | Alto | Documentar modos mutuamente exclusivos. Preferir WHPX path (compatível com Hyper-V) |
+| RISK-18-04 | Gradle cache corruption após sleep/crash do sistema | Média | Baixo | Documentar `./gradlew --stop && rm -rf ~/.gradle/caches` como recovery. Incluir no troubleshooting |
 
 ---
 
