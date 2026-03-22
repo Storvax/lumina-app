@@ -1,5 +1,77 @@
 # 25 — Riscos, Dependências e Decisões em Aberto
 
+## Contexto
+
+Este documento consolida todos os riscos identificados ao longo dos 26 documentos do plano de migração,
+acrescenta análise de compliance GDPR/health, e documenta cenários catastróficos com planos de resposta.
+
+Refs: Todos os documentos com secção "Riscos" — docs 10 a 24.
+
+---
+
+## 0. Consolidated Risk Index
+
+### Riscos Críticos e Altos (require active mitigation)
+
+| ID | Descrição | Doc | Fase | Prob. | Impacto | Status |
+|----|-----------|-----|------|-------|---------|--------|
+| RISK-10-01 | Controllers web afetados ao criar API | 10 | 0 | Média | Alto | Open |
+| RISK-11-01 | Sanctum guard conflita com web sessions | 11 | 0 | Média | Alto | Open |
+| RISK-12-01 | Token leak via logging/crash report | 12 | 1A | Média | Alto | Open |
+| RISK-13-01 | Sync loop consome bateria excessiva | 13 | 1B | Média | Alto | Open |
+| RISK-14-01 | WebSocket Reverb + Sanctum token incompatível | 14 | 3 | Média | Alto | Open |
+| RISK-14-02 | Crisis mode falha e mensagens não são throttled | 14 | 3 | Baixa | Crítico | Open |
+| RISK-15-01 | Backend rejeita M4A (apenas aceita webm/mp3/wav/ogg) | 15 | 2 | Alta | Alto | Open |
+| RISK-17-01 | Role transition não atualiza UI sem restart | 17 | 2+ | Média | Alto | Open |
+| RISK-20-01 | Force push em branch partilhado perde trabalho | 20 | Todas | Baixa | Alto | Open |
+| RISK-20-04 | Trabalho uncommitted perdido ao mudar de máquina | 20 | Todas | Média | Alto | Open |
+| RISK-21-01 | Keystore perdido = impossível atualizar app | 21 | Release | Baixa | Crítico | Open |
+| RISK-21-02 | Secret committed ao Git | 21 | Todas | Média | Alto | Open |
+| RISK-23-01 | Fase 0 demora mais que esperado | 23 | 0 | Alta | Crítico | Open |
+| RISK-23-03 | Fase 2 precisa moderação admin que não existe mobile | 23 | 2 | Média | Alto | Open |
+| RISK-23-04 | WebSocket auth incompatível com Reverb | 23 | 3 | Média | Alto | Open |
+| RISK-24-01 | Sanctum install conflita com auth middleware | 24 | 0 | Média | Alto | Open |
+
+### Riscos Médios (monitor and mitigate)
+
+| ID | Descrição | Doc | Fase | Prob. | Impacto | Status |
+|----|-----------|-----|------|-------|---------|--------|
+| RISK-10-02 | Eloquent queries ineficientes para mobile | 10 | 0 | Média | Médio | Open |
+| RISK-11-02 | Rate limiting bloqueia utilizadores legítimos | 11 | 0 | Baixa | Médio | Open |
+| RISK-12-02 | Biometric fallback UX confusa | 12 | 4 | Média | Médio | Open |
+| RISK-13-02 | Conflict resolution UX frustrante | 13 | 1B | Baixa | Médio | Open |
+| RISK-14-03 | FCM notifications duplicadas | 14 | 2 | Média | Médio | Open |
+| RISK-15-02 | Audio recording falha silenciosamente | 15 | 2 | Média | Médio | Open |
+| RISK-15-03 | Storage budget excedido em devices low-end | 15 | 2+ | Média | Médio | Open |
+| RISK-17-02 | PRO features visíveis a B2C (confusão UI) | 17 | 2+ | Média | Médio | Open |
+| RISK-18-01 | IDE settings divergem entre máquinas | 18 | Todas | Alta | Médio | Open |
+| RISK-18-02 | Emulator + Docker + IDE excedem 16GB RAM | 18 | Todas | Alta | Médio | Open |
+| RISK-18-03 | HAXM/WHPX conflito com Hyper-V | 18 | Todas | Média | Alto | Open |
+| RISK-19-01 | Version drift entre máquinas | 19 | Todas | Alta | Alto | Open |
+| RISK-19-02 | Android Studio auto-update quebra Gradle | 19 | Todas | Média | Médio | Open |
+| RISK-21-03 | .env diverge entre máquinas | 21 | Todas | Média | Médio | Open |
+| RISK-22-01 | Setup >2h por network issues | 22 | Setup | Média | Médio | Open |
+| RISK-22-04 | Windows Defender quarantines Gradle/ADB | 22 | Setup | Baixa | Alto | Open |
+| RISK-23-02 | Scope creep na Fase 1B | 23 | 1B | Média | Médio | Open |
+| RISK-24-02 | Login UX não emotionally safe | 24 | 1A | Alta | Médio | Open |
+| RISK-24-03 | Breathing animation jank em low-end | 24 | 1B | Média | Médio | Open |
+
+### Riscos Baixos (accepted, monitor periodically)
+
+| ID | Descrição | Doc | Fase | Prob. | Impacto | Status |
+|----|-----------|-----|------|-------|---------|--------|
+| RISK-10-03 | Scheduled commands não disponíveis em mobile | 10 | 1B | Baixa | Baixo | Accepted |
+| RISK-13-03 | Stale data exibida como atual | 13 | 1B | Baixa | Baixo | Open |
+| RISK-15-04 | Audio quality poor em devices baratos | 15 | 2 | Baixa | Baixo | Accepted |
+| RISK-19-03 | winget/brew version lag | 19 | Setup | Baixa | Baixo | Accepted |
+| RISK-20-02 | CRLF/LF phantom diffs | 20 | Todas | Média | Baixo | Open |
+| RISK-20-03 | Binários grandes bloat repo | 20 | 2+ | Baixa | Médio | Open |
+| RISK-21-04 | Firebase API key exposta no APK | 21 | 2 | Alta | Baixo | Open |
+| RISK-22-02 | check-env.sh false positive | 22 | Setup | Média | Baixo | Open |
+| RISK-22-03 | Gradle sync 1st open = 2GB+ download | 22 | Setup | Alta | Baixo | Accepted |
+
+---
+
 ## 1. Riscos técnicos
 
 ### R-01: WebSocket compatibility com Reverb via token auth
@@ -156,6 +228,111 @@
 | B2C mobile | Sim, Fase 1-3 | Core do produto |
 | PRO mobile | Condicional, Fase 4+ | Depende de procura |
 | Corporate mobile | Não | Desktop-first |
+
+---
+
+## 6. Health app compliance e GDPR
+
+### GDPR para dados de saúde em mobile
+
+A Lumina processa dados de saúde (humor, diário emocional, auto-avaliação PHQ-9/GAD-7).
+Sob o GDPR, estes são **dados de categoria especial** (Art. 9) e requerem proteção reforçada.
+
+| Requisito GDPR | Implementação mobile | Doc ref |
+|----------------|---------------------|---------|
+| **Consentimento explícito** (Art. 9(2)(a)) | Opt-in claro no onboarding. Explicar que dados são usados para tracking pessoal. Não usar dados para marketing | 12 |
+| **Encriptação em repouso** (Art. 32) | Room DB encriptada com SQLCipher. Tokens em EncryptedSharedPreferences | 12, 13 |
+| **Encriptação em trânsito** (Art. 32) | HTTPS obrigatório. Certificate pinning (Fase 4). WSS para WebSocket | 12, 14 |
+| **Direito ao apagamento** (Art. 17) | Endpoint `DELETE /api/v1/account` apaga todos os dados. App limpa Room DB + SharedPreferences localmente | 12 |
+| **Portabilidade** (Art. 20) | Endpoint `GET /api/v1/account/export` retorna JSON com todos os dados pessoais | 11 |
+| **Minimização** (Art. 5(1)(c)) | App só recolhe dados necessários. Analytics opt-in. Sem tracking de localização (exceto se feature futura) | — |
+| **Retenção** (Art. 5(1)(e)) | Dados de diário mantidos enquanto conta ativa. Após delete: 30 dias de retenção para recovery, depois apagamento permanente | — |
+
+### EU MDR (Medical Device Regulation)
+
+**A Lumina NÃO é um dispositivo médico.** É uma app de wellness e bem-estar emocional.
+
+**Disclaimer obrigatório (no onboarding e nas settings):**
+> "A Lumina é uma ferramenta de bem-estar emocional e auto-conhecimento. Não substitui
+> acompanhamento médico, psicológico ou psiquiátrico profissional. Em caso de emergência,
+> contacte o 112 ou a linha SNS 24 (808 24 24 24)."
+
+**Limites a nunca ultrapassar:**
+- Nunca diagnosticar (PHQ-9/GAD-7 são apenas indicadores, não diagnósticos)
+- Nunca prescrever (nem medicação, nem tratamento)
+- Nunca substituir profissionais (buddy system é peer support, não terapia)
+- Sempre incluir contactos de emergência visíveis
+
+### Google Play Store — Health app policies
+
+| Política | Implicação | Ação |
+|----------|-----------|------|
+| **Health app data disclosure** | Declarar que a app processa dados de saúde no Data Safety form | Preencher no Play Console: "Health information → Emotional well-being data" |
+| **Sensitive content** | Menções a auto-lesão e suicídio podem trigger review | Incluir disclaimer, contactos de emergência, e crisis support visível |
+| **Data encryption** | Play Store favorece apps que encriptam dados sensíveis | SQLCipher + EncryptedSharedPreferences (já planeado) |
+| **Age rating** | Conteúdo de saúde mental → classificação adequada | PEGI: "Parental Guidance" ou similar. IARC: selecionar "Health" |
+| **Permissions** | Justificar cada permissão pedida | Microphone (gravação áudio), Notifications (FCM), Internet, Camera (futuro Wall) |
+
+### Data retention: mobile vs server
+
+| Dados | Retenção mobile | Retenção servidor | Sync |
+|-------|----------------|------------------|------|
+| Diário (entradas) | Últimos 90 dias em Room | Ilimitado enquanto conta ativa | Bidirecional |
+| Cofre (técnicas) | Todos | Todos | Bidirecional |
+| Plano de crise | Todos (offline-first) | Backup encriptado | Push + pull |
+| Chat messages | Últimas 500 por sala | Todas | Paginação on-demand |
+| Audio uploads | Cache local 7 dias | Ilimitado | Upload-only |
+| PHQ-9/GAD-7 resultados | Últimos 6 meses | Ilimitado | Pull on-demand |
+| Preferências | Todas | Todas | Bidirecional |
+
+---
+
+## 7. Catastrophic scenarios
+
+### Cenário A: Keystore perdido
+
+**Probabilidade:** Baixa (se seguir 3 backups). **Impacto:** Crítico.
+
+- **Se Google Play App Signing ativo (recomendado):** Upload key pode ser reposta. A app signing key está nos servidores Google. Impacto: ~1 semana de downtime para processo de reset
+- **Se Google Play App Signing NÃO ativo:** App não pode ser atualizada. Necessário republicar com novo package name, perda de todos os installs e reviews
+- **Prevenção:** Ativar Google Play App Signing no primeiro upload. Guardar keystore em 3 locais (doc 21)
+
+### Cenário B: Backend comprometido (data breach)
+
+**Probabilidade:** Baixa. **Impacto:** Crítico.
+
+- **Resposta imediata:** Desligar API. Rodar todas as keys (doc 21 secção 8)
+- **GDPR Art. 33:** Notificar CNPD (autoridade portuguesa) em 72 horas
+- **GDPR Art. 34:** Se risco alto para utilizadores, notificar utilizadores afetados
+- **Mobile:** Push notification informativa. Forçar logout (invalidar todos os tokens)
+- **Prevenção:** Backups encriptados. Rate limiting. Audit logging. Principle of least privilege
+
+### Cenário C: OpenAI API deprecated ou indisponível permanentemente
+
+**Probabilidade:** Baixa (deprecated). Média (indisponível temporariamente). **Impacto:** Médio.
+
+- **Funcionalidades afetadas:** CBT insights, crisis detection Layer 3, AI summary, reflexão
+- **Degradação graceful:** Backend já tem Layers 1+2 (keywords + patterns) como fallback
+- **Longo prazo:** Migrar para modelo alternativo (Anthropic, Mistral, self-hosted)
+- **Mobile:** Nunca bloquear ação do utilizador por falha de AI. Exibir insight genérico como fallback
+
+### Cenário D: Self-harm durante utilização da app
+
+**Probabilidade:** Média (utilizadores vulneráveis). **Impacto:** Crítico (humano, não técnico).
+
+- **Prevenção ativa:** Crisis detection em conteúdo do diário e posts (3 layers). Plano de crise acessível offline. Contactos de emergência sempre visíveis
+- **UX de crise:** FAB persistente de SOS. Safe House para saída rápida. Modo noturno automático (21h-05h). Sem mecânicas de culpa (streaks reset para 1, não 0)
+- **Disclaimer:** App não substitui ajuda profissional. Referência constante a SNS 24 e 112
+- **Responsabilidade legal:** Incluir Terms of Service claros. A Lumina é wellness tool, não clinical tool
+
+---
+
+## Riscos (meta-riscos deste documento)
+
+| ID | Risco | Probabilidade | Impacto | Mitigação |
+|----|-------|--------------|---------|-----------|
+| RISK-25-01 | Risk register fica stale (novos riscos não são adicionados durante implementação) | Alta | Médio | Revisitar este documento a cada merge para `main`. Adicionar riscos descobertos durante implementação. Flag riscos como "Mitigated" ou "Closed" quando resolvidos |
+| RISK-25-02 | Unknown unknowns — riscos não identificados neste plano | Média | Alto | Manter feedback loop durante implementação. Post-mortem após cada fase. Incluir "surpresas" neste documento à medida que surgem |
 
 ---
 
