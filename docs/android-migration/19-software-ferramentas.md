@@ -1,5 +1,18 @@
 # 19 — Software e Ferramentas a Instalar em Cada Máquina
 
+## Contexto
+
+Este documento é a referência única para versões exatas de software. Todas as máquinas devem usar
+as mesmas versões para garantir builds reproduzíveis e evitar surpresas.
+
+Refs:
+- [18-setup-ambiente.md](18-setup-ambiente.md) — hardware e configuração de IDE
+- [22-bootstrap-novas-maquinas.md](22-bootstrap-novas-maquinas.md) — usa este doc como referência na checklist
+- [07-stack-android.md](07-stack-android.md) — versões de libraries Android (Compose, Hilt, Room, etc.)
+- [23-roadmap-fases.md](23-roadmap-fases.md) — fases determinam quando cada ferramenta é necessária
+
+---
+
 ## Checklist de instalação
 
 Esta é a lista completa e sequencial de tudo o que deve ser instalado numa nova máquina para desenvolver a app Android da Lumina e, quando necessário, correr o backend localmente.
@@ -220,6 +233,102 @@ nvm use 20
 ```
 
 **Tempo estimado:** ~45 minutos para setup completo Android + ~15 minutos para backend.
+
+---
+
+## Bloco 6 — Version pinning strategy
+
+### Princípio
+
+Pin **major.minor**, permitir **patch** updates. Isto garante compatibilidade sem bloquear security fixes.
+
+### Versões pinned
+
+| Ferramenta | Versão pinned | Gerido por | Ficheiro de lock |
+|-----------|-------------|-----------|-----------------|
+| JDK | 17.0.x-tem | SDKMAN | `.sdkmanrc` |
+| Kotlin | 2.0.x | Version Catalog | `libs.versions.toml` |
+| Compose BOM | 2025.x | Version Catalog | `libs.versions.toml` |
+| Gradle | 8.5.x | Gradle Wrapper | `gradle/wrapper/gradle-wrapper.properties` |
+| Node.js | 20.x | nvm | `.nvmrc` |
+| PHP | 8.2.x | Sistema | `composer.json` (`"php": "^8.2"`) |
+| Android SDK | API 35 (target), API 26 (min) | SDK Manager | `build.gradle.kts` |
+
+### Ficheiros de version lock
+
+```bash
+# .sdkmanrc (na raiz do repo)
+java=17.0.11-tem
+gradle=8.5
+
+# .nvmrc (na raiz do repo)
+20
+```
+
+**Workflow:** ao clonar o repo, executar `sdk env install` e `nvm use` para alinhar versões automaticamente.
+
+### Gradle Wrapper
+
+O Gradle Wrapper (`gradlew`) garante que todos usam a mesma versão de Gradle:
+
+```properties
+# gradle/wrapper/gradle-wrapper.properties
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+```
+
+**Nunca** instalar Gradle globalmente — usar sempre `./gradlew`.
+
+---
+
+## Bloco 7 — Emulação de sensores e condições de rede
+
+### Emulator Extended Controls
+
+No emulador Android (via `...` na toolbar):
+
+| Control | Uso | Cenário de teste |
+|---------|-----|-----------------|
+| **Location** | Definir GPS fixo | Testar geolocalização (futuro) |
+| **Battery** | Simular bateria baixa | Testar sync priority (ref. doc 13 secção 14) |
+| **Network** | Throttle velocidade | Simular 3G/offline para testar resiliência |
+| **Phone** | Chamada/SMS incoming | Testar interrupções durante gravação |
+
+### Network conditions
+
+```bash
+# Via ADB — simular rede lenta
+adb shell cmd connectivity airplane-mode enable   # Offline
+adb shell cmd connectivity airplane-mode disable   # Online
+
+# Via emulator — throttle
+# Extended Controls → Cellular → Network type: EDGE (2G) ou HSDPA (3G)
+```
+
+### Charles Proxy (para debugging avançado)
+
+- Configurar proxy no emulador: Settings → Network → Proxy → `10.0.2.2:8888`
+- Instalar certificado Charles no emulador para HTTPS interception
+- Throttle: Proxy → Throttle Settings → Preset `56kbps` ou `3G`
+- Útil para: verificar payloads API, simular latência, testar retry logic
+
+### Android Studio Profilers
+
+| Profiler | Uso |
+|----------|-----|
+| **Network** | Inspecionar requests HTTP em tempo real |
+| **Memory** | Detetar memory leaks (especialmente em ExoPlayer/SoundMixer) |
+| **CPU** | Identificar jank em animações Compose |
+| **Energy** | Estimar consumo de bateria de background sync |
+
+---
+
+## Riscos
+
+| ID | Risco | Probabilidade | Impacto | Mitigação |
+|----|-------|--------------|---------|-----------|
+| RISK-19-01 | Version drift entre máquinas causa build failures (ex: Kotlin 2.0.20 vs 2.0.21) | Alta | Alto | Pin versões em `.sdkmanrc`, `.nvmrc`, e Version Catalog. Usar `./gradlew` wrapper |
+| RISK-19-02 | Android Studio auto-update quebra compatibilidade com Gradle plugin | Média | Médio | Desativar auto-update: Settings → Appearance → System Settings → Updates → desmarcar |
+| RISK-19-03 | winget/brew instala versão diferente da esperada (lag behind releases) | Baixa | Baixo | Verificar versão após instalar. Fallback: download manual do site oficial |
 
 ---
 
