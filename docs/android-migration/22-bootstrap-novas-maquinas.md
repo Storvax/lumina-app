@@ -1,5 +1,19 @@
 # 22 — Bootstrap e Documentação para Novas Máquinas
 
+## Contexto
+
+Este documento é o guia passo-a-passo para configurar uma nova máquina de desenvolvimento.
+Objetivo: em menos de 1 hora, ter a app Android a compilar e o backend local acessível.
+
+Refs:
+- [18-setup-ambiente.md](18-setup-ambiente.md) — requisitos de hardware e configuração detalhada
+- [19-software-ferramentas.md](19-software-ferramentas.md) — versões exatas de cada software
+- [20-git-sincronizacao.md](20-git-sincronizacao.md) — clone, branches, workflow
+- [21-segredos-env.md](21-segredos-env.md) — segredos a copiar para a nova máquina
+- [23-roadmap-fases.md](23-roadmap-fases.md) — o que buildar primeiro após setup
+
+---
+
 ## 1. Checklist rápida de setup (nova máquina)
 
 ### Passo 1: Base (10 min)
@@ -238,6 +252,89 @@ php artisan reverb:start
 git add docs/android-migration/22-bootstrap-novas-maquinas.md
 git commit -m "docs: update bootstrap for new dependency X"
 ```
+
+---
+
+## 6. Troubleshooting avançado
+
+### 6.1 WSL2 (Windows Subsystem for Linux)
+
+| Problema | Causa | Solução |
+|----------|-------|---------|
+| Build Gradle extremamente lento | Ficheiros do projeto no filesystem Windows (`/mnt/c/`) em vez do filesystem Linux | Mover projeto para `~/` dentro do WSL2. Acesso via `\\wsl$\Ubuntu\home\user\` no Explorer |
+| Docker Desktop usa 4-8 GB RAM no WSL2 | Backend do Docker corre como VM WSL2 | Criar `.wslconfig` em `%USERPROFILE%`: `[wsl2]\nmemory=4GB\nswap=2GB` |
+| Port forwarding falha (emulador não vê backend WSL2) | Portas WSL2 nem sempre acessíveis a partir do Windows host | Usar `netsh interface portproxy add v4tov4 listenport=8000 listenaddress=0.0.0.0 connectport=8000 connectaddress=$(wsl hostname -I)` |
+| Clock skew após suspend/hibernate | WSL2 clock desincroniza do host | `sudo hwclock -s` dentro do WSL2, ou `wsl --shutdown` e reabrir |
+
+**Recomendação:** Para Android development, usar Git e Gradle diretamente no Windows (não no WSL2).
+WSL2 é útil para backend PHP/Node, mas o Android toolchain funciona melhor nativamente no Windows.
+
+### 6.2 Antivirus / Windows Defender
+
+| Problema | Causa | Solução |
+|----------|-------|---------|
+| Build Gradle demora 3-5x mais | Windows Defender scans every file Gradle reads/writes | Adicionar exclusões: `%USERPROFILE%\.gradle\`, `%LOCALAPPDATA%\Android\Sdk\`, pasta do projeto, `%PROGRAMFILES%\Android\Android Studio\` |
+| ADB não conecta via USB | Antivirus bloqueia conexão USB debugging | Adicionar `adb.exe` às exclusões do antivirus |
+| Emulador não inicia | Antivirus bloqueia executável do emulador | Adicionar `emulator.exe` e `qemu-system-*` às exclusões |
+| Corporate firewall bloqueia downloads | Gradle, SDK Manager, npm precisam de acesso a repos externos | Configurar proxy (ver secção 6.3) |
+
+**Adicionar exclusões no Windows Defender:**
+```powershell
+# PowerShell (Admin)
+Add-MpExclusion -Path "$env:USERPROFILE\.gradle"
+Add-MpExclusion -Path "$env:LOCALAPPDATA\Android\Sdk"
+Add-MpExclusion -Path "C:\Users\alexa\Documents\saude\lumina"
+Add-MpExclusion -Process "java.exe"
+Add-MpExclusion -Process "adb.exe"
+```
+
+### 6.3 Network / Proxy
+
+**Gradle proxy (se atrás de proxy corporativo):**
+```properties
+# gradle.properties (na HOME do utilizador, não no repo)
+systemProp.http.proxyHost=proxy.empresa.pt
+systemProp.http.proxyPort=8080
+systemProp.https.proxyHost=proxy.empresa.pt
+systemProp.https.proxyPort=8080
+systemProp.http.nonProxyHosts=localhost|10.0.2.2|127.0.0.1
+```
+
+**npm proxy:**
+```bash
+npm config set proxy http://proxy.empresa.pt:8080
+npm config set https-proxy http://proxy.empresa.pt:8080
+```
+
+**SSL certificate errors (self-signed corporate certs):**
+```bash
+# Gradle: aceitar certs custom
+# Adicionar o cert ao Java truststore:
+keytool -importcert -file corporate-ca.crt -keystore $JAVA_HOME/lib/security/cacerts -alias corporate-ca
+
+# npm: bypass (apenas para diagnóstico, não usar em produção)
+npm config set strict-ssl false
+```
+
+### 6.4 Windows paths e permissões
+
+| Problema | Causa | Solução |
+|----------|-------|---------|
+| `Filename too long` em Gradle | Windows path limit 260 chars | `git config --system core.longpaths true` + Registry: `HKLM\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled = 1` |
+| Espaços no path do utilizador (`C:\Users\João Silva\`) | Gradle e algumas tools falham com espaços | `setx GRADLE_USER_HOME "C:\gradle-home"` e `setx ANDROID_HOME "C:\Android\Sdk"` |
+| PowerShell vs Git Bash: comandos diferentes | Scripts `.sh` não correm em PowerShell | Usar Git Bash para scripts. Instalar com Git for Windows. Alternativa: adicionar Git Bash ao terminal do VS Code/Android Studio |
+| `Permission denied` em `gradlew` | Ficheiro não tem permissão de execução no Windows | `git update-index --chmod=+x gradlew` ou usar `.\gradlew.bat` no Windows |
+
+---
+
+## Riscos
+
+| ID | Risco | Probabilidade | Impacto | Mitigação |
+|----|-------|--------------|---------|-----------|
+| RISK-22-01 | Setup de nova máquina demora >2h por problemas de rede (download SDK, Gradle deps) | Média | Médio | Primeira vez com boa ligação à internet. Gradle cache pode ser copiado entre máquinas via `~/.gradle/caches/` |
+| RISK-22-02 | check-env.sh dá false positive (tudo OK mas build falha) | Média | Baixo | Script verifica presença, não funcionalidade. Após check-env, sempre fazer `./gradlew assembleDebug` como validação real |
+| RISK-22-03 | Primeiro Gradle sync descarrega >2GB (SDK + deps), falha a meio | Alta | Baixo | Retry: `./gradlew --refresh-dependencies`. Ou: limpar e recomeçar (`rm -rf ~/.gradle/caches/`) |
+| RISK-22-04 | Windows Defender quarantines Gradle daemon ou ADB | Baixa | Alto | Adicionar exclusões antes de instalar (secção 6.2). Se já quarantined: restaurar em Windows Security → Protection History |
 
 ---
 
