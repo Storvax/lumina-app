@@ -1,5 +1,30 @@
 # 20 — Git Workflow e Sincronização entre Máquinas
 
+## Contexto
+
+Este documento define o workflow Git completo para o desenvolvimento da Lumina em múltiplos PCs,
+incluindo branch strategy, convenções de commit, sincronização, e processos de merge e review.
+
+Refs:
+- [18-setup-ambiente.md](18-setup-ambiente.md) — configuração do ambiente de desenvolvimento
+- [21-segredos-env.md](21-segredos-env.md) — ficheiros que devem estar no .gitignore
+- [22-bootstrap-novas-maquinas.md](22-bootstrap-novas-maquinas.md) — clone e setup inicial
+- [23-roadmap-fases.md](23-roadmap-fases.md) — branches mapeiam para fases do roadmap
+- CLAUDE.md — convenções de commit (secção 5)
+
+---
+
+## Observações do estado atual
+
+1. **`.gitignore` não inclui entradas Android** — o projeto Android ainda não existe, mas quando for criado
+   o .gitignore deve ser atualizado imediatamente (secção 5 deste doc)
+2. **Sem `.gitattributes`** — não há normalização de line endings para ficheiros específicos. Risco de
+   phantom diffs CRLF/LF entre Windows e macOS/Linux
+3. **Sem PR template** em `.github/` — PRs não têm estrutura padronizada
+4. **Sem branch protection rules** no GitHub — `main` e `develop` podem receber push direto
+
+---
+
 ## 1. Estratégia de repositório: Monorepo
 
 ### Decisão: Monorepo com separação por diretórios
@@ -281,6 +306,189 @@ if git diff --cached --name-only | grep -q "^app/"; then
     ./vendor/bin/pint --test
 fi
 ```
+
+---
+
+## 9. Merge strategy
+
+### Feature → develop: Squash merge
+
+```bash
+# No GitHub PR: "Squash and merge"
+# Resultado: 1 commit limpo no develop por feature
+```
+
+**Porquê:** Feature branches acumulam WIP commits, fixups, e experimentação. Squash merge mantém
+o histórico do `develop` limpo e legível. Cada commit no develop corresponde a uma feature completa.
+
+### Develop → main: Merge commit
+
+```bash
+# No GitHub PR: "Create a merge commit"
+# Resultado: merge commit que preserva a boundary de release
+```
+
+**Porquê:** O merge commit no `main` funciona como marcador de release. É fácil identificar
+quando cada conjunto de features foi promovido para produção. `git log --first-parent main`
+mostra apenas os pontos de release.
+
+### Resumo
+
+| Merge | Estratégia | Razão |
+|-------|-----------|-------|
+| `feature/*` → `develop` | Squash merge | História limpa, 1 commit por feature |
+| `fix/*` → `develop` | Squash merge | Idem |
+| `develop` → `main` | Merge commit | Preserva boundary de release |
+| Hotfix → `main` + `develop` | Cherry-pick | Fix urgente em ambos os branches |
+
+---
+
+## 10. PR Template
+
+Criar `.github/PULL_REQUEST_TEMPLATE.md`:
+
+```markdown
+## Resumo
+
+<!-- Descreve o que este PR faz e porquê -->
+
+## Tipo de mudança
+
+- [ ] Nova funcionalidade (feature)
+- [ ] Bugfix
+- [ ] Refactoring (sem mudança de comportamento)
+- [ ] Documentação
+- [ ] Configuração / CI/CD
+
+## Scope
+
+- [ ] Backend (Laravel)
+- [ ] Android (lumina-android/)
+- [ ] Documentação (docs/)
+- [ ] Infraestrutura
+
+## Checklist
+
+- [ ] Código segue as convenções do CLAUDE.md
+- [ ] Strings da UI em PT-PT (empático, sem jargão técnico)
+- [ ] Touch targets ≥ 44dp (≥ 56dp em contexto de crise)
+- [ ] Funciona offline (se aplicável à feature)
+- [ ] Error handling com mensagens gentis
+- [ ] TalkBack navegável (se UI nova)
+- [ ] Testes adicionados/atualizados
+- [ ] Sem segredos hardcoded
+
+## Screenshots / Gravações
+
+<!-- Se houver mudanças visuais, anexar -->
+
+## Notas para review
+
+<!-- Algo que o reviewer deve saber? Decisões de trade-off? -->
+```
+
+---
+
+## 11. .gitattributes
+
+Criar `.gitattributes` na raiz do repo para normalizar line endings e tratar binários:
+
+```gitattributes
+# Normalização de line endings
+* text=auto eol=lf
+
+# Forçar LF em ficheiros de código
+*.kt text eol=lf
+*.kts text eol=lf
+*.java text eol=lf
+*.xml text eol=lf
+*.php text eol=lf
+*.blade.php text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.properties text eol=lf
+*.sh text eol=lf
+
+# Windows batch files mantêm CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binários — não fazer merge, não converter
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jks binary
+*.keystore binary
+*.jar binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+```
+
+**Porquê:** Sem `.gitattributes`, Windows (CRLF) e macOS/Linux (LF) produzem phantom diffs
+em ficheiros não-binários. Isto é especialmente problemático ao trabalhar em múltiplos PCs
+com sistemas operativos diferentes.
+
+---
+
+## 12. Code review guidelines (solo developer)
+
+Como developer solo, o code review é self-review antes de aprovar o merge. Usar esta checklist:
+
+### Self-review checklist
+
+**Funcionalidade:**
+- [ ] A feature funciona como descrito no PR?
+- [ ] Todos os edge cases foram considerados (offline, erro de rede, campo vazio)?
+- [ ] Não há regressões nas features existentes?
+
+**Código:**
+- [ ] Código em inglês (variáveis, funções, classes)?
+- [ ] Strings da UI em PT-PT, tom empático?
+- [ ] Sem TODO esquecidos ou código comentado?
+- [ ] Sem segredos hardcoded (API keys, URLs de produção em debug)?
+
+**Android-specific:**
+- [ ] Touch targets ≥ 44dp (≥ 56dp em contexto de crise)?
+- [ ] TalkBack: todos os elementos interativos têm contentDescription?
+- [ ] Offline: funcionalidade degrada gracefully sem rede?
+- [ ] Memory: sem leaks em ViewModels, coroutines cancelam corretamente?
+- [ ] Performance: listas usam LazyColumn, imagens usam Coil com cache?
+
+**Segurança e privacidade:**
+- [ ] Dados sensíveis (humor, diário) encriptados em Room (SQLCipher)?
+- [ ] Tokens guardados em EncryptedSharedPreferences?
+- [ ] Sem logging de dados pessoais em produção?
+
+**Processo:**
+- [ ] Commit messages seguem Conventional Commits?
+- [ ] PR tem descrição clara do que foi feito e porquê?
+- [ ] CI passa (build + lint + tests)?
+
+### Quando fazer self-review
+
+1. **Antes de criar o PR** — Ler o diff completo no GitHub
+2. **Esperar 10 minutos** — Olhos frescos detetam mais problemas
+3. **Ler o diff como se fosse de outra pessoa** — Ser crítico
+4. **Se o PR tem >400 linhas** — Considerar partir em PRs mais pequenos
+
+---
+
+## Riscos
+
+| ID | Risco | Probabilidade | Impacto | Mitigação |
+|----|-------|--------------|---------|-----------|
+| RISK-20-01 | Force push em branch partilhado perde trabalho da outra máquina | Baixa | Alto | Nunca force push em `develop` ou `main`. Usar `--force-with-lease` se necessário em feature branches. Ativar branch protection rules |
+| RISK-20-02 | CRLF/LF phantom diffs entre Windows e macOS/Linux | Média | Baixo | Criar `.gitattributes` com `* text=auto eol=lf`. Configurar `git config core.autocrlf input` em cada máquina |
+| RISK-20-03 | Binários grandes (APKs, assets de som) incham o repositório | Baixa | Médio | Nunca commitar APKs gerados. Manter `app/release/` no .gitignore. Assets de som descarregados on-demand (não bundled). Considerar Git LFS se necessário |
+| RISK-20-04 | Trabalho uncommitted perdido ao mudar de máquina | Média | Alto | Regra de ouro: sempre commit + push antes de fechar o laptop. WIP commits são aceitáveis e serão squashed no merge. Usar `git stash` apenas como último recurso |
 
 ---
 
