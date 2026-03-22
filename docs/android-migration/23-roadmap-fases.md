@@ -1,5 +1,21 @@
 # 23 — Roadmap de Execução por Fases
 
+## Contexto
+
+Este documento é o roadmap principal do projeto Android da Lumina. Define fases, deliverables,
+critérios de conclusão, e metas de performance/acessibilidade por fase.
+
+Refs:
+- Fase 1 (análise): [01-estado-atual.md](01-estado-atual.md), [02-inventario-funcional.md](02-inventario-funcional.md), [03-mapeamento-funcional.md](03-mapeamento-funcional.md)
+- Fase 2 (estratégia técnica): [04-fase-inicial.md](04-fase-inicial.md) a [09-modularizacao.md](09-modularizacao.md)
+- Fase 3 (backend↔mobile): [10-backend-reutilizacao.md](10-backend-reutilizacao.md), [11-backend-gaps.md](11-backend-gaps.md), [12-autenticacao-seguranca.md](12-autenticacao-seguranca.md), [16-gamificacao-servidor.md](16-gamificacao-servidor.md)
+- Fase 4 (experiência sensível): [13-offline-sync.md](13-offline-sync.md), [14-realtime-chat-notificacoes.md](14-realtime-chat-notificacoes.md), [15-audio-media-uploads.md](15-audio-media-uploads.md), [17-estrategia-b2c-pro-corporate.md](17-estrategia-b2c-pro-corporate.md)
+- Fase 5 (operacional): [18-setup-ambiente.md](18-setup-ambiente.md) a [22-bootstrap-novas-maquinas.md](22-bootstrap-novas-maquinas.md)
+- Quick wins: [24-quick-wins.md](24-quick-wins.md)
+- Riscos consolidados: [25-riscos-decisoes.md](25-riscos-decisoes.md)
+
+---
+
 ## Visão geral
 
 ```
@@ -311,6 +327,148 @@ Fase 4:  ░░░░░░░░░░░░░░░░░░░░███�
 ```
 
 **Nota:** Fases podem ter overlap. Por exemplo, endpoints API da Fase 2 podem ser criados enquanto se finaliza Fase 1B.
+
+---
+
+## Performance targets por fase
+
+| Fase | Métrica | Target | Como medir |
+|------|---------|--------|-----------|
+| **0** | API response time (p95) | < 200ms | Postman/Bruno collection runner, `php artisan test` |
+| **1A** | App cold start | < 3s (em Pixel 7 emulador) | Android Studio Profiler → Startup trace |
+| **1A** | CI build time | < 3 min | GitHub Actions timing |
+| **1B** | Frame rate (animações Compose) | 60fps (0 jank frames) | Android Studio CPU Profiler, Layout Inspector |
+| **1B** | Diary save (local + sync) | < 500ms perceção | Timestamp logging, optimistic UI |
+| **1B** | Offline calm zone load | < 1s | Tudo local, sem network |
+| **2** | Image load on 4G | < 1s (thumbnail), < 3s (full) | Charles Proxy throttle 4G, Coil cache metrics |
+| **2** | Forum infinite scroll | Smooth 60fps durante scroll | Profiler durante scroll rápido |
+| **2** | FCM delivery rate | > 95% | Firebase Console → Messaging stats |
+| **3** | Message delivery (send → display) | < 500ms | Timestamp diff client↔server |
+| **3** | WebSocket stable session | > 8h sem drops (WiFi estável) | Long-running test, reconnection counter |
+| **3** | Reconnection time | < 3s | Simular airplane mode toggle |
+| **4** | APK size | < 20 MB (base), < 30 MB com assets | `./gradlew assembleRelease` → check output size |
+| **4** | Audio gap entre tracks | < 200ms | ExoPlayer crossfade, manual testing |
+| **4** | Memory usage (steady state) | < 150 MB RSS | Android Studio Memory Profiler |
+
+### Como validar
+
+1. **Automated:** Adicionar Macrobenchmark tests no CI (cold start, scroll) a partir da Fase 1B
+2. **Manual:** Antes de cada merge para `main`, verificar no emulador e num device físico
+3. **Monitoring (pós-release):** Firebase Performance Monitoring para métricas reais
+
+---
+
+## Accessibility acceptance criteria por fase
+
+### Todas as fases
+
+- [ ] TalkBack: todos os ecrãs navegáveis sem visão
+- [ ] Touch targets ≥ 44dp (≥ 56dp em contexto de crise)
+- [ ] Contraste de texto ≥ 4.5:1 (AA) em todos os temas
+- [ ] Sem informação transmitida apenas por cor (usar ícones + texto)
+- [ ] Fonte respeita system font size (sp, não dp para texto)
+
+### Fase 1A
+
+- [ ] Login screen: campos focáveis por TalkBack, erros anunciados
+- [ ] Design system: componentes base já com contentDescription e semantics
+
+### Fase 1B
+
+- [ ] Mood slider: acessível por TalkBack com incrementos discretos (1-5)
+- [ ] Respiração guiada: acessível sem visão → audio cues + haptic (vibração indica fase)
+- [ ] Grounding 5-4-3-2-1: instruções lidas por TalkBack, progresso anunciado
+- [ ] Safe House: ativável por TalkBack (double-tap para double-tap exit → adaptar?)
+- [ ] Plano de crise: botão de chamada com contentDescription claro
+
+### Fase 2
+
+- [ ] Forum posts: lidos por TalkBack com estrutura (autor, conteúdo, reações)
+- [ ] Conteúdo sensível: blur tem alternativa texto ("Conteúdo sensível — toque para revelar")
+- [ ] The Wall: imagens com alt-text (quando disponível) ou "Imagem partilhada pela comunidade"
+- [ ] Auto-avaliação: perguntas e opções totalmente navegáveis por TalkBack
+
+### Fase 3
+
+- [ ] Chat: novas mensagens anunciadas por TalkBack (sem interromper composição)
+- [ ] Crisis mode: anúncio TalkBack "Modo de crise ativo. Mensagens limitadas a uma por 15 segundos"
+- [ ] Typing indicator: acessível ("João está a escrever...")
+- [ ] Reações: picker acessível por TalkBack
+
+### Fase 4
+
+- [ ] Sound mixer: sliders acessíveis com incrementos por TalkBack
+- [ ] Biometria: fallback para PIN/password sempre disponível
+
+---
+
+## Success metrics por fase
+
+### Fase 0 — Backend API Layer
+
+| Métrica | Target | Ferramenta |
+|---------|--------|-----------|
+| Endpoints JSON correto (schema validation) | 100% | PHPUnit + API tests |
+| Test coverage (API controllers) | > 80% | `php artisan test --coverage` |
+| Error responses padronizados | 100% (401, 403, 404, 422, 500) | Testes manuais + automatizados |
+| Rate limiting funcional | Sim | Testes com ab/wrk |
+
+### Fase 1A — Fundação Android
+
+| Métrica | Target | Ferramenta |
+|---------|--------|-----------|
+| CI build green | 100% | GitHub Actions |
+| Lint errors (detekt + ktlint) | 0 | `./gradlew detekt ktlintCheck` |
+| Login success rate contra API | 100% (happy path) | Manual + instrumented test |
+| Token persistence após app restart | Funcional | Manual test |
+
+### Fase 1B — Core Android
+
+| Métrica | Target | Ferramenta |
+|---------|--------|-----------|
+| Features E2E funcionais | 5+ (onboarding, dashboard, diary, calm zone, profile) | Manual + Espresso |
+| Offline diary: criar + sync | Funcional | Airplane mode test |
+| Offline calm zone: 4 exercícios | 100% offline | Airplane mode test |
+| Auto-save: recovery após crash | Funcional | Process kill test |
+| Unit test coverage (ViewModels) | > 70% | `./gradlew testDebugUnitTest` |
+
+### Fase 2 — Comunidade
+
+| Métrica | Target | Ferramenta |
+|---------|--------|-----------|
+| Forum load time (first page) | < 3s on 4G | Charles Proxy throttle |
+| FCM delivery rate | > 95% | Firebase Console |
+| Image upload success rate | > 98% | Error tracking |
+| Notification channels configurados | 4 (crisis, community, wellness, missions) | Manual verification |
+
+### Fase 3 — Real-time
+
+| Métrica | Target | Ferramenta |
+|---------|--------|-----------|
+| WebSocket stable session | > 8h | Long-running test |
+| Message delivery latency | < 500ms (p95) | Timestamp logging |
+| Reconnection success rate | > 99% após network toggle | Airplane mode test |
+| Crisis mode activation | < 1s | Manual test |
+
+### Fase 4 — Avançado
+
+| Métrica | Target | Ferramenta |
+|---------|--------|-----------|
+| APK size | < 20 MB base | Build output |
+| Crash-free rate | > 99.5% | Firebase Crashlytics |
+| Memory leaks | 0 (confirmed via LeakCanary) | LeakCanary + Profiler |
+| Biometric auth success rate | > 95% | Manual test multi-device |
+
+---
+
+## Riscos
+
+| ID | Risco | Probabilidade | Impacto | Mitigação |
+|----|-------|--------------|---------|-----------|
+| RISK-23-01 | Fase 0 demora mais que esperado (refactoring backend, edge cases em controllers existentes) | Alta | Crítico | Começar com 3 endpoints mínimos (login, profile, dashboard). Não refactorizar controllers web. API controllers separados em `Api/V1/` |
+| RISK-23-02 | Scope creep na Fase 1B (adicionar features não planeadas) | Média | Médio | Lista fechada de deliverables. Features adicionais vão para Fase 2+. Usar o roadmap como contrato |
+| RISK-23-03 | Fase 2 precisa de sistema de moderação admin que não existe | Média | Alto | Backend já tem moderação web (Filament). Reutilizar — não criar moderação mobile. Moderadores usam web |
+| RISK-23-04 | Fase 3 — WebSocket auth via Sanctum incompatível com Reverb out-of-the-box | Média | Alto | Testar cedo (na Fase 0 ou 1A). Criar endpoint `/broadcasting/auth` que aceite Bearer tokens. Fallback: Pusher cloud |
 
 ---
 
