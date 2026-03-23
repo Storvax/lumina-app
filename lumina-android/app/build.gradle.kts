@@ -61,6 +61,9 @@ dependencies {
     implementation(projects.core.coreDomain)
     implementation(projects.core.coreCommon)
 
+    // Feature modules
+    implementation(projects.feature.featureAuth)
+
     // Kotlin
     implementation(libs.kotlin.stdlib)
 
@@ -77,6 +80,9 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
+
+    // Compose Navigation
+    implementation("androidx.navigation:navigation-compose:2.7.7")
 
     // Coroutines
     implementation(libs.bundles.coroutines)
