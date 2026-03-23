@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.hilt)
 }
@@ -11,15 +12,10 @@ android {
 
     defaultConfig {
         minSdk = 26
-        targetSdk = 35
     }
 
     buildFeatures {
         compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
     }
 
     compileOptions {
@@ -30,18 +26,24 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    lint {
+        targetSdk = 35
+    }
+    testOptions {
+        targetSdk = 35
+    }
 }
 
 dependencies {
     implementation(libs.kotlin.stdlib)
-    
+
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose)
     implementation(libs.compose.material3)
-    
+
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.bundles.coroutines)
-    
+
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
 

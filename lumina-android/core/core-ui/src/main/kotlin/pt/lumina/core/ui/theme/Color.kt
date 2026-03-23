@@ -7,34 +7,43 @@ import androidx.compose.ui.graphics.Color
  * Tons suaves, acolhedores, pensados para bem-estar emocional.
  */
 
-// Brand Colors (primary)
-val LuminaPrimary = Color(0xFF8B5CF6)        // Roxo suave - cor principal
-val LuminaPrimaryLight = Color(0xFFA78BFA)   // Roxo claro - variação
-val LuminaPrimaryDark = Color(0xFF6D28D9)    // Roxo escuro - contrast
+// ===== CORE BRAND COLORS =====
+// Indigo: Profundidade, espiritualidade e calma (cor principal)
+val IndigoIndigo500 = Color(0xFF6366F1)      // Indigo-500 - Ação primária, links
+val IndigoIndigo600 = Color(0xFF4F46E5)      // Indigo-600 - Foco, hover
+val IndigoIndigo50 = Color(0xFFF0F4FF)       // Indigo-50 - Fundos suaves
 
-// Secondary (apoio, destaques)
-val LuminaSecondary = Color(0xFF0EA5E9)      // Azul claro - esperança
-val LuminaSecondaryLight = Color(0xFF38BDF8) // Azul mais claro
-val LuminaSecondaryDark = Color(0xFF0284C7)  // Azul mais escuro
+// Violet: Toque mágico e acolhedor (secundária)
+val VioletViolet500 = Color(0xFFA855F7)      // Violet-500 - Gradientes, destaque
+val VioletViolet600 = Color(0xFF9333EA)      // Violet-600 - Hover
 
-// Emotional States
-val SuccessGreen = Color(0xFF10B981)         // Verde suave - sucesso
-val WarningOrange = Color(0xFFF97316)        // Laranja suave - aviso
-val ErrorRose = Color(0xFFF43F5E)            // Rosa suave - erro (não vermelho agressivo!)
-val NeutralGray = Color(0xFF6B7280)          // Cinzento - neutro
+// ===== EMOTIONAL FEEDBACK COLORS =====
+// Rose: Acolhimento, amor, SOS (não agressivo como vermelho)
+val RoseRose50 = Color(0xFFFFF1F2)           // Rose-50 - Fundos
+val RoseRose500 = Color(0xFFF43F5E)          // Rose-500 - Botão SOS, coração, amor
+val RoseRose600 = Color(0xFFE11D48)          // Rose-600 - Hover
 
-// Background & Surface
-val BackgroundLight = Color(0xFFFAFAFA)      // Branco quente
-val SurfaceLight = Color(0xFFFFFFFF)         // Branco puro
-val BackgroundDark = Color(0xFF1F2937)       // Cinzento escuro
-val SurfaceDark = Color(0xFF111827)          // Quase preto
+// Emerald: Esperança, crescimento, sucesso
+val EmeraldEmerald50 = Color(0xFFF0FDF4)     // Emerald-50 - Fundos de sucesso
+val EmeraldEmerald500 = Color(0xFF10B981)    // Emerald-500 - Sucesso, check
+val EmeraldEmerald600 = Color(0xFF059669)    // Emerald-600 - Hover
 
-// Text
-val TextPrimary = Color(0xFF1F2937)          // Cinzento escuro (light mode)
-val TextSecondary = Color(0xFF6B7280)        // Cinzento médio
-val TextPrimaryDark = Color(0xFFFAFAFA)      // Quase branco (dark mode)
-val TextSecondaryDark = Color(0xFFD1D5DB)    // Cinzento claro
+// Amber: Aviso suave, ansiedade (não alarmista)
+val AmberAmber50 = Color(0xFFFFFBEB)         // Amber-50 - Fundos de aviso
+val AmberAmber500 = Color(0xFFF59E0B)        // Amber-500 - Aviso, ansiedade
+val AmberAmber600 = Color(0xFFD97706)        // Amber-600 - Hover
 
-// Border & Dividers
-val BorderLight = Color(0xFFE5E7EB)
-val BorderDark = Color(0xFF374151)
+// ===== NEUTRAL COLORS (Slate - Para texto e fundos) =====
+// IMPORTANTE: Lumina não usa #000000 puro (causa fadiga). Usa Slate (cinza com toque azul).
+val SlateSlate50 = Color(0xFFF8FAFC)         // Fundo geral (quase branco)
+val SlateSlate100 = Color(0xFFE2E8F0)        // Fundos inputs, cards segundários
+val SlateSlate500 = Color(0xFF64748B)        // Texto secundário (light mode)
+val SlateSlate600 = Color(0xFF475569)        // Texto corpo (light mode)
+val SlateSlate800 = Color(0xFF1E293B)        // Headings (light mode)
+val SlateSlate900 = Color(0xFF0F172A)        // Headings fortes (light mode)
+
+// ===== DARK MODE =====
+val SlateDarkBg = Color(0xFF0F172A)          // Fundo app (dark mode)
+val SlateDarkSurface = Color(0xFF1E293B)     // Cards/Surfaces (dark mode)
+val SlateDarkText = Color(0xFFF1F5F9)        // Texto primário (dark mode)
+val SlateDarkTextSecondary = Color(0xFFCBD5E1)  // Texto secundário (dark mode)

@@ -9,7 +9,6 @@ android {
 
     defaultConfig {
         minSdk = 26
-        targetSdk = 35
     }
 
     compileOptions {
@@ -19,6 +18,12 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+    lint {
+        targetSdk = 35
+    }
+    testOptions {
+        targetSdk = 35
     }
 }
 

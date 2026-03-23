@@ -11,7 +11,6 @@ android {
 
     defaultConfig {
         minSdk = 26
-        targetSdk = 35
     }
 
     compileOptions {
@@ -22,14 +21,20 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    lint {
+        targetSdk = 35
+    }
+    testOptions {
+        targetSdk = 35
+    }
 }
 
 dependencies {
     implementation(libs.kotlin.stdlib)
-    
+
     implementation(libs.bundles.retrofit)
     implementation(libs.bundles.okhttp)
-    
+
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
 
