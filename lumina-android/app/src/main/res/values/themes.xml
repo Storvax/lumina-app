@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.Lumina" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">#6200EE</item>
+    </style>
+</resources>

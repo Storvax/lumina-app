@@ -74,6 +74,9 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity)
 
+    // Material
+    implementation(libs.material)
+
     // Compose
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose)

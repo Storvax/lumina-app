@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -38,34 +39,28 @@ import pt.lumina.core.ui.theme.SlateSlate600
  * - Fundo suave (Slate50) que passa a branco ao focar
  * - Anéis de foco brilhantes (border com cor Indigo)
  * - Suporte a ícone leading (emoji ou composable)
- * - Espaçamento generoso (padding relaxado)
- * - Suporte a campos de senha (masked)
- * - Touch target mínimo 44dp de altura
- * - Transições suaves (200ms)
  *
- * @param label Etiqueta do campo (PT-PT)
  * @param value Valor atual do campo
- * @param onValueChange Lambda executada ao alterar o valor
- * @param placeholder Texto de ajuda quando vazio
- * @param leadingIcon Composable opcional para ícone/emoji à esquerda
- * @param isPassword Se true, mascara o texto (dots)
- * @param modifier Modificador Compose opcional
+ * @param onValueChange Callback ao mudar o texto
+ * @param label Etiqueta descritiva
+ * @param modifier Modificador opcional
+ * @param isPassword Se true, oculta os caracteres
+ * @param leadingIcon Ícone ou emoji opcional à esquerda
  */
 @Composable
 fun LuminaTextField(
-    label: String,
     value: String,
     onValueChange: (String) -> Unit,
+    label: String,
     modifier: Modifier = Modifier,
-    placeholder: String = "",
-    leadingIcon: (@Composable () -> Unit)? = null,
     isPassword: Boolean = false,
+    leadingIcon: (@Composable () -> Unit)? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused = interactionSource.collectIsFocusedAsState()
 
-    // Animação da cor de fundo: Slate50 -> Branco ao focar
-    val animatedBackgroundColor = animateColorAsState(
+    // Animação do fundo: Slate50 -> Branco ao focar
+    val animatedBgColor = animateColorAsState(
         targetValue = if (isFocused.value) Color.White else SlateSlate50,
         animationSpec = tween(durationMillis = 200),
         label = "textfield_bg_color"
@@ -101,68 +96,38 @@ fun LuminaTextField(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    color = animatedBackgroundColor.value,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .border(
-                    width = 2.dp,
-                    color = animatedBorderColor.value,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(12.dp),  // Padding interior: espaçamento relaxado
-            contentAlignment = Alignment.CenterStart
+                .background(animatedBgColor.value, RoundedCornerShape(12.dp))
+                .border(1.dp, animatedBorderColor.value, RoundedCornerShape(12.dp))
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.CenterStart),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Ícone leading (à esquerda)
                 if (leadingIcon != null) {
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 12.dp)
-                            .align(Alignment.CenterVertically)
-                    ) {
+                    Box(modifier = Modifier.padding(end = 12.dp)) {
                         leadingIcon()
                     }
                 }
 
-                // BasicTextField (sem decoração, usamos Box para estilo)
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .align(Alignment.CenterVertically)
-                ) {
-                    if (value.isEmpty()) {
-                        // Placeholder quando vazio
-                        Text(
-                            text = placeholder,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = SlateSlate500,
-                        )
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = SlateSlate600),
+                    cursorBrush = SolidColor(IndigoIndigo500),
+                    visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+                    interactionSource = interactionSource,
+                    decorationBox = { innerTextField ->
+                        if (value.isEmpty()) {
+                            Text(
+                                text = "Escreva aqui...",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = SlateSlate500
+                            )
+                        }
+                        innerTextField()
                     }
-
-                    BasicTextField(
-                        value = value,
-                        onValueChange = onValueChange,
-                        interactionSource = interactionSource,
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            color = SlateSlate600
-                        ),
-                        cursorBrush = SolidColor(IndigoIndigo500),
-                        visualTransformation = if (isPassword) {
-                            PasswordVisualTransformation()
-                        } else {
-                            VisualTransformation.None
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),  // Touch target mínimo 44dp
-                    )
-                }
+                )
             }
         }
     }

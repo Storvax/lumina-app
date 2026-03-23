@@ -100,7 +100,6 @@ fun LoginScreen(
                         label = "Email",
                         value = formState.email,
                         onValueChange = { viewModel.updateEmail(it) },
-                        placeholder = "O teu email",
                         leadingIcon = {
                             Text("📧")
                         },
@@ -114,7 +113,6 @@ fun LoginScreen(
                         label = "Password",
                         value = formState.password,
                         onValueChange = { viewModel.updatePassword(it) },
-                        placeholder = "Mínimo 8 caracteres",
                         leadingIcon = {
                             Text("🔐")
                         },

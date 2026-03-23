@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-endpoint>
+        <include domain="file" path="." />
+    </cloud-endpoint>
+    <device-endpoint>
+        <include domain="file" path="." />
+    </device-endpoint>
+</data-extraction-rules>
