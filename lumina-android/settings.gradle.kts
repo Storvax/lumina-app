@@ -27,7 +27,8 @@ include(
     ":core:core-domain",
     ":core:core-common",
     ":feature:feature-auth",
-    ":feature:feature-home"
+    ":feature:feature-home",
+    ":feature:feature-mural"
 )
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")

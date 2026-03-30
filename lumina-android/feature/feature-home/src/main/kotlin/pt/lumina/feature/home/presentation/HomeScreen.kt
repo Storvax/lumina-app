@@ -74,6 +74,7 @@ fun HomeScreen(
     nomeUtilizador: String = "Alexandre",
     streakDias: Int = 7,
     onMuralClick: () -> Unit = {},
+    onCasuloClick: () -> Unit = {},
     onZonaCalmClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -101,9 +102,10 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // Cards de acesso rápido: Mural e Zona Calma
+        // Cards de acesso rápido: Mural, Casulo e Zona Calma
         SecaoCards(
             onMuralClick = onMuralClick,
+            onCasuloClick = onCasuloClick,
             onZonaCalmClick = onZonaCalmClick,
         )
     }
@@ -320,6 +322,7 @@ private fun ChipMood(
 @Composable
 private fun SecaoCards(
     onMuralClick: () -> Unit,
+    onCasuloClick: () -> Unit,
     onZonaCalmClick: () -> Unit,
 ) {
     Text(
@@ -347,19 +350,34 @@ private fun SecaoCards(
             descricaoAcessibilidade = "Aceder ao Mural da Esperança",
         )
 
-        // Card: Zona Calma — tons Emerald para transmitir esperança e crescimento
+        // Card: Casulo da Resiliência — tons Violet para intimidade e grupo privado
         CardAcaoRapida(
-            titulo = "Zona\nCalma",
-            emoji = "🌿",
-            descricao = "Exercícios de respiração e meditação",
+            titulo = "Casulo da\nResiliência",
+            emoji = "🫂",
+            descricao = "Grupo privado de apoio mútuo",
             gradiente = Brush.verticalGradient(
-                colors = listOf(EmeraldEmerald500, EmeraldEmerald600),
+                colors = listOf(Color(0xFFA855F7), Color(0xFF9333EA)),
             ),
-            onClick = onZonaCalmClick,
+            onClick = onCasuloClick,
             modifier = Modifier.weight(1f),
-            descricaoAcessibilidade = "Aceder à Zona Calma",
+            descricaoAcessibilidade = "Aceder ao Casulo da Resiliência",
         )
     }
+
+    Spacer(modifier = Modifier.height(14.dp))
+
+    // Segunda linha: Zona Calma a largura total
+    CardAcaoRapida(
+        titulo = "Zona Calma",
+        emoji = "🌿",
+        descricao = "Exercícios de respiração e meditação",
+        gradiente = Brush.verticalGradient(
+            colors = listOf(EmeraldEmerald500, EmeraldEmerald600),
+        ),
+        onClick = onZonaCalmClick,
+        modifier = Modifier.fillMaxWidth(),
+        descricaoAcessibilidade = "Aceder à Zona Calma",
+    )
 }
 
 /**

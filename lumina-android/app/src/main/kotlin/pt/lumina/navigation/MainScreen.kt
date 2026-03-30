@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -30,6 +31,8 @@ import pt.lumina.core.ui.theme.IndigoIndigo500
 import pt.lumina.core.ui.theme.SlateSlate400
 import pt.lumina.feature.home.presentation.HomeScreen
 import pt.lumina.feature.home.presentation.ZonaCalmaScreen
+import pt.lumina.feature.mural.presentation.PactScreen
+import pt.lumina.feature.mural.presentation.WallScreen
 
 /**
  * Modelo de um separador da barra de navegação inferior.
@@ -49,7 +52,7 @@ private data class SeparadorNav(
 /**
  * Ecrã principal pós-autenticação com navegação inferior.
  *
- * Gere o Scaffold com NavigationBar (3 separadores: Home, Mural, Zona Calma)
+ * Gere o Scaffold com NavigationBar (4 separadores: Home, Mural, Casulo, Zona Calma)
  * e renderiza o conteúdo do separador ativo. Usa rememberSaveable para
  * preservar o separador ativo em rotações de ecrã sem ViewModel dedicado.
  *
@@ -74,6 +77,12 @@ fun MainScreen() {
             rotulo = "Mural",
         ),
         SeparadorNav(
+            rota = "casulo",
+            icone = Icons.Default.Group,
+            iconeDescricao = "Casulo da Resiliência",
+            rotulo = "Casulo",
+        ),
+        SeparadorNav(
             rota = "zona_calma",
             icone = Icons.Default.Spa,
             iconeDescricao = "Zona Calma",
@@ -96,12 +105,18 @@ fun MainScreen() {
         when (separadorAtivo) {
             "home" -> HomeScreen(
                 onMuralClick = { separadorAtivo = "mural" },
+                onCasuloClick = { separadorAtivo = "casulo" },
                 onZonaCalmClick = { separadorAtivo = "zona_calma" },
                 modifier = Modifier.padding(paddingValues),
             )
 
-            "mural" -> EcraConstrucao(
-                mensagem = "Mural da Esperança — Em breve 🌸",
+            "mural" -> WallScreen(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+            )
+
+            "casulo" -> PactScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),

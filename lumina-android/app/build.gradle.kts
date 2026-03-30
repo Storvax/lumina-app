@@ -64,6 +64,7 @@ dependencies {
     // Feature modules
     implementation(projects.feature.featureAuth)
     implementation(projects.feature.featureHome)
+    implementation(projects.feature.featureMural)
 
     // Ícones Material estendidos (Spa, etc.) para a NavigationBar
     implementation("androidx.compose.material:material-icons-extended")
