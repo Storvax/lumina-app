@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import pt.lumina.core.ui.theme.IndigoIndigo500
 import pt.lumina.core.ui.theme.SlateSlate400
 import pt.lumina.feature.home.presentation.HomeScreen
+import pt.lumina.feature.home.presentation.ZonaCalmaScreen
 
 /**
  * Modelo de um separador da barra de navegação inferior.
@@ -106,8 +107,8 @@ fun MainScreen() {
                     .padding(paddingValues),
             )
 
-            "zona_calma" -> EcraConstrucao(
-                mensagem = "Zona Calma — Em breve 🌿",
+            "zona_calma" -> ZonaCalmaScreen(
+                onBack = { separadorAtivo = "home" },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
