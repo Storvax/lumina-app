@@ -22,6 +22,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +50,7 @@ import pt.lumina.core.ui.theme.IndigoIndigo500
 import pt.lumina.core.ui.theme.RoseRose500
 import pt.lumina.core.ui.theme.SlateSlate100
 import pt.lumina.core.ui.theme.SlateSlate400
+import pt.lumina.core.ui.theme.SlateSlate500
 import pt.lumina.core.ui.theme.SlateSlate600
 import pt.lumina.core.ui.theme.SlateSlate800
 
@@ -190,11 +193,11 @@ private data class MoodOpcao(
 )
 
 /**
- * Seletor de humor horizontal e compacto para o dashboard.
+ * Seletor de humor encapsulado num card acolhedor.
  *
- * Versão em chips (LazyRow) do MoodSelector completo — ocupa apenas uma
- * linha horizontal para não dominar o ecrã principal. Cada chip tem
- * animação de seleção (200ms) e touch target mínimo de 72x80dp.
+ * O card branco com cantos de 24dp e sombra suave cria uma "bolha" visual
+ * que enquadra a secção de humor — tornando-a mais íntima e convidativa.
+ * Os chips lá dentro mantêm o comportamento animado já existente.
  */
 @Composable
 private fun SecaoMoodCompacto(
@@ -209,25 +212,41 @@ private fun SecaoMoodCompacto(
         MoodOpcao("raiva", "🔥", "Raiva", RoseRose500, Color(0xFFFFF1F2)),
     )
 
-    Column {
-        Text(
-            text = "O meu humor agora",
-            style = MaterialTheme.typography.titleMedium,
-            color = SlateSlate800,
-        )
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        // Elevação suave — sem sombra preta pesada (guideline Lumina)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Como me sinto agora",
+                style = MaterialTheme.typography.titleMedium,
+                color = SlateSlate800,
+            )
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(horizontal = 2.dp),
-        ) {
-            items(opcoes) { opcao ->
-                ChipMood(
-                    opcao = opcao,
-                    selecionado = moodSelecionado == opcao.id,
-                    aoSelecionar = { onMoodSelecionado(opcao.id) },
-                )
+            Text(
+                text = "Toca numa emoção para registar o teu estado.",
+                style = MaterialTheme.typography.bodySmall,
+                color = SlateSlate400,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(horizontal = 2.dp),
+            ) {
+                items(opcoes) { opcao ->
+                    ChipMood(
+                        opcao = opcao,
+                        selecionado = moodSelecionado == opcao.id,
+                        aoSelecionar = { onMoodSelecionado(opcao.id) },
+                    )
+                }
             }
         }
     }
