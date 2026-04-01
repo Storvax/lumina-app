@@ -178,6 +178,7 @@ Route::middleware(['auth', 'onboarding'])->group(function () {
         Route::post('/perfil/tags', 'updateTags')->name('profile.tags');
         Route::post('/perfil/jornada', 'storeMilestone')->name('profile.milestones.store');
         Route::delete('/perfil/jornada/{milestone}', 'destroyMilestone')->name('profile.milestones.destroy');
+        Route::get('/perfil/tendencias', 'moodTrends')->name('profile.mood-trends');
         Route::get('/perfil/passaporte', 'exportPassport')->name('profile.passport');
         Route::patch('/perfil/acessibilidade', 'updateAccessibility')->name('profile.accessibility');
         Route::post('/api/user/tour-completed', [App\Http\Controllers\OnboardingController::class, 'markTourCompleted'])->name('tour.completed');

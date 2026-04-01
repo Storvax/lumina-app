@@ -12,6 +12,7 @@ use App\Models\DailyLog;
 use App\Models\Achievement;
 use App\Models\Milestone;
 use App\Services\GamificationService;
+use App\Services\MoodTrendService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 
@@ -274,6 +275,18 @@ class ProfileController extends Controller
         }
 
         return $streak;
+    }
+
+    /**
+     * Dashboard de tendências de humor (7d, 30d, 90d) com média móvel e alerta proativo.
+     * Dados pré-computados pelo MoodTrendService e cacheados por 6h.
+     */
+    public function moodTrends(MoodTrendService $trendService): View
+    {
+        $user = Auth::user();
+        $data = $trendService->getDashboardData($user);
+
+        return view('profile.mood-trends', compact('user', 'data'));
     }
 
     public function logBreathing(GamificationService $gamification)

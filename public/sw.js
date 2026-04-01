@@ -4,13 +4,27 @@
  * Responsabilidades:
  *  1. Cache-first para assets estáticos (CSS, JS, fontes, imagens).
  *  2. Network-first para páginas HTML (com fallback offline).
- *  3. Web Push Notifications (VAPID).
- *  4. Offline fallback page para navegação sem rede.
+ *  3. Stale-while-revalidate para rotas dinâmicas frequentes (dashboard, perfil).
+ *  4. Runtime cache com limite de entradas para evitar crescimento ilimitado.
+ *  5. Web Push Notifications (VAPID).
  */
 'use strict';
 
-var CACHE_VERSION = 'lumina-v1';
-var OFFLINE_URL = '/offline';
+var CACHE_VERSION  = 'lumina-v2';
+var RUNTIME_CACHE  = 'lumina-runtime-v2';
+var OFFLINE_URL    = '/offline';
+
+// Limite de entradas no cache de runtime — evita esgotamento de armazenamento.
+var RUNTIME_MAX_ENTRIES = 60;
+
+// Rotas que beneficiam de stale-while-revalidate (rápido + fresco).
+var SWR_ROUTES = [
+    '/dashboard',
+    '/perfil',
+    '/perfil/tendencias',
+    '/mural',
+    '/zona-calma',
+];
 
 // Assets estáticos para pre-cache no install
 var PRECACHE_URLS = [
@@ -33,17 +47,17 @@ self.addEventListener('install', function (event) {
 });
 
 // ──────────────────────────────────────────────
-// ACTIVATE — limpar caches antigas
+// ACTIVATE — limpar caches de versões anteriores
 // ──────────────────────────────────────────────
 self.addEventListener('activate', function (event) {
+    var currentCaches = [CACHE_VERSION, RUNTIME_CACHE];
+
     event.waitUntil(
         caches.keys().then(function (cacheNames) {
             return Promise.all(
-                cacheNames.filter(function (name) {
-                    return name !== CACHE_VERSION;
-                }).map(function (name) {
-                    return caches.delete(name);
-                })
+                cacheNames
+                    .filter(function (name) { return !currentCaches.includes(name); })
+                    .map(function (name) { return caches.delete(name); })
             );
         }).then(function () {
             return self.clients.claim();
@@ -88,15 +102,20 @@ self.addEventListener('fetch', function (event) {
         return;
     }
 
-    // Páginas HTML → Network-first com fallback offline
+    var url = new URL(request.url);
+
+    // Rotas dinâmicas frequentes → Stale-while-revalidate (resposta imediata + atualização em background)
+    if (isSWRRoute(url.pathname)) {
+        event.respondWith(staleWhileRevalidate(request));
+        return;
+    }
+
+    // Páginas HTML → Network-first com fallback para cache e página offline
     if (request.headers.get('Accept') && request.headers.get('Accept').includes('text/html')) {
         event.respondWith(
             fetch(request).then(function (response) {
                 if (response.ok) {
-                    var clone = response.clone();
-                    caches.open(CACHE_VERSION).then(function (cache) {
-                        cache.put(request, clone);
-                    });
+                    putInRuntimeCache(request, response.clone());
                 }
                 return response;
             }).catch(function () {
@@ -112,6 +131,55 @@ self.addEventListener('fetch', function (event) {
 function isStaticAsset(url) {
     return /\.(css|js|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|ico|webp)(\?.*)?$/.test(url)
         || url.includes('/build/');
+}
+
+function isSWRRoute(pathname) {
+    return SWR_ROUTES.some(function (route) {
+        return pathname === route || pathname.startsWith(route + '/');
+    });
+}
+
+/**
+ * Stale-while-revalidate: devolve o cache imediatamente e atualiza em background.
+ * Reduz a latência percebida em rotas visitadas frequentemente.
+ */
+function staleWhileRevalidate(request) {
+    return caches.open(RUNTIME_CACHE).then(function (cache) {
+        return cache.match(request).then(function (cached) {
+            var networkFetch = fetch(request).then(function (response) {
+                if (response.ok) {
+                    cache.put(request, response.clone());
+                    enforceRuntimeCacheLimit(cache);
+                }
+                return response;
+            });
+
+            // Devolve o cache imediatamente, ou aguarda a rede se não houver cache.
+            return cached || networkFetch;
+        });
+    });
+}
+
+/**
+ * Guarda resposta no runtime cache e limita o número de entradas.
+ */
+function putInRuntimeCache(request, response) {
+    caches.open(RUNTIME_CACHE).then(function (cache) {
+        cache.put(request, response);
+        enforceRuntimeCacheLimit(cache);
+    });
+}
+
+/**
+ * Remove as entradas mais antigas quando o limite é atingido.
+ * Sem este controlo, o cache cresceria indefinidamente com cada visita.
+ */
+function enforceRuntimeCacheLimit(cache) {
+    cache.keys().then(function (keys) {
+        if (keys.length > RUNTIME_MAX_ENTRIES) {
+            cache.delete(keys[0]);
+        }
+    });
 }
 
 // ──────────────────────────────────────────────

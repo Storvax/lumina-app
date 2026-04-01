@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\DailyLog;
-use App\Services\GamificationService;
 use App\Services\CBTAnalysisService;
+use App\Services\GamificationService;
+use App\Services\MoodTrendService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -20,11 +21,13 @@ class DailyLogController extends Controller
 {
     protected GamificationService $gamification;
     protected CBTAnalysisService $cbtService;
+    protected MoodTrendService $trendService;
 
-    public function __construct(GamificationService $gamification, CBTAnalysisService $cbtService)
+    public function __construct(GamificationService $gamification, CBTAnalysisService $cbtService, MoodTrendService $trendService)
     {
         $this->gamification = $gamification;
-        $this->cbtService = $cbtService;
+        $this->cbtService   = $cbtService;
+        $this->trendService = $trendService;
     }
 
     /**
@@ -73,8 +76,9 @@ class DailyLogController extends Controller
             ]
         );
 
-        // Invalida a espiral em cache para refletir o novo registo no perfil.
+        // Invalida a espiral e as tendências em cache para refletir o novo registo.
         Cache::forget("spiral:{$log->user_id}");
+        $this->trendService->invalidateCache(Auth::user());
 
         if ($log->wasRecentlyCreated) {
             $this->gamification->trackAction(Auth::user(), 'daily_log');

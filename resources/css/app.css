@@ -29,7 +29,20 @@
         radial-gradient(at 0% 50%, hsla(341,100%,94%,1) 0px, transparent 50%);
 }
 
-/*  Utilitários de Acessibilidade 
+/* Estilos de foco visíveis e acessíveis — aplicados globalmente sem depender do modo de alto contraste.
+   O outline indigo é consistente com a identidade visual e cumpre WCAG 2.1 AA (ratio ≥ 3:1). */
+:focus-visible {
+    outline: 2px solid #6366f1 !important;
+    outline-offset: 3px !important;
+    border-radius: 4px;
+}
+
+/* Remove o outline padrão do browser — só :focus-visible mantém o ring */
+:focus:not(:focus-visible) {
+    outline: none !important;
+}
+
+/*  Utilitários de Acessibilidade
   O !important garante que sobrescreve qualquer classe Tailwind gerada dinamicamente.
  */
 .font-dyslexic {

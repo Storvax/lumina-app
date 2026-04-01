@@ -215,12 +215,18 @@
                         </div>
 
                         <div class="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                            <p class="text-xs text-slate-400 flex items-center gap-1.5 select-none">
-                                <i class="ri-lock-2-line"></i> 100% Privado
-                            </p>
-                            
-                            <button type="submit" class="w-full sm:w-auto !bg-slate-900 hover:!bg-slate-800 !text-white font-bold py-4 px-10 rounded-2xl shadow-xl shadow-slate-900/20 transform transition hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
-                                <span>Guardar Memória</span> 
+                            <div class="flex items-center gap-3">
+                                <p class="text-xs text-slate-400 flex items-center gap-1.5 select-none">
+                                    <i class="ri-lock-2-line"></i> 100% Privado
+                                </p>
+                                {{-- Indicador de auto-save --}}
+                                <span id="autosave-indicator" class="hidden text-xs text-teal-500 flex items-center gap-1">
+                                    <i class="ri-check-line"></i> Guardado automaticamente
+                                </span>
+                            </div>
+
+                            <button type="submit" id="diary-submit-btn" class="w-full sm:w-auto !bg-slate-900 hover:!bg-slate-800 !text-white font-bold py-4 px-10 rounded-2xl shadow-xl shadow-slate-900/20 transform transition hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
+                                <span>Guardar Memória</span>
                                 <i class="ri-save-line text-lg"></i>
                             </button>
                         </div>
@@ -264,22 +270,102 @@
     </div>
 
     <script>
-        const prompts = [
-            "Qual foi a melhor coisa (mesmo que pequena) que aconteceu hoje?",
-            "O que é que está a ocupar demasiado espaço na tua cabeça agora?",
-            "Escreve sobre um momento em que te sentiste em paz hoje.",
-            "O que é que te deixou ansioso hoje e como lidaste com isso?",
-            "Pelo que é que te sentes grato(a) neste momento?",
-            "O que precisas de perdoar a ti mesmo hoje?"
-        ];
+        // Prompts contextuais injetados pelo PHP — selecionados com base no humor e tags.
+        const journalPrompts = @json(config('journal-prompts'));
+
+        const AUTOSAVE_KEY = 'lumina_diary_draft_{{ auth()->id() }}';
+        const AUTOSAVE_INTERVAL = 10000; // 10 segundos
+
+        /**
+         * Seleciona prompts com base no humor e tags atualmente selecionados no formulário.
+         * Prioridade: tag específica > grupo de humor.
+         */
+        function getContextualPrompts() {
+            const selectedMood = document.querySelector('input[name="mood_level"]:checked');
+            const moodLevel = selectedMood ? parseInt(selectedMood.value) : null;
+            const checkedTags = Array.from(document.querySelectorAll('input[name="tags[]"]:checked'))
+                .map(el => el.value.toLowerCase());
+
+            // Tags prioritárias com grupo associado
+            if (checkedTags.includes('ansiedade') || checkedTags.includes('pânico')) {
+                return journalPrompts.anxiety;
+            }
+            if (checkedTags.includes('cansaço')) {
+                return journalPrompts.fatigue;
+            }
+            if (checkedTags.includes('solidão')) {
+                return journalPrompts.loneliness;
+            }
+
+            // Grupo de humor
+            if (moodLevel !== null) {
+                if (moodLevel <= 2) return journalPrompts.distress;
+                if (moodLevel >= 4) return journalPrompts.positive;
+                return journalPrompts.neutral;
+            }
+
+            // Fallback neutro
+            return journalPrompts.neutral;
+        }
 
         function generatePrompt() {
-            const box = document.getElementById('prompt-box');
+            const box  = document.getElementById('prompt-box');
             const text = document.getElementById('prompt-text');
-            const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
-            text.textContent = randomPrompt;
+            const pool = getContextualPrompts();
+            text.textContent = pool[Math.floor(Math.random() * pool.length)];
             box.classList.remove('hidden');
         }
+
+        // --- Auto-save ---
+
+        function autosaveDraft() {
+            const textarea = document.getElementById('journal-area');
+            if (!textarea || !textarea.value.trim()) return;
+
+            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
+                note: textarea.value,
+                saved_at: new Date().toISOString(),
+            }));
+
+            const indicator = document.getElementById('autosave-indicator');
+            if (indicator) {
+                indicator.classList.remove('hidden');
+                setTimeout(() => indicator.classList.add('hidden'), 3000);
+            }
+        }
+
+        function restoreDraft() {
+            const textarea = document.getElementById('journal-area');
+            // Não restaurar se já existe conteúdo guardado no servidor
+            if (!textarea || textarea.value.trim().length > 0) return;
+
+            const raw = localStorage.getItem(AUTOSAVE_KEY);
+            if (!raw) return;
+
+            try {
+                const draft = JSON.parse(raw);
+                if (draft.note && draft.note.trim().length > 0) {
+                    textarea.value = draft.note;
+                }
+            } catch (_) {
+                localStorage.removeItem(AUTOSAVE_KEY);
+            }
+        }
+
+        function clearDraft() {
+            localStorage.removeItem(AUTOSAVE_KEY);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            restoreDraft();
+            setInterval(autosaveDraft, AUTOSAVE_INTERVAL);
+
+            // Limpa o rascunho após submissão com sucesso
+            const submitBtn = document.getElementById('diary-submit-btn');
+            if (submitBtn) {
+                submitBtn.closest('form').addEventListener('submit', clearDraft);
+            }
+        });
 
         /**
          * Inicializa o componente Alpine para reconhecimento de voz via Web Speech API.
