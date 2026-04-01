@@ -39,11 +39,14 @@ class AuthController extends Controller
         // Disparar evento de registo (envia email de verificação via queue)
         event(new Registered($user));
 
-        $token = $user->createToken('mobile-app')->plainTextToken;
+        // Token com abilities limitadas até o email ser verificado — acesso pleno só após verificação.
+        $abilities = $user->hasVerifiedEmail() ? ['*'] : ['read-only'];
+        $token = $user->createToken('mobile-app', $abilities)->plainTextToken;
 
         return response()->json([
-            'token' => $token,
-            'user'  => new UserResource($user),
+            'token'              => $token,
+            'email_verified'     => $user->hasVerifiedEmail(),
+            'user'               => new UserResource($user),
         ], 201);
     }
 

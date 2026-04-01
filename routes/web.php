@@ -277,6 +277,19 @@ Route::middleware(['auth', \App\Http\Middleware\TherapistMiddleware::class])->gr
     Route::get('/terapeuta', [\App\Http\Controllers\TherapistController::class, 'dashboard'])->name('therapist.dashboard');
     Route::post('/terapeuta/missao', [\App\Http\Controllers\TherapistController::class, 'assignMission'])->name('therapist.assign');
     Route::post('/terapeuta/somatico', [\App\Http\Controllers\TherapistController::class, 'triggerSomaticSync'])->name('therapist.somatic');
+    Route::get('/terapeuta/pacientes/{patient}/relatorio', [\App\Http\Controllers\TherapistController::class, 'patientReport'])->name('therapist.patient-report');
+
+    // Notas clínicas encriptadas — acesso restrito ao terapeuta atribuído ao paciente.
+    Route::controller(\App\Http\Controllers\ClinicalNoteController::class)
+        ->prefix('terapeuta/pacientes/{patient}/notas')
+        ->name('clinical-notes.')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{clinicalNote}/editar', 'edit')->name('edit');
+            Route::patch('/{clinicalNote}', 'update')->name('update');
+            Route::delete('/{clinicalNote}', 'destroy')->name('destroy');
+        });
 });
 
 /*

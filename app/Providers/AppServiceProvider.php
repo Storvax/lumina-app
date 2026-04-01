@@ -2,12 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\ClinicalNote;
 use App\Models\Comment;
 use App\Models\DailyLog;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\SelfAssessment;
 use App\Models\VaultItem;
+use App\Policies\ClinicalNotePolicy;
 use App\Policies\CommentPolicy;
 use App\Policies\DailyLogPolicy;
 use App\Policies\MessagePolicy;
@@ -59,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configurePolicies(): void
     {
+        Gate::policy(ClinicalNote::class, ClinicalNotePolicy::class);
         Gate::policy(Post::class, PostPolicy::class);
         Gate::policy(Comment::class, CommentPolicy::class);
         Gate::policy(Message::class, MessagePolicy::class);

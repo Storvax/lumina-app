@@ -1,12 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Events\SomaticSyncTriggered;
 use App\Models\DailyLog;
+use App\Models\User;
+use App\Services\PatientReportService;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
+use Illuminate\View\View;
 
 class TherapistController extends Controller
 {
@@ -14,7 +20,7 @@ class TherapistController extends Controller
      * Dashboard do terapeuta com pacientes atribuídos
      * e o clima emocional de cada um nos últimos 7 dias.
      */
-    public function dashboard()
+    public function dashboard(): View
     {
         $therapist = Auth::user()->therapistProfile;
 
@@ -60,12 +66,31 @@ class TherapistController extends Controller
     }
 
     /**
+     * Relatório de progresso do paciente: humor, frequência, tags, alertas de crise.
+     * Acesso restrito ao terapeuta atribuído ao paciente.
+     */
+    public function patientReport(User $patient, PatientReportService $reportService): View
+    {
+        $therapist = Auth::user()->therapistProfile;
+
+        if (!$therapist) {
+            abort(403, 'Perfil de terapeuta não encontrado.');
+        }
+
+        if (!$therapist->patients()->where('users.id', $patient->id)->exists()) {
+            abort(403, 'Este paciente não está atribuído ao teu perfil.');
+        }
+
+        $report = $reportService->generate($patient, 30);
+
+        return view('therapist.patient-report', compact('patient', 'report'));
+    }
+
+    /**
      * Atribui uma missão terapêutica personalizada a um paciente.
      * Apenas o terapeuta atribuído pode definir missões.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function assignMission(Request $request)
+    public function assignMission(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'patient_id' => 'required|exists:users,id',
@@ -78,7 +103,7 @@ class TherapistController extends Controller
             return response()->json(['error' => 'Não és o terapeuta deste paciente.'], 403);
         }
 
-        $patient = \App\Models\User::findOrFail($validated['patient_id']);
+        $patient = User::findOrFail($validated['patient_id']);
 
         // Evitar duplicação de missão no mesmo dia
         $today = now()->toDateString();
