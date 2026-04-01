@@ -46,6 +46,7 @@ dependencies {
 
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     implementation(project(":core:core-ui"))
     implementation(project(":core:core-network"))

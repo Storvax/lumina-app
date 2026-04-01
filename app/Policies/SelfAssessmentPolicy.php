@@ -3,7 +3,6 @@
 namespace App\Policies;
 
 use App\Models\SelfAssessment;
-use App\Models\Therapist;
 use App\Models\User;
 
 /**
@@ -37,7 +36,7 @@ class SelfAssessmentPolicy
 
         // Terapeuta atribuído pode ver os resultados do seu paciente.
         if ($user->role === 'therapist') {
-            $therapist = Therapist::where('name', 'like', '%' . $user->name . '%')->first();
+            $therapist = $user->therapistProfile;
             if ($therapist) {
                 return $selfAssessment->user->therapists()
                     ->where('therapists.id', $therapist->id)

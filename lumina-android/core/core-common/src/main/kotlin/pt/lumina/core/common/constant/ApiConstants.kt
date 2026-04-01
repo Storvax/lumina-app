@@ -7,8 +7,10 @@ object ApiConstants {
     // API endpoints
     object Endpoints {
         const val LOGIN = "api/v1/auth/login"
+        const val REGISTER = "api/v1/auth/register"
         const val LOGOUT = "api/v1/auth/logout"
         const val ME = "api/v1/auth/me"
+        const val ONBOARDING = "api/v1/onboarding"
         const val PROFILE = "api/v1/profile"
         const val DASHBOARD = "api/v1/dashboard"
         const val DIARY = "api/v1/diary"

@@ -8,6 +8,7 @@ use App\Http\Resources\DailyLogResource;
 use App\Models\DailyLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class DiaryController extends Controller
 {
@@ -49,6 +50,8 @@ class DiaryController extends Controller
             'log_date' => now()->startOfDay(),
             'cbt_insight' => $this->generateCbtInsight($request->mood_level),
         ]);
+
+        Cache::forget("spiral:{$user->id}");
 
         return response()->json([
             'data' => new DailyLogResource($log),

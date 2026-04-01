@@ -35,21 +35,35 @@ class ProcessGdprDeletion implements ShouldQueue
         // Bloqueia a transação para garantir integridade atómica
         DB::transaction(function () {
             $user = User::withTrashed()->find($this->userId);
-            
+
             if (!$user) return;
 
-            // Purga explícita (mesmo que haja onDeleteCascade, previne dados órfãos em polymorphic relations)
+            // Tokens Sanctum revogados antes do forceDelete para prevenir uso após confirmação de eliminação.
+            $user->tokens()->delete();
+
             $user->dailyLogs()->delete();
             $user->posts()->delete();
             $user->comments()->delete();
+            $user->messages()->delete();
+            $user->reactions()->delete();
+            $user->vaultItems()->delete();
+            $user->selfAssessments()->delete();
+            $user->pactAnswers()->delete();
             $user->buddySessions()->delete();
-            
-            // Remove as associações pivot
+            $user->milestones()->delete();
+
+            // Eventos de analytics são dados comportamentais — eliminados ao abrigo do Art. 17 RGPD.
+            \App\Models\AnalyticsEvent::where('user_id', $user->id)->delete();
+
+            // Push subscriptions contêm device tokens pessoais.
+            $user->pushSubscriptions()->delete();
+
             $user->savedPosts()->detach();
             $user->subscribedPosts()->detach();
             $user->achievements()->detach();
+            $user->missions()->detach();
+            $user->therapists()->detach();
 
-            // Apagamento físico definitivo
             $user->forceDelete();
         });
 

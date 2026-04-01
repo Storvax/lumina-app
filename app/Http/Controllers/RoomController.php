@@ -23,7 +23,7 @@ class RoomController extends Controller
      */
     public function index(Request $request)
     {
-        $rooms = Room::where('is_private', false)->where('is_active', true)->get();
+        $rooms = Room::publicActive()->get();
 
         $presenceCounts = DB::table('room_visits')
             ->whereIn('room_id', $rooms->pluck('id'))

@@ -44,6 +44,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
     });
+
+    // Rotas de 2FA — acessíveis a utilizadores autenticados sem o middleware de 2FA para evitar loop.
+    Route::controller(\App\Http\Controllers\TwoFactorController::class)->prefix('two-factor')->name('two-factor.')->group(function () {
+        Route::get('/setup', 'setup')->name('setup');
+        Route::post('/confirm', 'confirm')->name('confirm');
+        Route::post('/disable', 'disable')->name('disable');
+        Route::get('/challenge', 'challenge')->name('challenge');
+        Route::post('/verify', 'verify')->name('verify');
+    });
 });
 
 Route::middleware(['auth', 'onboarding'])->group(function () {
@@ -254,8 +263,8 @@ Route::middleware(['auth', 'onboarding'])->group(function () {
     | Diário do Pacto (integrado na comunidade)
     |--------------------------------------------------------------------------
     */
-    Route::get('/comunidade/pacto', [ForumController::class, 'pact'])->name('forum.pact');
-    Route::post('/comunidade/pacto/responder', [ForumController::class, 'storePact'])->name('forum.pact.store');
+    Route::get('/comunidade/pacto', [\App\Http\Controllers\PactController::class, 'show'])->name('forum.pact');
+    Route::post('/comunidade/pacto/responder', [\App\Http\Controllers\PactController::class, 'store'])->name('forum.pact.store');
 });
 
 /*

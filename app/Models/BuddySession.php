@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class BuddySession extends Model
@@ -12,4 +15,10 @@ class BuddySession extends Model
     public function user() { return $this->belongsTo(User::class, 'user_id'); }
     public function buddy() { return $this->belongsTo(User::class, 'buddy_id'); }
     public function room() { return $this->belongsTo(Room::class); }
+
+    /** Filtra sessões à espera de um buddy disponível. */
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->where('status', 'pending');
+    }
 }

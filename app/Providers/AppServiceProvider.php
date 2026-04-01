@@ -75,6 +75,11 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting(): void
     {
+        // Limiter padrão para todas as rotas API autenticadas.
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
         // Recuperação de password — 1 pedido/minuto para mitigar enumeração de emails.
         RateLimiter::for('password-reset', function (Request $request) {
             return Limit::perMinute(1)->by($request->input('email', $request->ip()));

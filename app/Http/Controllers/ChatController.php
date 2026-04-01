@@ -1,34 +1,40 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-use App\Events\MessageSent;
-use App\Events\MessageReacted;
 use App\Events\MessageDeleted;
-use App\Events\MessageUpdated;
 use App\Events\MessageRead;
+use App\Events\MessageReacted;
+use App\Events\MessageUpdated;
 use App\Events\RoomStatusUpdated;
 use App\Models\BuddySession;
 use App\Models\Message;
 use App\Models\MessageReaction;
 use App\Models\Room;
 use App\Models\User;
-use App\Notifications\ModeratorCrisisAlert;
-use App\Services\CBTAnalysisService;
+use App\Services\ChatService;
+use App\Services\ModerationService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\View\View;
 
 class ChatController extends Controller
 {
-    public function __construct(private CBTAnalysisService $cbtService) {}
+    public function __construct(
+        private ChatService $chatService,
+        private ModerationService $moderationService,
+    ) {}
 
     /**
      * Apresenta a sala de chat, histórico e o Painel de Moderação.
      */
-    public function show(Room $room)
+    public function show(Room $room): View
     {
         // Controlo de acesso para salas privadas (ex: buddy sessions).
         // Apenas os participantes da sessão e moderadores podem aceder.
@@ -110,82 +116,46 @@ class ChatController extends Controller
         }
 
         // Sidebar: apenas salas públicas (exclui salas privadas de buddy sessions).
-        $allRooms = Cache::remember('public_rooms', 300, fn() => Room::where('is_private', false)->where('is_active', true)->get());
+        $allRooms = Cache::remember('public_rooms', 300, fn() => Room::publicActive()->get());
 
         return view('chat.show', compact('room', 'messages', 'allRooms', 'followingIds', 'modStats', 'modLogs', 'olderCursor', 'hasOlderMessages'));
     }
 
     /**
-     * Processa o envio de mensagens (com Slow Mode e Deteção de Crise).
+     * Processa o envio de mensagens com slow mode e deteção de crise.
      */
-    public function send(Request $request, Room $room)
+    public function send(Request $request, Room $room): JsonResponse
     {
         $user = Auth::user();
 
-        // 1. Validação de Mute
-        if (Cache::has("mute:room:{$room->id}:user:{$user->id}")) {
-            return response()->json(['error' => 'Encontra-se silenciado temporariamente nesta sala.'], 403);
-        }
-
-        // 2. Slow Mode
-        $delay = $room->is_crisis_mode ? 15 : 3;
-        $lastMessage = Message::where('user_id', $user->id)
-            ->where('room_id', $room->id)
-            ->latest()
-            ->first();
-        
-        if ($lastMessage && $lastMessage->created_at->diffInSeconds(now()) < $delay) {
-            $msg = $room->is_crisis_mode 
-                ? 'Modo Crise ativo. O envio está limitado a cada 15 segundos.' 
-                : 'Está a escrever demasiado rápido. Respire fundo.';
-            return response()->json(['error' => $msg], 429);
+        $block = $this->chatService->checkSendPermission($user, $room);
+        if ($block !== null) {
+            if ($block['silent'] ?? false) return response()->json(['success' => true]);
+            return response()->json(['error' => $block['error']], $block['status']);
         }
 
         $request->validate([
-            'content' => 'required|string|max:1000',
+            'content'      => 'required|string|max:1000',
             'is_sensitive' => 'boolean',
             'is_anonymous' => 'boolean',
-            'reply_to_id' => 'nullable|exists:messages,id'
+            'reply_to_id'  => 'nullable|exists:messages,id',
         ]);
 
-        // 3. Deteção de Crise Multicamada (Camadas 1 + 2)
-        $crisisResult = $this->cbtService->detectCrisis($request->input('content'));
-
-        // 4. Criação
-        $message = Message::create([
-            'user_id'     => $user->id,
-            'room_id'     => $room->id,
-            'content'     => $request->input('content'),
-            'is_sensitive' => $request->boolean('is_sensitive') || $crisisResult['detected'],
-            'is_anonymous' => $request->boolean('is_anonymous'),
-            'reply_to_id' => $request->input('reply_to_id'),
-        ]);
-
-        // IMPORTANTE: Carregar TODAS as relações que o frontend espera (user, replyTo, reactions, reads)
-        // Isto previne erros de JavaScript "undefined" na função appendMessage
-        $message->load(['user', 'replyTo.user', 'reactions', 'reads']);
-
-        // 5. Alerta automático a moderadores quando crise é detetada
-        if ($crisisResult['detected']) {
-            $moderators = User::whereIn('role', ['admin', 'moderator'])->get();
-            if ($moderators->isNotEmpty()) {
-                Notification::send($moderators, new ModeratorCrisisAlert($message, $room, $crisisResult));
-            }
-        }
-
-        broadcast(new MessageSent($message))->toOthers();
+        $result = $this->chatService->createAndBroadcast($user, $room, $request->only([
+            'content', 'is_sensitive', 'is_anonymous', 'reply_to_id',
+        ]));
 
         return response()->json([
             'status'          => 'Message Sent!',
-            'message'         => $message,
-            'crisis_detected' => $crisisResult['detected'],
+            'message'         => $result['message'],
+            'crisis_detected' => $result['crisis_detected'],
         ]);
     }
 
     /**
      * Atualiza uma mensagem existente (Edição).
      */
-    public function updateMessage(Request $request, Room $room, Message $message)
+    public function updateMessage(Request $request, Room $room, Message $message): JsonResponse
     {
         if (Auth::id() !== $message->user_id) abort(403);
 
@@ -208,7 +178,7 @@ class ChatController extends Controller
     /**
      * Marca mensagens como lidas.
      */
-    public function markAsRead(Request $request, Room $room)
+    public function markAsRead(Request $request, Room $room): JsonResponse
     {
         $user = Auth::user();
         if (!$user->read_receipts_enabled) return response()->json(['status' => 'disabled']);
@@ -236,35 +206,35 @@ class ChatController extends Controller
 
     // --- FERRAMENTAS DE MODERAÇÃO ---
 
-    public function toggleCrisisMode(Request $request, Room $room)
+    public function toggleCrisisMode(Request $request, Room $room): JsonResponse
     {
         if (!Auth::user()->isModerator()) abort(403);
 
         $newState = !$room->is_crisis_mode;
         $room->update(['is_crisis_mode' => $newState]);
 
-        $this->logAction($room->id, $newState ? 'crisis_on' : 'crisis_off', null, 'Alterou estado de crise.');
+        $this->moderationService->logAction($room->id, $newState ? 'crisis_on' : 'crisis_off', null, 'Alterou estado de crise.');
         broadcast(new RoomStatusUpdated($room));
 
         return response()->json(['status' => $newState ? 'active' : 'inactive']);
     }
 
-    public function muteUser(Request $request, Room $room, User $targetUser)
+    public function muteUser(Request $request, Room $room, User $targetUser): JsonResponse
     {
         if (!Auth::user()->isModerator()) abort(403);
         
         Cache::put("mute:room:{$room->id}:user:{$targetUser->id}", true, now()->addMinutes(10));
-        $this->logAction($room->id, 'mute', $targetUser->id, 'Silenciado por 10m.');
+        $this->moderationService->logAction($room->id, 'mute', $targetUser->id, 'Silenciado por 10m.');
         
         return response()->json(['message' => "Utilizador silenciado."]);
     }
 
-    public function destroyMessage(Message $message)
+    public function destroyMessage(Message $message): JsonResponse|RedirectResponse
     {
         if (!Auth::user()->isModerator() && Auth::id() !== $message->user_id) abort(403);
         
         if (Auth::user()->isModerator() && Auth::id() !== $message->user_id) {
-            $this->logAction($message->room_id, 'delete_msg', $message->user_id, 'Apagou msg.');
+            $this->moderationService->logAction($message->room_id, 'delete_msg', $message->user_id, 'Apagou msg.');
         }
 
         $roomId = $message->room_id;
@@ -276,18 +246,18 @@ class ChatController extends Controller
         return request()->expectsJson() ? response()->json(['status' => 'Deleted']) : back();
     }
 
-    public function pinMessage(Request $request, Room $room)
+    public function pinMessage(Request $request, Room $room): RedirectResponse
     {
         if (!Auth::user()->isModerator()) abort(403);
         
         $request->validate(['message' => 'nullable|string|max:500']);
         $room->update(['pinned_message' => $request->input('message')]);
-        $this->logAction($room->id, 'pin', null, 'Atualizou mensagem fixada.');
+        $this->moderationService->logAction($room->id, 'pin', null, 'Atualizou mensagem fixada.');
         
         return back();
     }
 
-    public function reportMessage(Request $request, Message $message)
+    public function reportMessage(Request $request, Message $message): JsonResponse
     {
         $request->validate(['reason' => 'required|string|max:500']);
         
@@ -306,7 +276,7 @@ class ChatController extends Controller
 
     // --- COMUNIDADE ---
 
-    public function react(Request $request, Room $room, Message $message)
+    public function react(Request $request, Room $room, Message $message): JsonResponse
     {
         $request->validate(['type' => 'required|in:hug,candle,ear']);
         $existing = MessageReaction::where('message_id', $message->id)
@@ -340,7 +310,7 @@ class ChatController extends Controller
         return response()->json($payload);
     }
 
-    public function togglePresenceAlert(Request $request, Room $room, User $targetUser)
+    public function togglePresenceAlert(Request $request, Room $room, User $targetUser): JsonResponse
     {
         $userId = Auth::id();
         $exists = DB::table('chat_presence_subscriptions')
@@ -369,28 +339,12 @@ class ChatController extends Controller
         return response()->json(['status' => $status]);
     }
 
-    /**
-     * Helper privado para registar ações no log.
-     */
-    private function logAction($roomId, $action, $targetId = null, $details = null)
-    {
-        DB::table('moderation_logs')->insert([
-            'user_id' => Auth::id(),
-            'room_id' => $roomId,
-            'action' => $action,
-            'target_user_id' => $targetId,
-            'details' => $details,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-    }
-
     // --- PREFERÊNCIAS DE UI ---
 
     /**
      * Alterna entre modo Compacto e Confortável.
      */
-    public function toggleViewMode(Request $request)
+    public function toggleViewMode(Request $request): JsonResponse
     {
         $user = Auth::user();
         $newMode = $user->chat_view_mode === 'comfortable' ? 'compact' : 'comfortable';

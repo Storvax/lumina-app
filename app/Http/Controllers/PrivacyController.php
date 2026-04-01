@@ -24,15 +24,37 @@ class PrivacyController extends Controller
      */
     public function exportData()
     {
-        $user = Auth::user()->load(['dailyLogs', 'posts', 'comments', 'milestones']);
+        $user = Auth::user()->load([
+            'dailyLogs',
+            'posts',
+            'comments',
+            'milestones',
+            'messages',
+            'reactions',
+            'vaultItems',
+            'selfAssessments',
+            'buddySessions',
+            'pactAnswers',
+        ]);
 
         $data = [
-            'personal_info' => $user->only(['name', 'email', 'bio', 'safety_plan', 'created_at']),
-            'emotional_tags' => $user->emotional_tags,
-            'daily_logs' => $user->dailyLogs,
-            'forum_posts' => $user->posts,
-            'comments' => $user->comments,
-            'milestones' => $user->milestones,
+            'personal_info'    => $user->only(['name', 'email', 'bio', 'safety_plan', 'created_at']),
+            'emotional_tags'   => $user->emotional_tags,
+            'daily_logs'       => $user->dailyLogs,
+            'forum_posts'      => $user->posts,
+            'comments'         => $user->comments,
+            'milestones'       => $user->milestones,
+            // Mensagens encriptadas E2E: o servidor não tem acesso ao conteúdo em claro.
+            'chat_messages'    => $user->messages->map(fn ($m) => [
+                'id'         => $m->id,
+                'room_id'    => $m->room_id,
+                'created_at' => $m->created_at,
+            ]),
+            'reactions'        => $user->reactions,
+            'vault_items'      => $user->vaultItems,
+            'self_assessments' => $user->selfAssessments,
+            'buddy_sessions'   => $user->buddySessions,
+            'pact_answers'     => $user->pactAnswers,
         ];
 
         $fileName = 'lumina_export_' . now()->format('Ymd_His') . '.json';

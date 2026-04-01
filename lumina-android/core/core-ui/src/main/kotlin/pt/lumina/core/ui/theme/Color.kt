@@ -20,6 +20,7 @@ val VioletViolet600 = Color(0xFF9333EA)      // Violet-600 - Hover
 // ===== EMOTIONAL FEEDBACK COLORS =====
 // Rose: Acolhimento, amor, SOS (não agressivo como vermelho)
 val RoseRose50 = Color(0xFFFFF1F2)           // Rose-50 - Fundos
+val RoseRose100 = Color(0xFFFFE4E6)          // Rose-100 - Fundo de erros inline suaves
 val RoseRose500 = Color(0xFFF43F5E)          // Rose-500 - Botão SOS, coração, amor
 val RoseRose600 = Color(0xFFE11D48)          // Rose-600 - Hover
 
@@ -36,7 +37,8 @@ val AmberAmber600 = Color(0xFFD97706)        // Amber-600 - Hover
 // ===== NEUTRAL COLORS (Slate - Para texto e fundos) =====
 // IMPORTANTE: Lumina não usa #000000 puro (causa fadiga). Usa Slate (cinza com toque azul).
 val SlateSlate50 = Color(0xFFF8FAFC)         // Fundo geral (quase branco)
-val SlateSlate100 = Color(0xFFE2E8F0)        // Fundos inputs, cards segundários
+val SlateSlate100 = Color(0xFFE2E8F0)        // Fundos inputs, cards secundários
+val SlateSlate400 = Color(0xFF94A3B8)        // Placeholder text, ícones subtis
 val SlateSlate500 = Color(0xFF64748B)        // Texto secundário (light mode)
 val SlateSlate600 = Color(0xFF475569)        // Texto corpo (light mode)
 val SlateSlate800 = Color(0xFF1E293B)        // Headings (light mode)

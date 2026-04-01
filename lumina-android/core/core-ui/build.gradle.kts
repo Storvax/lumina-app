@@ -40,5 +40,8 @@ dependencies {
     implementation(libs.bundles.compose)
     implementation(libs.compose.material3)
 
+    // Google Fonts para Compose — Nunito + DM Sans (sem CDN, descarregadas via GMS)
+    implementation("androidx.compose.ui:ui-text-google-fonts")
+
     implementation(project(":core:core-common"))
 }

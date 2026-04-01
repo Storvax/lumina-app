@@ -1,18 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-use App\Models\PlaylistSong;
 use App\Models\DailyLog;
+use App\Models\PlaylistSong;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 
 class CalmZoneController extends Controller
 {
-    public function index()
+    public function index(): View
     {
         $songs = PlaylistSong::orderBy('votes_count', 'desc')->take(10)->get();
         $weeklyWinner = PlaylistSong::where('is_weekly_winner', true)->first();
@@ -25,17 +30,17 @@ class CalmZoneController extends Controller
         return view('calm.index', compact('songs', 'weeklyWinner', 'userVotes'));
     }
 
-    public function grounding()
+    public function grounding(): View
     {
         return view('calm.grounding');
     }
 
-    public function crisis()
+    public function crisis(): View
     {
         return view('calm.crisis', ['user' => Auth::user()]);
     }
 
-    public function sounds()
+    public function sounds(): View
     {
         return view('calm.sounds', [
             'categories' => config('sound-library.categories', []),
@@ -47,7 +52,7 @@ class CalmZoneController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function burn()
+    public function burn(): View
     {
         $entries = DailyLog::where('user_id', Auth::id())
             ->whereNotNull('note')
@@ -98,7 +103,7 @@ class CalmZoneController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function breathe()
+    public function breathe(): View
     {
         $techniques = [
             [
@@ -126,12 +131,12 @@ class CalmZoneController extends Controller
         return view('calm.breathe', compact('techniques'));
     }
 
-    public function heartbeat()
+    public function heartbeat(): View
     {
         return view('calm.heartbeat');
     }
 
-    public function reflection()
+    public function reflection(): View
     {
         return view('calm.reflection');
     }
@@ -143,7 +148,7 @@ class CalmZoneController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function sendReflection(Request $request)
+    public function sendReflection(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'message' => 'required|string|max:1000',
@@ -203,7 +208,7 @@ class CalmZoneController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function vault()
+    public function vault(): View
     {
         $lights = Auth::user()->vaultItems()
             ->orderBy('created_at', 'desc')
@@ -217,7 +222,7 @@ class CalmZoneController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
-    public function storeVaultItem(Request $request)
+    public function storeVaultItem(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'content' => 'required|string|max:2000',
@@ -238,7 +243,7 @@ class CalmZoneController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
-    public function suggestSong(Request $request)
+    public function suggestSong(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'title' => 'nullable|string|max:100',
@@ -307,7 +312,7 @@ class CalmZoneController extends Controller
         return back()->with('success', 'Música adicionada à Zona Calma.');
     }
 
-    public function deleteSong(PlaylistSong $song)
+    public function deleteSong(PlaylistSong $song): JsonResponse
     {
         if ($song->user_id !== Auth::id() && !Auth::user()->isAdmin()) {
             abort(403, 'Não tens permissão para apagar esta música.');
@@ -323,7 +328,7 @@ class CalmZoneController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
-    public function voteSong(PlaylistSong $song, Request $request)
+    public function voteSong(PlaylistSong $song, Request $request): JsonResponse|RedirectResponse
     {
         $userId = Auth::id();
 

@@ -71,7 +71,7 @@ Broadcast::channel('session.{sessionId}', function ($user, $sessionId) {
     // Terapeutas só acedem se estiverem atribuídos ao paciente desta sessão,
     // evitando que escutem sessões de pacientes que não são seus.
     if ($user->role === 'therapist') {
-        $therapist = \App\Models\Therapist::where('name', 'like', '%' . $user->name . '%')->first();
+        $therapist = $user->therapistProfile;
 
         if (!$therapist) {
             return false;

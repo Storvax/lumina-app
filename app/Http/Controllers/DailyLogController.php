@@ -7,6 +7,7 @@ use App\Services\GamificationService;
 use App\Services\CBTAnalysisService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Carbon\Carbon;
@@ -71,6 +72,9 @@ class DailyLogController extends Controller
                 'cbt_insight' => $insight,
             ]
         );
+
+        // Invalida a espiral em cache para refletir o novo registo no perfil.
+        Cache::forget("spiral:{$log->user_id}");
 
         if ($log->wasRecentlyCreated) {
             $this->gamification->trackAction(Auth::user(), 'daily_log');

@@ -4,125 +4,155 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.sp
+import pt.lumina.core.ui.R
 
 /**
- * Tipografia Lumina.
- * Pensada para ser legível mesmo em estados de stress/hands trembling.
- * PT-PT friendly: spacing relaxado, word-break friendly.
+ * Tipografia Lumina — Nunito + DM Sans via Google Fonts.
  *
- * Fontes:
- * - Plus Jakarta Sans: Auth, Errors (limpa, geométrica, moderna)
- * - Figtree: Dashboard, Fórum (legível em ecrãs pequenos)
+ * Escolhas deliberadamente não-genéricas:
+ * - Nunito: terminais redondas, quente, acolhedor — perfeito para saúde mental.
+ *   Não é Inter. Não é Roboto. Tem carácter próprio.
+ * - DM Sans: geométrica limpa, formas de 'a' e 'g' distintas — legível em stress.
  *
- * Paleta de tamanhos:
- * - Super Headings (títulos página): 3xl-5xl, font-black (900), tracking-tight
- * - Body (desabafos): sm-base, leading-relaxed (espaçamento confortável)
- * - Labels (dicas): xs, font-bold, uppercase, tracking-widest
+ * Hierarquia inspirada no Flinch:
+ * - Headlines: Black/ExtraBold, tracking negativo, grande contraste de tamanho
+ * - Body: Regular, espaçamento relaxado
+ * - Labels: Bold, uppercase, tracking largo (estilo Flinch)
+ *
+ * Fontes via GMS — sem CDN, sem bundle de assets, ~0kb no APK.
+ * Requerem internet no primeiro uso; depois ficam em cache.
  */
 
-// FontFamilies - Apontam para fontes em assets/fonts/
-// TODO: Adicionar Plus Jakarta Sans e Figtree aos recursos do projeto
-val PlusJakartaSansFontFamily = FontFamily.Default   // Será substituído quando fontes forem adicionadas
-val FigtreeFontFamily = FontFamily.Default            // Será substituído quando fontes forem adicionadas
+private val googleFontProvider = GoogleFont.Provider(
+    providerAuthority = "com.google.android.gms.fonts",
+    providerPackage  = "com.google.android.gms",
+    certificates     = R.array.com_google_android_gms_fonts_certs,
+)
+
+// Nunito: 9 pesos disponíveis (300–900). Usar ExtraBold/Black para impacto.
+private val nunitoFont = GoogleFont("Nunito")
+val NunitoFontFamily = FontFamily(
+    Font(googleFont = nunitoFont, fontProvider = googleFontProvider, weight = FontWeight.Normal),
+    Font(googleFont = nunitoFont, fontProvider = googleFontProvider, weight = FontWeight.Medium),
+    Font(googleFont = nunitoFont, fontProvider = googleFontProvider, weight = FontWeight.SemiBold),
+    Font(googleFont = nunitoFont, fontProvider = googleFontProvider, weight = FontWeight.Bold),
+    Font(googleFont = nunitoFont, fontProvider = googleFontProvider, weight = FontWeight.ExtraBold),
+    Font(googleFont = nunitoFont, fontProvider = googleFontProvider, weight = FontWeight.Black),
+)
+
+// DM Sans: limpa, moderna, com letterforms distintos. Boa para textos corridos.
+private val dmSansFont = GoogleFont("DM Sans")
+val DmSansFontFamily = FontFamily(
+    Font(googleFont = dmSansFont, fontProvider = googleFontProvider, weight = FontWeight.Normal),
+    Font(googleFont = dmSansFont, fontProvider = googleFontProvider, weight = FontWeight.Medium),
+    Font(googleFont = dmSansFont, fontProvider = googleFontProvider, weight = FontWeight.SemiBold),
+    Font(googleFont = dmSansFont, fontProvider = googleFontProvider, weight = FontWeight.Bold),
+)
 
 val LuminaTypography = Typography(
-    // ===== HEADLINES (Super Headings - texto-3xl a text-5xl, font-black) =====
+    // ── HEADLINES ─────────────────────────────────────────────────────────────
+    // Nunito Black com tracking negativo: impacto máximo, zero genérico
     headlineLarge = TextStyle(
-        fontFamily = PlusJakartaSansFontFamily,
-        fontWeight = FontWeight.Black,  // 900
-        fontSize = 44.sp,               // ~text-5xl
-        lineHeight = 52.sp,
-        letterSpacing = -0.5.sp         // tracking-tight
+        fontFamily   = NunitoFontFamily,
+        fontWeight   = FontWeight.Black,       // 900 — contraste forte com body
+        fontSize     = 40.sp,
+        lineHeight   = 46.sp,
+        letterSpacing = (-0.8).sp,             // tracking-tight: compacto, editorial
     ),
     headlineMedium = TextStyle(
-        fontFamily = PlusJakartaSansFontFamily,
-        fontWeight = FontWeight.Black,  // 900
-        fontSize = 36.sp,               // ~text-4xl
-        lineHeight = 44.sp,
-        letterSpacing = -0.3.sp
+        fontFamily   = NunitoFontFamily,
+        fontWeight   = FontWeight.Black,
+        fontSize     = 32.sp,
+        lineHeight   = 38.sp,
+        letterSpacing = (-0.5).sp,
     ),
     headlineSmall = TextStyle(
-        fontFamily = PlusJakartaSansFontFamily,
-        fontWeight = FontWeight.Black,  // 900
-        fontSize = 28.sp,               // ~text-3xl
-        lineHeight = 36.sp,
-        letterSpacing = -0.2.sp
+        fontFamily   = NunitoFontFamily,
+        fontWeight   = FontWeight.ExtraBold,   // 800
+        fontSize     = 26.sp,
+        lineHeight   = 32.sp,
+        letterSpacing = (-0.3).sp,
     ),
 
-    // ===== TITLES (Subtítulos e cabeçalhos de secções) =====
+    // ── TITLES ────────────────────────────────────────────────────────────────
+    // Nunito Bold para sub-headings, secções, cards
     titleLarge = TextStyle(
-        fontFamily = FigtreeFontFamily,
-        fontWeight = FontWeight.Bold,   // 700
-        fontSize = 24.sp,
-        lineHeight = 32.sp,
-        letterSpacing = 0.sp
+        fontFamily   = NunitoFontFamily,
+        fontWeight   = FontWeight.Bold,
+        fontSize     = 22.sp,
+        lineHeight   = 28.sp,
+        letterSpacing = 0.sp,
     ),
     titleMedium = TextStyle(
-        fontFamily = FigtreeFontFamily,
-        fontWeight = FontWeight.SemiBold, // 600
-        fontSize = 20.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.1.sp
+        fontFamily   = NunitoFontFamily,
+        fontWeight   = FontWeight.SemiBold,
+        fontSize     = 18.sp,
+        lineHeight   = 24.sp,
+        letterSpacing = 0.sp,
     ),
     titleSmall = TextStyle(
-        fontFamily = FigtreeFontFamily,
-        fontWeight = FontWeight.SemiBold, // 600
-        fontSize = 18.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.1.sp
+        fontFamily   = NunitoFontFamily,
+        fontWeight   = FontWeight.SemiBold,
+        fontSize     = 16.sp,
+        lineHeight   = 22.sp,
+        letterSpacing = 0.1.sp,
     ),
 
-    // ===== BODY (Desabafos, textos longos - text-sm a text-base, leading-relaxed) =====
-    // Leading-relaxed no Compose = 1.75x do tamanho da fonte aprox
+    // ── BODY ──────────────────────────────────────────────────────────────────
+    // DM Sans Regular com espaçamento relaxado — confortável em estados de stress
     bodyLarge = TextStyle(
-        fontFamily = FigtreeFontFamily,
-        fontWeight = FontWeight.Normal,  // 400
-        fontSize = 16.sp,                // ~text-base
-        lineHeight = 28.sp,              // relaxed spacing
-        letterSpacing = 0.3.sp,
-        color = SlateSlate600
+        fontFamily   = DmSansFontFamily,
+        fontWeight   = FontWeight.Normal,
+        fontSize     = 16.sp,
+        lineHeight   = 26.sp,                 // 1.625x — espaçamento generoso
+        letterSpacing = 0.1.sp,
+        color        = SlateSlate600,
     ),
     bodyMedium = TextStyle(
-        fontFamily = FigtreeFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,                // ~text-sm
-        lineHeight = 24.sp,              // relaxed
-        letterSpacing = 0.2.sp,
-        color = SlateSlate600
+        fontFamily   = DmSansFontFamily,
+        fontWeight   = FontWeight.Normal,
+        fontSize     = 14.sp,
+        lineHeight   = 22.sp,
+        letterSpacing = 0.1.sp,
+        color        = SlateSlate600,
     ),
     bodySmall = TextStyle(
-        fontFamily = FigtreeFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 20.sp,
+        fontFamily   = DmSansFontFamily,
+        fontWeight   = FontWeight.Normal,
+        fontSize     = 12.sp,
+        lineHeight   = 18.sp,
         letterSpacing = 0.1.sp,
-        color = SlateSlate500
+        color        = SlateSlate500,
     ),
 
-    // ===== LABELS (Dicas, hints - text-xs, font-bold, uppercase, tracking-widest) =====
+    // ── LABELS ────────────────────────────────────────────────────────────────
+    // DM Sans Bold uppercase com tracking largo — estilo Flinch
+    // Usado em etiquetas de campos, categorias, badges
     labelLarge = TextStyle(
-        fontFamily = FigtreeFontFamily,
-        fontWeight = FontWeight.Bold,    // 700
-        fontSize = 13.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.8.sp,          // tracking-widest
-        color = SlateSlate600
+        fontFamily   = DmSansFontFamily,
+        fontWeight   = FontWeight.Bold,
+        fontSize     = 11.sp,
+        lineHeight   = 16.sp,
+        letterSpacing = 1.0.sp,              // tracking-widest — estilo Flinch
+        color        = SlateSlate600,
     ),
     labelMedium = TextStyle(
-        fontFamily = FigtreeFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 11.sp,                // ~text-xs
-        lineHeight = 16.sp,
-        letterSpacing = 1.2.sp,          // tracking-widest
-        color = SlateSlate500
+        fontFamily   = DmSansFontFamily,
+        fontWeight   = FontWeight.Bold,
+        fontSize     = 10.sp,
+        lineHeight   = 14.sp,
+        letterSpacing = 1.2.sp,
+        color        = SlateSlate500,
     ),
     labelSmall = TextStyle(
-        fontFamily = FigtreeFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 10.sp,
-        lineHeight = 14.sp,
-        letterSpacing = 1.5.sp,          // tracking-widest
-        color = SlateSlate500
+        fontFamily   = DmSansFontFamily,
+        fontWeight   = FontWeight.Medium,
+        fontSize     = 10.sp,
+        lineHeight   = 14.sp,
+        letterSpacing = 0.5.sp,
+        color        = SlateSlate500,
     ),
 )

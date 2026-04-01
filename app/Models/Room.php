@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -28,5 +31,11 @@ class Room extends Model
     
     public function visits() {
         return $this->belongsToMany(User::class, 'room_visits');
+    }
+
+    /** Filtra salas públicas e ativas para a sidebar do chat. */
+    public function scopePublicActive(Builder $query): Builder
+    {
+        return $query->where('is_private', false)->where('is_active', true);
     }
 }

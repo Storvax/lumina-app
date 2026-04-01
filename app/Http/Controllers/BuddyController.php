@@ -1,17 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\BuddyApplication;
 use App\Models\BuddySession;
 use App\Models\Room;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class BuddyController extends Controller
 {
     // --- 1. PAINEL DO BUDDY ---
-    public function dashboard()
+    public function dashboard(): View
     {
         $user = Auth::user();
 
@@ -25,7 +29,11 @@ class BuddyController extends Controller
             ->with('user')
             ->get();
 
-        $pendingRequests = BuddySession::where('status', 'pending')->get();
+        // Pedidos anónimos sem buddy atribuído — identidade do requerente não é exposta até aceitação.
+        $pendingRequests = BuddySession::where('status', 'pending')
+            ->whereNull('buddy_id')
+            ->select(['id', 'created_at'])
+            ->get();
 
         $stats = [
             'total_helped' => BuddySession::where('buddy_id', $user->id)->where('status', 'completed')->count(),
@@ -36,7 +44,7 @@ class BuddyController extends Controller
     }
 
     // --- 2. PEDIR AJUDA (Utilizador normal) ---
-    public function requestBuddy()
+    public function requestBuddy(): RedirectResponse
     {
         // Evita pedidos duplicados: só é permitido um pedido pendente ou ativo por utilizador.
         $existing = BuddySession::where('user_id', Auth::id())
@@ -56,7 +64,7 @@ class BuddyController extends Controller
     }
 
     // --- 3. ACEITAR SESSÃO (Buddy) ---
-    public function acceptSession(BuddySession $session)
+    public function acceptSession(BuddySession $session): RedirectResponse
     {
         $user = Auth::user();
 
@@ -93,7 +101,7 @@ class BuddyController extends Controller
     }
 
     // --- 4. ESCALAR PARA MODERADOR (Crise) ---
-    public function escalate(BuddySession $session)
+    public function escalate(BuddySession $session): RedirectResponse
     {
         $user = Auth::user();
 
@@ -115,7 +123,7 @@ class BuddyController extends Controller
     }
 
     // --- 5. AVALIAÇÃO PÓS-SESSÃO (Utilizador) ---
-    public function evaluate(Request $request, BuddySession $session)
+    public function evaluate(Request $request, BuddySession $session): RedirectResponse
     {
         $user = Auth::user();
 
@@ -146,7 +154,7 @@ class BuddyController extends Controller
     }
 
     // --- 6. CANDIDATAR-SE A OUVINTE ---
-    public function apply(Request $request)
+    public function apply(Request $request): RedirectResponse
     {
         $user = Auth::user();
 

@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Events\SomaticSyncTriggered;
 use App\Models\DailyLog;
-use App\Models\Therapist;
-use App\Models\Mission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -18,7 +16,7 @@ class TherapistController extends Controller
      */
     public function dashboard()
     {
-        $therapist = Therapist::where('name', 'like', '%' . Auth::user()->name . '%')->first();
+        $therapist = Auth::user()->therapistProfile;
 
         if (!$therapist) {
             abort(403, 'Perfil de terapeuta não encontrado.');
@@ -74,11 +72,9 @@ class TherapistController extends Controller
             'mission_id' => 'required|exists:missions,id',
         ]);
 
-        $therapist = Therapist::whereHas('patients', function ($q) use ($validated) {
-            $q->where('user_id', $validated['patient_id']);
-        })->first();
+        $therapist = Auth::user()->therapistProfile;
 
-        if (!$therapist) {
+        if (!$therapist || !$therapist->patients()->where('users.id', $validated['patient_id'])->exists()) {
             return response()->json(['error' => 'Não és o terapeuta deste paciente.'], 403);
         }
 

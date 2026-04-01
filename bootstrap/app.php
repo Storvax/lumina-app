@@ -30,7 +30,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'onboarding' => \App\Http\Middleware\EnsureOnboardingCompleted::class,
+            'onboarding'   => \App\Http\Middleware\EnsureOnboardingCompleted::class,
+            'two-factor'   => \App\Http\Middleware\RequiresTwoFactor::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

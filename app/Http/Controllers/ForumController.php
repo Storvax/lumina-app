@@ -1,58 +1,49 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
+use App\Models\Comment;
+use App\Models\ModerationLog;
 use App\Models\Post;
 use App\Models\PostCheckin;
-use App\Models\User;
-use App\Models\PostReaction;
-use App\Models\Comment;
 use App\Models\Report;
-use App\Models\ModerationLog;
-use App\Models\PactPrompt;
-use App\Models\PactAnswer;
-use Illuminate\Support\Facades\DB;
-use App\Notifications\ForumInteraction;
-use App\Services\GamificationService;
-use App\Services\CBTAnalysisService;
+use App\Models\User;
+use App\Services\ForumService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\View\View;
 
 /**
  * Gere o Mural da Esperança (Fórum).
- * Integra processamento de NLP para deteção de crise e moderação assistida.
+ * A lógica de negócio (NLP, reações, comentários) está em ForumService.
  */
 class ForumController extends Controller
 {
-    protected GamificationService $gamification;
-    protected CBTAnalysisService $nlpService;
-
-    public function __construct(GamificationService $gamification, CBTAnalysisService $nlpService)
-    {
-        $this->gamification = $gamification;
-        $this->nlpService = $nlpService;
-    }
+    public function __construct(private ForumService $forumService) {}
 
     /**
      * Lista as publicações do mural com suporte a filtros e pesquisa.
      */
-    public function index(Request $request)
+    public function index(Request $request): View|JsonResponse
     {
         $query = Post::with(['user', 'reactions', 'comments'])
-            ->orderBy('is_pinned', 'desc') 
-            ->latest(); 
+            ->orderBy('is_pinned', 'desc')
+            ->latest();
 
-        if ($request->has('search') && $request->search != '') {
+        if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
                   ->orWhere('content', 'like', "%{$search}%");
             });
         }
 
-        if ($request->has('tag') && $request->tag != 'all') {
+        if ($request->filled('tag') && $request->tag !== 'all') {
             $query->where('tag', $request->tag);
         }
 
@@ -61,33 +52,33 @@ class ForumController extends Controller
         // Para pedidos AJAX (filtros ou scroll infinito), devolvemos HTML + cursor metadata.
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
-                'html' => view('forum.partials.posts', compact('posts'))->render(),
+                'html'       => view('forum.partials.posts', compact('posts'))->render(),
                 'nextCursor' => $posts->nextCursor()?->encode(),
-                'hasMore' => $posts->hasMorePages(),
+                'hasMore'    => $posts->hasMorePages(),
             ]);
         }
 
         return view('forum.index', compact('posts'));
     }
-    
+
     /**
      * Exibe os detalhes de uma publicação específica e os respetivos comentários.
      */
-    public function show(Post $post)
+    public function show(Post $post): View
     {
-        $post->load(['user', 'comments' => function($q) {
+        $post->load(['user', 'comments' => function ($q) {
             $q->whereNull('parent_id')
               ->with(['user', 'replies.user', 'reactions', 'replies.reactions'])
               ->latest();
         }]);
-        
+
         $post->loadCount('comments');
 
         $relatedPosts = Post::where('tag', $post->tag)
-                            ->where('id', '!=', $post->id)
-                            ->latest()
-                            ->take(3)
-                            ->get();
+            ->where('id', '!=', $post->id)
+            ->latest()
+            ->take(3)
+            ->get();
 
         return view('forum.show', compact('post', 'relatedPosts'));
     }
@@ -97,37 +88,21 @@ class ForumController extends Controller
      * Suporta "Whispered Wall": o utilizador pode publicar texto OU áudio,
      * mas o título é sempre obrigatório para indexação e acessibilidade.
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'title' => 'required|max:100',
-            'content' => 'nullable|required_without:audio_file|string|max:1000',
-            'tag' => 'required|in:hope,vent,anxiety',
+            'title'        => 'required|max:100',
+            'content'      => 'nullable|required_without:audio_file|string|max:1000',
+            'tag'          => 'required|in:hope,vent,anxiety',
             'is_sensitive' => 'sometimes|accepted',
-            'audio_file' => 'nullable|required_without:content|file|mimes:webm,mp3,wav,ogg|max:10240',
+            'audio_file'   => 'nullable|required_without:content|file|mimes:webm,mp3,wav,ogg|max:10240',
         ]);
 
-        // NLP só analisa texto; publicações apenas com áudio passam sem triagem automática
-        $fullText = $validated['title'] . ' ' . ($validated['content'] ?? '');
-        $analysis = $this->nlpService->analyzeForumPost($fullText);
+        $audioPath = $request->hasFile('audio_file')
+            ? $request->file('audio_file')->store('whispers', 'public')
+            : null;
 
-        $audioPath = null;
-        if ($request->hasFile('audio_file')) {
-            $audioPath = $request->file('audio_file')->store('whispers', 'public');
-        }
-
-        $post = Post::create([
-            'user_id' => Auth::id(),
-            'title' => $validated['title'],
-            'content' => $validated['content'] ?? null,
-            'audio_path' => $audioPath,
-            'tag' => $validated['tag'],
-            'is_sensitive' => $request->has('is_sensitive') || $analysis['is_sensitive'],
-            'risk_level' => $analysis['risk_level'],
-            'sentiment' => $analysis['sentiment'],
-        ]);
-
-        $this->gamification->trackAction(Auth::user(), 'first_post');
+        $this->forumService->processAndCreatePost(Auth::user(), $validated, $audioPath);
 
         return response()->json(['message' => 'Post criado com sucesso!']);
     }
@@ -135,30 +110,20 @@ class ForumController extends Controller
     /**
      * Atualiza uma publicação e reavalia o risco clínico (NLP).
      */
-    public function update(Request $request, Post $post)
+    public function update(Request $request, Post $post): JsonResponse
     {
         if (Auth::id() !== $post->user_id) {
             abort(403, 'Acesso não autorizado.');
         }
 
         $validated = $request->validate([
-            'title' => 'required|max:100',
-            'content' => 'required|max:1000',
-            'tag' => 'required|in:hope,vent,anxiety',
-            'is_sensitive' => 'sometimes|accepted'
+            'title'        => 'required|max:100',
+            'content'      => 'required|max:1000',
+            'tag'          => 'required|in:hope,vent,anxiety',
+            'is_sensitive' => 'sometimes|accepted',
         ]);
 
-        $fullText = $validated['title'] . ' ' . $validated['content'];
-        $analysis = $this->nlpService->analyzeForumPost($fullText);
-
-        $post->update([
-            'title' => $validated['title'],
-            'content' => $validated['content'],
-            'tag' => $validated['tag'],
-            'is_sensitive' => $request->has('is_sensitive') || $analysis['is_sensitive'],
-            'risk_level' => $analysis['risk_level'],
-            'sentiment' => $analysis['sentiment'],
-        ]);
+        $this->forumService->processAndUpdatePost($post, $validated);
 
         return response()->json(['message' => 'Post atualizado com sucesso!']);
     }
@@ -166,7 +131,7 @@ class ForumController extends Controller
     /**
      * Remove uma publicação (pelo autor ou por um moderador).
      */
-    public function destroy(Post $post)
+    public function destroy(Post $post): JsonResponse
     {
         $user = Auth::user();
 
@@ -176,175 +141,101 @@ class ForumController extends Controller
 
         if ($user->isModerator() && $user->id !== $post->user_id) {
             ModerationLog::create([
-                'moderator_id' => $user->id,
+                'moderator_id'   => $user->id,
                 'target_user_id' => $post->user_id,
-                'target_type' => Post::class,
-                'target_id' => $post->id,
-                'action' => 'delete',
-                'reason' => 'Violação das regras (Apagado pelo Admin)'
+                'target_type'    => Post::class,
+                'target_id'      => $post->id,
+                'action'         => 'delete',
+                'reason'         => 'Violação das regras (Apagado pelo Admin)',
             ]);
         }
 
         $post->delete();
+
         return response()->json(['message' => 'Post apagado com sucesso.']);
     }
 
     /**
-     * Toggle puro de reações emocionais por tipo.
-     * Cada tipo (hug, candle, ear) funciona de forma independente:
-     * se já existe para este utilizador, remove; caso contrário, cria.
-     * Previne spam e garante integridade via unicidade user+post+type.
+     * Toggle de reação emocional (hug/candle/ear).
      */
-    public function react(Request $request, Post $post)
+    public function react(Request $request, Post $post): JsonResponse
     {
         if ($post->is_locked) {
             return response()->json(['error' => 'A publicação está trancada.'], 403);
         }
 
         $request->validate(['type' => 'required|in:hug,candle,ear']);
-        $user = Auth::user();
 
-        $existing = PostReaction::where('user_id', $user->id)
-                                ->where('post_id', $post->id)
-                                ->where('type', $request->type)
-                                ->first();
-
-        if ($existing) {
-            $existing->delete();
-            $action = 'removed';
-        } else {
-            PostReaction::create([
-                'user_id' => $user->id,
-                'post_id' => $post->id,
-                'type' => $request->type,
-            ]);
-            $action = 'added';
-
-            // Notificar o autor apenas em novas reações (não no toggle-off)
-            if ($post->user_id !== $user->id) {
-                $this->gamification->trackAction($user, 'reaction');
-
-                // Shadowban: utilizador fantasma não dispara notificações
-                if (!$user->isShadowbanned()) {
-                    $customMessage = match($request->type) {
-                        'hug' => 'Alguém deixou-te um abraço apertado na tua história.',
-                        'candle' => 'Alguém acendeu uma vela de esperança por ti.',
-                        'ear' => 'Alguém está aqui para te ouvir, em silêncio.',
-                        default => 'Alguém interagiu com a tua história.',
-                    };
-
-                    $post->user->notify(new ForumInteraction($post, $user, 'reaction', $customMessage));
-                }
-            }
-        }
-
-        return response()->json([
-            'action' => $action,
-            'counts' => [
-                'hug' => $post->reactions()->where('type', 'hug')->count(),
-                'candle' => $post->reactions()->where('type', 'candle')->count(),
-                'ear' => $post->reactions()->where('type', 'ear')->count(),
-            ],
-        ]);
+        return response()->json(
+            $this->forumService->toggleReaction(Auth::user(), $post, $request->type)
+        );
     }
 
     /**
      * Adiciona um comentário ou resposta a uma publicação.
      */
-    public function comment(Request $request, Post $post)
+    public function comment(Request $request, Post $post): RedirectResponse
     {
         if ($post->is_locked) {
             return back()->with('error', 'A publicação encontra-se trancada.');
         }
 
         $request->validate([
-            'body' => 'required|max:500',
-            'parent_id' => 'nullable|exists:comments,id'
+            'body'      => 'required|max:500',
+            'parent_id' => 'nullable|exists:comments,id',
         ]);
 
-        $post->comments()->create([
-            'user_id' => Auth::id(),
-            'body' => $request->body,
-            'parent_id' => $request->parent_id
-        ]);
-
-        $this->gamification->trackAction(Auth::user(), 'reply');
-
-        $recipients = collect();
-
-        if ($post->user_id !== Auth::id()) {
-            $recipients->push($post->user);
-        }
-
-        $subscribers = $post->subscribers()->where('user_id', '!=', Auth::id())->get();
-        $recipients = $recipients->merge($subscribers);
-
-        if ($request->parent_id) {
-            $parent = Comment::find($request->parent_id);
-            if ($parent && $parent->user_id !== Auth::id()) {
-                $recipients->push($parent->user);
-            }
-        }
-
-        $uniqueRecipients = $recipients->unique('id');
-        
-        // Shadowban: utilizador fantasma não dispara notificações
-        if ($uniqueRecipients->count() > 0 && !Auth::user()->isShadowbanned()) {
-            $customMessage = $request->parent_id 
-                ? 'Alguém respondeu diretamente ao teu comentário.' 
-                : 'Alguém partilhou palavras de conforto na tua publicação.';
-
-            Notification::send(
-                $uniqueRecipients, 
-                new ForumInteraction($post, Auth::user(), 'comment', $customMessage)
-            );
-        }
+        $this->forumService->addComment(Auth::user(), $post, $request->only('body', 'parent_id'));
 
         return back();
     }
 
     /**
-     * Alterna o estado de afixação de uma publicação (Apenas Moderadores).
+     * Alterna o estado de afixação de uma publicação (apenas Moderadores).
      */
-    public function togglePin(Post $post)
+    public function togglePin(Post $post): RedirectResponse
     {
         if (!Auth::user()->isModerator()) {
             abort(403, 'Acesso não autorizado.');
         }
+
         $post->update(['is_pinned' => !$post->is_pinned]);
+
         return back();
     }
 
     /**
-     * Tranca ou destranca uma publicação (Apenas Moderadores).
+     * Tranca ou destranca uma publicação (apenas Moderadores).
      */
-    public function toggleLock(Post $post)
+    public function toggleLock(Post $post): RedirectResponse
     {
         if (!Auth::user()->isModerator()) {
             abort(403, 'Acesso não autorizado.');
         }
+
         $post->update(['is_locked' => !$post->is_locked]);
+
         return back();
     }
 
     /**
      * Aplica o estado de "Shadowban" a um utilizador reportado.
      */
-    public function shadowbanUser(Request $request, User $user)
+    public function shadowbanUser(Request $request, User $user): JsonResponse
     {
         if (!Auth::user()->isModerator()) {
             abort(403, 'Acesso não autorizado.');
         }
-        
+
         $user->update(['shadowbanned_until' => now()->addDays(7)]);
 
         ModerationLog::create([
-            'moderator_id' => Auth::id(),
+            'moderator_id'   => Auth::id(),
             'target_user_id' => $user->id,
-            'target_type' => 'user',
-            'target_id' => $user->id,
-            'action' => 'shadowban',
-            'reason' => 'Comportamento tóxico (Automático ou Manual via Mural)'
+            'target_type'    => 'user',
+            'target_id'      => $user->id,
+            'action'         => 'shadowban',
+            'reason'         => 'Comportamento tóxico (Automático ou Manual via Mural)',
         ]);
 
         return response()->json(['message' => 'Utilizador em modo fantasma.']);
@@ -353,19 +244,19 @@ class ForumController extends Controller
     /**
      * Regista uma denúncia para análise por parte da moderação.
      */
-    public function report(Request $request, Post $post)
+    public function report(Request $request, Post $post): JsonResponse
     {
         $request->validate(['reason' => 'required|string|max:50']);
 
         $exists = Report::where('user_id', Auth::id())
-                        ->where('post_id', $post->id)
-                        ->exists();
+            ->where('post_id', $post->id)
+            ->exists();
 
         if (!$exists) {
             Report::create([
                 'user_id' => Auth::id(),
                 'post_id' => $post->id,
-                'reason' => $request->reason,
+                'reason'  => $request->reason,
             ]);
         }
 
@@ -375,44 +266,28 @@ class ForumController extends Controller
     /**
      * Guarda ou remove uma publicação dos favoritos do utilizador.
      */
-    public function toggleSave(Post $post)
+    public function toggleSave(Post $post): JsonResponse
     {
         $user = Auth::user();
-        
+
         if ($user->savedPosts()->where('post_id', $post->id)->exists()) {
             $user->savedPosts()->detach($post->id);
-            $message = 'Publicação removida dos guardados.';
-            $saved = false;
-        } else {
-            $user->savedPosts()->attach($post->id);
-            $message = 'Publicação guardada no teu perfil.';
-            $saved = true;
+            return response()->json(['message' => 'Publicação removida dos guardados.', 'saved' => false]);
         }
 
-        return response()->json(['message' => $message, 'saved' => $saved]);
+        $user->savedPosts()->attach($post->id);
+
+        return response()->json(['message' => 'Publicação guardada no teu perfil.', 'saved' => true]);
     }
 
     /**
      * Reage a um comentário específico.
      */
-    public function reactToComment(Request $request, Comment $comment)
+    public function reactToComment(Request $request, Comment $comment): JsonResponse
     {
         $request->validate(['type' => 'required|in:hug,heart,muscle']);
-        
-        $existing = \App\Models\CommentReaction::where('user_id', Auth::id())
-            ->where('comment_id', $comment->id)
-            ->first();
 
-        if ($existing && $existing->type == $request->type) {
-            $existing->delete();
-            $action = 'removed';
-        } else {
-            \App\Models\CommentReaction::updateOrCreate(
-                ['user_id' => Auth::id(), 'comment_id' => $comment->id],
-                ['type' => $request->type]
-            );
-            $action = 'added';
-        }
+        $action = $this->forumService->toggleCommentReaction(Auth::user(), $comment, $request->type);
 
         return response()->json(['action' => $action]);
     }
@@ -420,12 +295,14 @@ class ForumController extends Controller
     /**
      * Marca um comentário como particularmente útil pelo autor do tópico.
      */
-    public function markHelpful(Comment $comment)
+    public function markHelpful(Comment $comment): RedirectResponse
     {
         if (Auth::id() !== $comment->post->user_id) {
             abort(403, 'Acesso não autorizado.');
         }
+
         $comment->update(['is_helpful' => !$comment->is_helpful]);
+
         return back();
     }
 
@@ -433,7 +310,7 @@ class ForumController extends Controller
      * Regista como o utilizador se sentiu após ler uma publicação sensível.
      * Se reportar tristeza, a resposta inclui uma sugestão para a Zona Calma.
      */
-    public function postCheckin(Request $request, Post $post): \Illuminate\Http\JsonResponse
+    public function postCheckin(Request $request, Post $post): JsonResponse
     {
         $request->validate([
             'emotion' => 'required|in:empathy,sadness,strength,neutral',
@@ -461,7 +338,7 @@ class ForumController extends Controller
      * Gera um resumo empático via OpenAI, com cache no campo ai_summary
      * para evitar chamadas redundantes à API.
      */
-    public function summarize(Post $post)
+    public function summarize(Post $post): JsonResponse
     {
         if ($post->ai_summary) {
             return response()->json(['summary' => $post->ai_summary]);
@@ -471,18 +348,18 @@ class ForumController extends Controller
             $response = Http::withToken(config('services.openai.api_key'))
                 ->timeout(15)
                 ->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => config('services.openai.model', 'gpt-4o-mini'),
+                    'model'    => config('services.openai.model', 'gpt-4o-mini'),
                     'messages' => [
                         [
-                            'role' => 'system',
+                            'role'    => 'system',
                             'content' => 'Resume este desabafo em 3 bullet points curtos e empáticos. Devolve apenas HTML <ul><li>. Valida os sentimentos sem julgar. Responde em Português de Portugal.',
                         ],
                         [
-                            'role' => 'user',
+                            'role'    => 'user',
                             'content' => $post->content,
                         ],
                     ],
-                    'max_tokens' => 200,
+                    'max_tokens'  => 200,
                     'temperature' => 0.7,
                 ]);
 
@@ -502,77 +379,17 @@ class ForumController extends Controller
     /**
      * Ativa ou desativa a receção de notificações para uma publicação.
      */
-    public function toggleSubscription(Post $post)
+    public function toggleSubscription(Post $post): JsonResponse
     {
-        $user = Auth::user();
+        $user         = Auth::user();
         $subscription = $post->subscribers()->toggle($user->id);
-        $subscribed = count($subscription['attached']) > 0;
+        $subscribed   = count($subscription['attached']) > 0;
 
         return response()->json([
             'subscribed' => $subscribed,
-            'message' => $subscribed ? 'Notificações ativadas para esta publicação.' : 'Notificações desativadas.'
+            'message'    => $subscribed
+                ? 'Notificações ativadas para esta publicação.'
+                : 'Notificações desativadas.',
         ]);
-    }
-
-    /**
-     * Exibe o pacto do dia com respostas comunitárias.
-     * Rotação determinística por active_date; fallback cíclico se nenhum estiver agendado.
-     */
-    public function pact()
-    {
-        $todayPrompt = PactPrompt::where('active_date', now()->toDateString())->first();
-
-        // Fallback cíclico: roda entre todos os prompts por dia do ano
-        if (!$todayPrompt) {
-            $prompts = PactPrompt::orderBy('id')->get();
-            $todayPrompt = $prompts->isNotEmpty()
-                ? $prompts[now()->dayOfYear % $prompts->count()]
-                : null;
-        }
-
-        $communityAnswers = collect();
-        $myAnswer = null;
-
-        if ($todayPrompt) {
-            $communityAnswers = PactAnswer::where('pact_prompt_id', $todayPrompt->id)
-                ->where('user_id', '!=', Auth::id())
-                ->latest()
-                ->take(20)
-                ->get();
-
-            $myAnswer = PactAnswer::where('user_id', Auth::id())
-                ->where('pact_prompt_id', $todayPrompt->id)
-                ->whereDate('created_at', now()->toDateString())
-                ->first();
-        }
-
-        return view('calm.pact', compact('todayPrompt', 'communityAnswers', 'myAnswer'));
-    }
-
-    /**
-     * Guarda a resposta do utilizador ao pacto do dia.
-     * updateOrCreate garante uma única resposta por prompt por utilizador.
-     */
-    public function storePact(Request $request)
-    {
-        $validated = $request->validate([
-            'pact_prompt_id' => 'required|exists:pact_prompts,id',
-            'answer' => 'required|string|max:2000',
-        ]);
-
-        $answer = Auth::user()->pactAnswers()->updateOrCreate(
-            [
-                'pact_prompt_id' => $validated['pact_prompt_id'],
-            ],
-            [
-                'answer' => $validated['answer'],
-            ]
-        );
-
-        if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'answer' => $answer]);
-        }
-
-        return back()->with('success', 'A tua reflexão foi guardada.');
     }
 }

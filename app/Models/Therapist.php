@@ -7,7 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Therapist extends Model
 {
-    protected $fillable = ['name', 'specialty', 'approach', 'avatar'];
+    protected $fillable = ['user_id', 'name', 'specialty', 'approach', 'avatar'];
+
+    /**
+     * Conta de utilizador associada a este perfil de terapeuta.
+     */
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     /**
      * Pacientes atribuídos a este terapeuta via tabela pivot.

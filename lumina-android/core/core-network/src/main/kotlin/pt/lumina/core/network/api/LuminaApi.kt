@@ -13,10 +13,27 @@ import retrofit2.http.POST
 interface LuminaApi {
     // Auth
     @FormUrlEncoded
+    @POST("api/v1/auth/register")
+    suspend fun register(
+        @Field("name") name: String,
+        @Field("email") email: String,
+        @Field("password") password: String,
+        @Field("password_confirmation") passwordConfirmation: String,
+    ): ApiResponse<Any>
+
+    @FormUrlEncoded
     @POST("api/v1/auth/login")
     suspend fun login(
         @Field("email") email: String,
         @Field("password") password: String,
+    ): ApiResponse<Any>
+
+    @FormUrlEncoded
+    @POST("api/v1/onboarding")
+    suspend fun submitOnboarding(
+        @Field("intent") intent: String,
+        @Field("mood") mood: String,
+        @Field("preference") preference: String,
     ): ApiResponse<Any>
 
     @POST("api/v1/auth/logout")

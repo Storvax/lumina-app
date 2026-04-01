@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -40,11 +43,16 @@ class User extends Authenticatable implements FilamentUser
         'encrypted_private_key',
         'onboarding_tours',
         'company_id',
+        'two_factor_secret',
+        'two_factor_confirmed',
+        'is_buddy',
+        'is_buddy_available',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
         'encrypted_private_key',
     ];
 
@@ -62,6 +70,9 @@ class User extends Authenticatable implements FilamentUser
             'a11y_dyslexic_font' => 'boolean',
             'a11y_reduced_motion' => 'boolean',
             'onboarding_tours' => 'array',
+            'two_factor_confirmed' => 'boolean',
+            // Segredo TOTP encriptado em repouso via cast nativo do Laravel.
+            'two_factor_secret' => 'encrypted',
         ];
     }
 
@@ -203,6 +214,26 @@ class User extends Authenticatable implements FilamentUser
         return $this->belongsTo(Company::class);
     }
 
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function messages()
+    {
+        return $this->hasMany(Message::class);
+    }
+
+    public function reactions()
+    {
+        return $this->hasMany(PostReaction::class);
+    }
+
+    public function selfAssessments()
+    {
+        return $this->hasMany(SelfAssessment::class);
+    }
+
     /**
      * Terapeutas atribuídos a este paciente (relação N:M).
      */
@@ -210,5 +241,26 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->belongsToMany(Therapist::class, 'patient_therapist')
             ->withTimestamps();
+    }
+
+    /**
+     * Perfil de terapeuta deste utilizador (quando role = 'therapist').
+     * Lookup por user_id em vez de name para garantir unicidade.
+     */
+    public function therapistProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Therapist::class);
+    }
+
+    /** Filtra utilizadores activos — sem ban e sem soft-delete. */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereNull('banned_at');
+    }
+
+    /** Filtra utilizadores que não estão em modo de hibernação. */
+    public function scopeNotHibernated(Builder $query): Builder
+    {
+        return $query->whereNull('hibernated_at');
     }
 }

@@ -106,10 +106,10 @@ private val DarkColors = darkColorScheme(
 @Composable
 fun LuminaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Mudar o padrão para false
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
+        val colorScheme = when {
         // Android 12+: Dynamic colors respeitam o wallpaper/sistema
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

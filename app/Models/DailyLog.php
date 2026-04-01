@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class DailyLog extends Model
 {
+    use HasFactory;
+
     protected $fillable = ['user_id', 'mood_level', 'tags', 'note', 'log_date', 'cbt_insight'];
 
     // O Laravel converte automaticamente o JSON para Array e vice-versa

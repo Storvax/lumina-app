@@ -13,6 +13,7 @@ use App\Models\Achievement;
 use App\Models\Milestone;
 use App\Services\GamificationService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class ProfileController extends Controller
 {
@@ -49,7 +50,8 @@ class ProfileController extends Controller
         }
 
         // --- Gamification & Badges ---
-        $allAchievements = Achievement::all();
+        // Achievements são definidos em seed e raramente mudam — cache de 1h partilhado por todos os utilizadores.
+        $allAchievements = Cache::remember('all_achievements', 3600, fn () => Achievement::all());
         $unlockedIds = $user->achievements->pluck('id')->toArray();
 
         $flames = $user->flames ?? 0;
@@ -74,17 +76,20 @@ class ProfileController extends Controller
             4 => '#14b8a6', 5 => '#6366f1',
         ];
 
-        $spiralData = DailyLog::where('user_id', $user->id)
-            ->orderBy('log_date', 'desc')
-            ->take(30)
-            ->get()
-            ->reverse()
-            ->values()
-            ->map(fn ($log) => [
-                'date'  => Carbon::parse($log->log_date)->format('d/m'),
-                'color' => $colorMap[$log->mood_level] ?? '#cbd5e1',
-                'note'  => $log->note ? mb_strimwidth($log->note, 0, 60, '...') : 'Sem nota escrita',
-            ]);
+        // Cache de 24h: a espiral só muda quando o utilizador regista um novo diário.
+        $spiralData = Cache::remember("spiral:{$user->id}", 86400, function () use ($user, $colorMap) {
+            return DailyLog::where('user_id', $user->id)
+                ->orderBy('log_date', 'desc')
+                ->take(30)
+                ->get()
+                ->reverse()
+                ->values()
+                ->map(fn ($log) => [
+                    'date'  => Carbon::parse($log->log_date)->format('d/m'),
+                    'color' => $colorMap[$log->mood_level] ?? '#cbd5e1',
+                    'note'  => $log->note ? mb_strimwidth($log->note, 0, 60, '...') : 'Sem nota escrita',
+                ]);
+        });
 
         $milestones = $user->milestones()->orderBy('date', 'desc')->get();
         $tagsList = ['Ansiedade', 'Luto', 'Burnout', 'Depressão', 'TDAH', 'Pânico', 'Recuperação', 'Stress', 'Solidão'];
@@ -184,6 +189,15 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+
+        // Registo de auditoria antes do logout — após logout $request->user() é null.
+        \App\Models\DataAccessLog::create([
+            'user_id'     => $user->id,
+            'accessed_by' => $user->id,
+            'data_type'   => 'account_deletion_initiated',
+            'purpose'     => 'Pedido de eliminação de conta pelo próprio utilizador.',
+            'ip_address'  => $request->ip(),
+        ]);
 
         Auth::logout();
         $user->delete();
