@@ -99,12 +99,14 @@ it('revoga o token no logout', function () {
     $user = User::factory()->create();
     $token = $user->createToken('test')->plainTextToken;
 
-    $response = $this->withHeader('Authorization', "Bearer {$token}")
-        ->postJson('/api/v1/auth/logout');
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/v1/auth/logout')
+        ->assertStatus(200);
 
-    $response->assertStatus(200);
+    // Limpa cache do guard Sanctum para forçar re-autenticação na próxima request.
+    // Sem este reset, o utilizador permanece em memória mesmo após a revogação do token.
+    $this->app['auth']->forgetGuards();
 
-    // Token revogado — próxima chamada deve retornar 401
     $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/v1/auth/me')
         ->assertStatus(401);

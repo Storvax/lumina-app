@@ -79,10 +79,10 @@
                                     <p class="font-bold text-slate-800 dark:text-white text-sm">Sessão #{{ $session->id }}</p>
                                     <span class="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-md">Ativa</span>
                                 </div>
-                                
+
                                 <div class="flex gap-2">
                                     <a href="{{ route('chat.show', $session->room->slug) }}" class="flex-1 text-center bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold px-4 py-2 rounded-xl text-sm transition-colors">Ir para Chat</a>
-                                    
+
                                     <form action="{{ route('buddy.escalate', $session) }}" method="POST" onsubmit="return confirm('ATENÇÃO: Tens a certeza que queres escalar esta conversa para emergência clínica? O utilizador e moderadores serão notificados.')">
                                         @csrf
                                         <button class="bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-500 hover:text-white p-2 rounded-xl text-sm transition-colors" title="Pedir ajuda a moderador clínico">
@@ -90,6 +90,10 @@
                                         </button>
                                     </form>
                                 </div>
+                            </div>
+                        @empty
+                            <div class="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-center">
+                                <p class="text-slate-500">Ainda não tens conversas ativas.</p>
                             </div>
                         @endforelse
                     </div>
