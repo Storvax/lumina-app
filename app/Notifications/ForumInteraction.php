@@ -92,7 +92,8 @@ class ForumInteraction extends Notification
         }
 
         return [
-            'post_id' => $this->post->id,
+            'post_id'   => $this->post->id,
+            'post_slug' => $this->post->slug,
             'user_id' => $this->user->id,
             'message' => $this->customMessage ?? $defaultMessage,
             'icon' => $icon,

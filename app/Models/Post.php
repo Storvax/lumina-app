@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use App\Models\Scopes\ShadowbanScope;
 
 class Post extends Model
@@ -19,6 +20,7 @@ class Post extends Model
     protected $fillable = [
         'user_id',
         'title',
+        'slug',
         'content',
         'audio_path',
         'tag',
@@ -34,6 +36,17 @@ class Post extends Model
     protected static function booted(): void
     {
         static::addGlobalScope(new ShadowbanScope);
+
+        static::creating(function (Post $post): void {
+            if (empty($post->slug)) {
+                $post->slug = Str::slug($post->title) . '-' . Str::random(6);
+            }
+        });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
     }
 
     public function user(): BelongsTo

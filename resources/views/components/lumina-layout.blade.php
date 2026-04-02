@@ -153,7 +153,7 @@
                                 <div class="max-h-64 overflow-y-auto">
                                     @forelse(Auth::user()->notifications()->latest()->take(8)->get() as $notification)
                                         @php $data = $notification->data; @endphp
-                                        <a href="{{ isset($data['post_id']) ? route('forum.show', $data['post_id']) : '#' }}" class="block px-4 py-3 hover:bg-slate-50 transition-colors {{ $notification->read_at ? 'opacity-60' : 'bg-indigo-50/20' }}">
+                                        <a href="{{ isset($data['post_slug']) ? route('forum.show', $data['post_slug']) : (isset($data['post_id']) ? route('forum.show', $data['post_id']) : '#') }}" class="block px-4 py-3 hover:bg-slate-50 transition-colors {{ $notification->read_at ? 'opacity-60' : 'bg-indigo-50/20' }}">
                                             <div class="flex items-start gap-3">
                                                 <div class="w-8 h-8 rounded-full {{ ($data['type'] ?? '') == 'reaction' ? 'bg-rose-100 text-rose-500' : 'bg-indigo-100 text-indigo-500' }} flex items-center justify-center text-sm shrink-0">
                                                     <i class="{{ ($data['type'] ?? '') == 'reaction' ? 'ri-heart-fill' : 'ri-chat-1-fill' }}"></i>

@@ -57,7 +57,7 @@
                         <div class="max-h-80 overflow-y-auto custom-scrollbar">
                             @forelse(Auth::user()->notifications()->latest()->take(10)->get() as $notification)
                                 @php $data = $notification->data; @endphp
-                                <a href="{{ isset($data['post_id']) ? route('forum.show', $data['post_id']) : '#' }}" class="block px-5 py-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 {{ $notification->read_at ? 'opacity-60' : 'bg-indigo-50/20' }}">
+                                <a href="{{ isset($data['post_slug']) ? route('forum.show', $data['post_slug']) : (isset($data['post_id']) ? route('forum.show', $data['post_id']) : '#') }}" class="block px-5 py-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 {{ $notification->read_at ? 'opacity-60' : 'bg-indigo-50/20' }}">
                                     <div class="flex items-start gap-4">
                                         <div class="w-10 h-10 rounded-2xl {{ $data['color'] ?? 'bg-slate-100 text-slate-500' }} flex items-center justify-center text-lg shrink-0">
                                             <i class="{{ $data['icon'] ?? 'ri-notification-line' }}"></i>
