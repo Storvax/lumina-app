@@ -11,6 +11,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Forms;
 use Filament\Tables;
+use Filament\Actions\EditAction;
 use Filament\Tables\Table;
 
 class FeatureFlagResource extends Resource
@@ -73,7 +74,7 @@ class FeatureFlagResource extends Resource
                     ->since(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                EditAction::make(),
             ]);
     }
 
