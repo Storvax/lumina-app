@@ -84,6 +84,8 @@ class DailyLogController extends Controller
             $this->gamification->trackAction(Auth::user(), 'daily_log');
         }
 
-        return redirect()->route('diary.index')->with('success', 'Diário atualizado com sucesso!');
+        return redirect()->route('diary.index')
+            ->with('success', 'Diário atualizado com sucesso!')
+            ->with('clear_diary_storage', true);
     }
 }

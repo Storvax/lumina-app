@@ -357,7 +357,11 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            @if(session('clear_diary_storage'))
+            localStorage.removeItem(AUTOSAVE_KEY);
+            @else
             restoreDraft();
+            @endif
             setInterval(autosaveDraft, AUTOSAVE_INTERVAL);
 
             // Limpa o rascunho após submissão com sucesso
