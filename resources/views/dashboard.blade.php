@@ -5,7 +5,8 @@
          * Mapa cromático: 1 (cinza-azulado) → 2 (azul frio) → 3 (neutro) → 4 (verde) → 5 (amarelo-quente).
          * Fallback para tags emocionais quando não há registo.
          */
-        $moodLevel = $progressData['todayMoodLevel'] ?? null;
+        $moodLevel   = $progressData['todayMoodLevel'] ?? null;
+        $primaryMood = strtolower($emotionalTags[0] ?? 'neutro');
 
         $moodGradient = match($moodLevel) {
             1 => 'from-slate-100/80 via-blue-50/40 to-transparent dark:from-slate-800/30 dark:via-blue-900/15',
@@ -18,7 +19,6 @@
 
         // Fallback: se não há mood_level, usar tags emocionais
         if (!$moodGradient) {
-            $primaryMood = strtolower($emotionalTags[0] ?? 'neutro');
             $moodGradient = match(true) {
                 str_contains($primaryMood, 'ansiedade')      => 'from-amber-50/80 via-orange-50/30 to-transparent dark:from-amber-900/20 dark:via-orange-900/10',
                 str_contains($primaryMood, 'tristeza')       => 'from-emerald-50/80 via-teal-50/30 to-transparent dark:from-emerald-900/20 dark:via-teal-900/10',
