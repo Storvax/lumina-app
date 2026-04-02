@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Services;
+declare(strict_types=1);
+
+namespace App\Services\Analytics;
 
 use App\Models\AnalyticsEvent;
 use Illuminate\Support\Facades\Auth;

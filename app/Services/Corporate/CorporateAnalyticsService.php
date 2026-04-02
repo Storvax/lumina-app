@@ -2,14 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Services\Corporate;
 
 use App\Models\DailyLog;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 class CorporateAnalyticsService
 {

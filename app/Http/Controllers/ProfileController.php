@@ -11,8 +11,8 @@ use Illuminate\View\View;
 use App\Models\DailyLog;
 use App\Models\Achievement;
 use App\Models\Milestone;
-use App\Services\GamificationService;
-use App\Services\MoodTrendService;
+use App\Services\Gamification\GamificationService;
+use App\Services\Analytics\MoodTrendService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 

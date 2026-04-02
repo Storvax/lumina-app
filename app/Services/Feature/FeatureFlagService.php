@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Services;
+declare(strict_types=1);
+
+namespace App\Services\Feature;
 
 use App\Models\FeatureFlag;
 use App\Models\User;
@@ -29,7 +31,7 @@ class FeatureFlagService
             return false;
         }
 
-        // Se não especifica user, a flag é global
+        // Flag global sem utilizador específico
         if ($user === null) {
             return true;
         }

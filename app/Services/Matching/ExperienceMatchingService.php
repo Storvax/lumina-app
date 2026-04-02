@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Services;
+declare(strict_types=1);
+
+namespace App\Services\Matching;
 
 use App\Models\ExperienceConnection;
 use App\Models\User;

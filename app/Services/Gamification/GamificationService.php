@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Services\Gamification;
 
-use App\Models\User;
 use App\Models\Achievement;
+use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Gere o progresso do utilizador de forma terapêutica e não punitiva.
@@ -50,7 +49,7 @@ class GamificationService
         // 2. Recompensas fixas (ação genérica)
         if (array_key_exists($actionType, self::REWARDS)) {
             $this->awardFlames($user, self::REWARDS[$actionType]);
-            
+
             // O Diário dita o ritmo da Fogueira (Streak)
             if ($actionType === 'daily_log') {
                 $this->updateGentleStreak($user);
@@ -77,7 +76,6 @@ class GamificationService
     private function updateGentleStreak(User $user): void
     {
         $lastActivity = $user->last_activity_at ? Carbon::parse($user->last_activity_at) : null;
-        $today = Carbon::today();
 
         if (!$lastActivity) {
             $user->current_streak = 1;
@@ -97,12 +95,10 @@ class GamificationService
      */
     private function checkMilestones(User $user): void
     {
-        // Exemplo: Desbloqueia conquista "Guardião da Chama" aos 100 pontos
         if ($user->flames >= 100) {
-            $this->unlockAchievement($user, 'guardian_flame'); 
+            $this->unlockAchievement($user, 'guardian_flame');
         }
 
-        // Exemplo: 7 dias de autocuidado contínuo
         if ($user->current_streak === 7) {
             $this->unlockAchievement($user, 'seven_days_peace');
         }
@@ -113,21 +109,18 @@ class GamificationService
      */
     private function unlockAchievement(User $user, string $slug): void
     {
-        // Verifica por 'slug' ou 'code' consoante a estrutura da tua BD
         $achievement = Achievement::where('slug', $slug)->orWhere('code', $slug)->first();
 
         if ($achievement && !$user->achievements()->where('achievement_id', $achievement->id)->exists()) {
             $user->achievements()->attach($achievement->id, ['unlocked_at' => now()]);
-            
-            // Bónus de chamas do badge
+
             if ($achievement->flames_reward) {
                 $user->increment('flames', $achievement->flames_reward);
             }
-            
-            // Notificação visual para o Front-end
+
             session()->flash('gamification.badge', [
-                'name' => $achievement->name,
-                'icon' => $achievement->icon,
+                'name'  => $achievement->name,
+                'icon'  => $achievement->icon,
                 'image' => $achievement->image ?? null,
             ]);
         }

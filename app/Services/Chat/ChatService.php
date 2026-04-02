@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Services;
+declare(strict_types=1);
+
+namespace App\Services\Chat;
 
 use App\Events\MessageSent;
 use App\Models\Message;
 use App\Models\Room;
 use App\Models\User;
-use Illuminate\Support\Facades\Broadcast;
+use App\Services\AI\CBTAnalysisService;
 use Illuminate\Support\Facades\Cache;
 
 /**

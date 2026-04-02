@@ -251,6 +251,7 @@ Route::middleware(['auth', 'onboarding'])->group(function () {
         Route::get('/sintonia', 'heartbeat')->name('heartbeat');
         Route::get('/reflexao', [CalmZoneController::class, 'reflection'])->name('reflection');
         Route::post('/reflexao/enviar', [CalmZoneController::class, 'sendReflection'])->middleware('throttle:ai-actions')->name('reflection.send');
+        Route::get('/meditacoes', 'meditations')->name('meditations');
         Route::get('/cofre', 'vault')->name('vault');
         Route::post('/cofre', 'storeVaultItem')->name('vault.store');
 
@@ -299,6 +300,21 @@ Route::middleware(['auth', \App\Http\Middleware\TherapistMiddleware::class])->gr
 */
 Route::middleware(['auth', \App\Http\Middleware\CorporateMiddleware::class])->group(function () {
     Route::get('/empresa', [\App\Http\Controllers\CorporateController::class, 'dashboard'])->name('corporate.dashboard');
+
+    // Programas de bem-estar B2B — gestão pelo administrador de RH.
+    Route::controller(\App\Http\Controllers\WellnessProgramController::class)
+        ->prefix('empresa/programas')
+        ->name('wellness.')
+        ->group(function () {
+            Route::get('/dashboard', 'dashboard')->name('dashboard');
+            Route::post('/', 'store')->name('store');
+        });
+});
+
+// Programas de bem-estar — vista do colaborador (apenas auth + onboarding).
+Route::middleware(['auth', 'onboarding'])->group(function () {
+    Route::get('/bem-estar', [\App\Http\Controllers\WellnessProgramController::class, 'index'])->name('wellness.index');
+    Route::post('/bem-estar/{program}/inscrever', [\App\Http\Controllers\WellnessProgramController::class, 'enroll'])->name('wellness.enroll');
 });
 
 require __DIR__.'/auth.php';

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Services\Therapist;
 
 use App\Models\DailyLog;
 use App\Models\User;

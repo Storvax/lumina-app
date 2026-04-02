@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\CBTAnalysisService;
+use App\Services\AI\CBTAnalysisService;
 
 beforeEach(function () {
     $this->service = new CBTAnalysisService();

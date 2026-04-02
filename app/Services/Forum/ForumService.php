@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Services\Forum;
 
 use App\Models\Comment;
 use App\Models\CommentReaction;
@@ -10,6 +10,8 @@ use App\Models\Post;
 use App\Models\PostReaction;
 use App\Models\User;
 use App\Notifications\ForumInteraction;
+use App\Services\AI\CBTAnalysisService;
+use App\Services\Gamification\GamificationService;
 use Illuminate\Support\Facades\Notification;
 
 /**

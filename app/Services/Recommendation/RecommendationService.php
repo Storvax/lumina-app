@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Services;
+declare(strict_types=1);
 
-use App\Models\User;
+namespace App\Services\Recommendation;
+
 use App\Models\DailyLog;
 use App\Models\Post;
+use App\Models\User;
 
 /**
  * Motor de recomendação contextual.

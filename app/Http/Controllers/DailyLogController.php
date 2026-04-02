@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\DailyLog;
-use App\Services\CBTAnalysisService;
-use App\Services\GamificationService;
-use App\Services\MoodTrendService;
+use App\Services\AI\CBTAnalysisService;
+use App\Services\Gamification\GamificationService;
+use App\Services\Analytics\MoodTrendService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;

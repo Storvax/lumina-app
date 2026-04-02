@@ -7,7 +7,7 @@ namespace App\Http\Controllers;
 use App\Events\SomaticSyncTriggered;
 use App\Models\DailyLog;
 use App\Models\User;
-use App\Services\PatientReportService;
+use App\Services\Therapist\PatientReportService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

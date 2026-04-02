@@ -3,7 +3,7 @@
 use App\Models\Achievement;
 use App\Models\Mission;
 use App\Models\User;
-use App\Services\GamificationService;
+use App\Services\Gamification\GamificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);

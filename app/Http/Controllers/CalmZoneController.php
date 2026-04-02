@@ -5,18 +5,24 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\DailyLog;
+use App\Models\Meditation;
 use App\Models\PlaylistSong;
+use App\Services\AI\AIReflectionService;
+use App\Services\Playlist\PlaylistService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class CalmZoneController extends Controller
 {
+    public function __construct(
+        private readonly PlaylistService $playlistService,
+        private readonly AIReflectionService $reflectionService,
+    ) {}
+
     public function index(): View
     {
         $songs = PlaylistSong::orderBy('votes_count', 'desc')->take(10)->get();
@@ -28,6 +34,23 @@ class CalmZoneController extends Controller
             ->toArray();
 
         return view('calm.index', compact('songs', 'weeklyWinner', 'userVotes'));
+    }
+
+    /**
+     * Secção de meditações guiadas e mindfulness agrupadas por categoria.
+     * Conteúdo gerido pelo administrador via Filament.
+     */
+    public function meditations(): View
+    {
+        // Agrupamento em PHP após uma única query — evita N+1 com groupBy em Eloquent.
+        $allMeditations = Meditation::active()
+            ->orderBy('sort_order')
+            ->orderBy('title')
+            ->get();
+
+        $categories = $allMeditations->groupBy('category');
+
+        return view('calm.meditations', compact('categories'));
     }
 
     public function grounding(): View
@@ -48,9 +71,8 @@ class CalmZoneController extends Controller
     }
 
     /**
-     * Combustion diary: therapeutic writing with daily rotating prompts.
-     *
-     * @return \Illuminate\View\View
+     * Diário de combustão: escrita terapêutica com prompts rotativos diários.
+     * Prompts definidos em config/burn-prompts.php para facilitar curadoria.
      */
     public function burn(): View
     {
@@ -60,48 +82,14 @@ class CalmZoneController extends Controller
             ->take(7)
             ->get();
 
-        $prompts = [
-            'O que gostarias de deixar ir hoje?',
-            'Descreve uma emoção que carregas há demasiado tempo.',
-            'Se a tua dor tivesse uma cor, qual seria?',
-            'Escreve uma carta ao teu eu de há um ano.',
-            'O que te impede de descansar verdadeiramente?',
-            'Qual foi o momento mais difícil desta semana?',
-            'Que pensamento repetitivo gostarias de silenciar?',
-            'Descreve o peso que sentes agora, sem filtros.',
-            'Se pudesses gritar algo ao mundo, o que seria?',
-            'O que significa "estar bem" para ti neste momento?',
-            'Escreve sobre algo que nunca disseste a ninguém.',
-            'Que parte de ti merece mais compaixão?',
-            'O que farias se não tivesses medo?',
-            'Descreve um lugar onde te sentes seguro/a.',
-            'Qual é a tua maior necessidade emocional agora?',
-            'Escreve uma frase que resuma o teu dia.',
-            'O que aprendeste sobre ti esta semana?',
-            'Descreve um momento de coragem recente.',
-            'Que hábito gostarias de transformar?',
-            'Escreve sobre algo que te surpreendeu em ti.',
-            'O que te dá esperança, mesmo nos dias cinzentos?',
-            'Descreve como te sentes fisicamente neste momento.',
-            'Que conversa interna precisas de ter contigo?',
-            'Se pudesses mudar uma coisa no teu dia, qual seria?',
-            'Escreve algo que precisas de ouvir.',
-            'Qual é a emoção dominante neste instante?',
-            'O que significa autocuidado para ti?',
-            'Descreve um pequeno gesto que te fez bem recentemente.',
-            'Que limite precisas de estabelecer?',
-            'Escreve uma promessa gentil a ti mesmo/a.',
-        ];
-
+        $prompts = config('burn-prompts');
         $dailyPrompt = $prompts[now()->dayOfYear % count($prompts)];
 
         return view('calm.burn', compact('entries', 'dailyPrompt'));
     }
 
     /**
-     * Somatic breathing: technique parameters for the frontend timer animation.
-     *
-     * @return \Illuminate\View\View
+     * Respiração somática: parâmetros das técnicas para a animação do timer no frontend.
      */
     public function breathe(): View
     {
@@ -142,11 +130,8 @@ class CalmZoneController extends Controller
     }
 
     /**
-     * Sends a reflection message to OpenAI acting as the user's compassionate
-     * "future self" using first-person plural ("Nós conseguimos").
-     * Supports conversation history for multi-turn context.
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * Envia mensagem ao "eu do futuro" via OpenAI com suporte a contexto multi-turno.
+     * Lógica isolada no AIReflectionService para separação de responsabilidades.
      */
     public function sendReflection(Request $request): JsonResponse
     {
@@ -157,56 +142,24 @@ class CalmZoneController extends Controller
             'history.*.content' => 'required_with:history|string|max:1000',
         ]);
 
-        $user = Auth::user();
-
-        // Build message chain: system prompt → prior turns → current message
-        $messages = [
-            [
-                'role' => 'system',
-                'content' => "És o 'eu do futuro' do utilizador — uma versão mais sábia, mais calma e mais compassiva dele/a daqui a 5 anos. Usa a primeira pessoa do plural ('Nós conseguimos', 'Nós sabemos'). Responde com empatia profunda, validação emocional e esperança realista. Nunca dês conselhos clínicos. Fala em Português de Portugal. Sê breve (2-4 frases). O nome do utilizador é {$user->name}.",
-            ],
-        ];
-
-        // Append prior conversation turns for multi-turn context
-        if (!empty($validated['history'])) {
-            foreach ($validated['history'] as $turn) {
-                $messages[] = [
-                    'role' => $turn['role'],
-                    'content' => $turn['content'],
-                ];
-            }
-        }
-
-        $messages[] = [
-            'role' => 'user',
-            'content' => $validated['message'],
-        ];
-
         try {
-            $response = Http::withToken(config('services.openai.api_key'))
-                ->timeout(20)
-                ->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => config('services.openai.model', 'gpt-4o-mini'),
-                    'messages' => $messages,
-                    'max_tokens' => 250,
-                    'temperature' => 0.8,
-                ]);
+            $reply = $this->reflectionService->reply(
+                Auth::user(),
+                $validated['message'],
+                $validated['history'] ?? [],
+            );
 
-            if ($response->failed()) {
-                return response()->json(['error' => 'Não foi possível contactar o teu eu do futuro.'], 502);
-            }
-
-            return response()->json(['reply' => $response->json('choices.0.message.content')]);
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            return response()->json(['reply' => $reply]);
+        } catch (\Illuminate\Http\Client\ConnectionException) {
             return response()->json(['error' => 'Serviço temporariamente indisponível.'], 503);
+        } catch (\RuntimeException) {
+            return response()->json(['error' => 'Não foi possível contactar o teu eu do futuro.'], 502);
         }
     }
 
     /**
-     * Lists the authenticated user's vault items (personal emotional anchors).
-     * Variable named $lights to match the frontend's "luzes" metaphor.
-     *
-     * @return \Illuminate\View\View
+     * Lista os itens do cofre do utilizador autenticado (âncoras emocionais pessoais).
+     * Variável $lights para corresponder à metáfora "luzes" usada no frontend.
      */
     public function vault(): View
     {
@@ -218,7 +171,7 @@ class CalmZoneController extends Controller
     }
 
     /**
-     * Stores a new vault item (a single "luz" — text content only).
+     * Guarda um novo item no cofre (uma "luz" — apenas texto).
      *
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
@@ -238,8 +191,8 @@ class CalmZoneController extends Controller
     }
 
     /**
-     * Suggests a song for the community playlist.
-     * Attempts to fetch cover art from Spotify oEmbed or iTunes Search API.
+     * Sugere uma música para a playlist comunitária.
+     * Delega resolução de capa e criação ao PlaylistService.
      *
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
@@ -248,7 +201,7 @@ class CalmZoneController extends Controller
         $validated = $request->validate([
             'title' => 'nullable|string|max:100',
             'artist' => 'nullable|string|max:100',
-            'spotify_url' => 'nullable|url'
+            'spotify_url' => 'nullable|url',
         ]);
 
         if (empty($validated['title']) && empty($validated['spotify_url'])) {
@@ -258,52 +211,7 @@ class CalmZoneController extends Controller
             ], 422);
         }
 
-        $coverUrl = null;
-        $title = $validated['title'];
-        $artist = $validated['artist'];
-
-        // Cover art resolution: Spotify oEmbed first, iTunes Search as fallback
-        if (!empty($validated['spotify_url']) && str_contains($validated['spotify_url'], 'spotify.com')) {
-            try {
-                $response = Http::withoutVerifying()->timeout(5)
-                    ->get('https://open.spotify.com/oembed?url=' . urlencode($validated['spotify_url']));
-
-                if ($response->successful()) {
-                    $coverUrl = $response->json('thumbnail_url');
-                    if (empty($title)) $title = $response->json('title');
-
-                    $author = $response->json('author_name');
-                    if (empty($artist) && !empty($author)) {
-                        $artist = ucwords(str_replace(' - topic', '', strtolower($author)));
-                    }
-                }
-            } catch (\Exception $e) {
-                Log::warning('Spotify oEmbed fetch failed', ['error' => $e->getMessage()]);
-            }
-        }
-
-        if (!$coverUrl && !empty($title) && !empty($artist)) {
-            try {
-                $response = Http::withoutVerifying()->timeout(5)
-                    ->get('https://itunes.apple.com/search?entity=song&limit=1&term=' . urlencode("{$title} {$artist}"));
-
-                if ($response->successful() && $response->json('resultCount') > 0) {
-                    $artwork = $response->json('results.0.artworkUrl100');
-                    if ($artwork) {
-                        $coverUrl = str_replace('100x100bb', '600x600bb', $artwork);
-                    }
-                }
-            } catch (\Exception $e) {
-                Log::warning('iTunes Search fetch failed', ['error' => $e->getMessage()]);
-            }
-        }
-
-        $song = Auth::user()->playlistSongs()->create([
-            'title' => $title ?: 'Música Desconhecida',
-            'artist' => $artist ?: 'Artista Desconhecido',
-            'spotify_url' => $validated['spotify_url'],
-            'cover_url' => $coverUrl,
-        ]);
+        $song = $this->playlistService->suggest(Auth::user(), $validated);
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Música adicionada com sucesso!', 'song' => $song]);
@@ -324,36 +232,17 @@ class CalmZoneController extends Controller
     }
 
     /**
-     * Toggles a vote on a playlist song. Each user can only vote once per song.
+     * Alterna o voto numa música da playlist.
+     * Cada utilizador só pode votar uma vez por música — lógica isolada no PlaylistService.
      *
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
     public function voteSong(PlaylistSong $song, Request $request): JsonResponse|RedirectResponse
     {
-        $userId = Auth::id();
-
-        $existingVote = DB::table('playlist_votes')
-            ->where('user_id', $userId)
-            ->where('playlist_song_id', $song->id)
-            ->first();
-
-        if ($existingVote) {
-            DB::table('playlist_votes')->where('id', $existingVote->id)->delete();
-            $song->decrement('votes_count');
-            $action = 'removed';
-        } else {
-            DB::table('playlist_votes')->insert([
-                'user_id' => $userId,
-                'playlist_song_id' => $song->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            $song->increment('votes_count');
-            $action = 'added';
-        }
+        $result = $this->playlistService->toggleVote(Auth::user(), $song);
 
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(['success' => true, 'action' => $action, 'votes_count' => $song->votes_count]);
+            return response()->json(['success' => true, ...$result]);
         }
 
         return back();
