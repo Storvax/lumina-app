@@ -1,6 +1,5 @@
-@extends('layouts.app')
-@section('content')
-<div class="container mx-auto px-4 py-8">
-    <p class="text-slate-400">View placeholder — frontend em construção.</p>
-</div>
-@endsection
+<x-lumina-layout title="Combustão | Lumina">
+    <div class="max-w-3xl mx-auto px-6 py-10">
+        <p class="text-slate-400">Vista em construção.</p>
+    </div>
+</x-lumina-layout>
