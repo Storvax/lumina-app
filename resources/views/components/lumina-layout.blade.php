@@ -171,7 +171,33 @@
                             </div>
                         </div>
 
-                        <a href="{{ route('profile.show') }}" class="hidden md:flex text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-full transition-colors border border-transparent hover:border-indigo-100">Perfil</a>
+                        <div class="hidden md:flex items-center gap-1" x-data="{ open: false }">
+                            <button type="button" @click="open = !open"
+                                    class="flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-full transition-colors border border-transparent hover:border-indigo-100">
+                                {{ Str::of(Auth::user()->name)->explode(' ')->first() }}
+                                <i class="ri-arrow-down-s-line text-xs"></i>
+                            </button>
+                            <div x-show="open" @click.outside="open = false"
+                                 x-transition:enter="transition ease-out duration-150"
+                                 x-transition:enter-start="opacity-0 scale-95"
+                                 x-transition:enter-end="opacity-100 scale-100"
+                                 class="absolute top-full mt-2 w-44 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-50"
+                                 style="display: none;">
+                                <a href="{{ route('profile.show') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+                                    <i class="ri-user-line text-slate-400"></i> Ver Perfil
+                                </a>
+                                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+                                    <i class="ri-settings-3-line text-slate-400"></i> Definições
+                                </a>
+                                <div class="border-t border-slate-100 my-1"></div>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:bg-rose-50 hover:text-rose-700 transition-colors text-left">
+                                        <i class="ri-logout-box-r-line text-slate-400"></i> Terminar Sessão
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     @else
                         <a href="{{ route('login') }}" class="text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-full transition-colors">Entrar</a>
                     @endauth
