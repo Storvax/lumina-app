@@ -20,6 +20,7 @@ use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\WallController;
 use App\Http\Controllers\CommunityReportController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\LocaleController;
 
 
 /*
@@ -30,6 +31,7 @@ use App\Http\Controllers\HealthController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/offline', fn () => view('offline'))->name('offline');
+Route::get('/idioma/{locale}', [LocaleController::class, 'switch'])->name('locale.switch');
 Route::get('/comunidade/impacto', [CommunityReportController::class, 'index'])->name('community.report');
 Route::get('/pesquisar', [SearchController::class, 'index'])->middleware(['auth', 'onboarding'])->name('search.index');
 Route::get('/fogueira', [RoomController::class, 'index'])->name('rooms.index');

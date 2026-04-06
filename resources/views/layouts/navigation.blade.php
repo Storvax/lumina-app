@@ -103,6 +103,19 @@
                                 <span>Dados de Saúde</span>
                             </div>
                         </x-dropdown-link>
+
+                        {{-- Seletor de idioma --}}
+                        <div class="px-4 py-2 border-t border-slate-50">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Idioma</p>
+                            <div class="flex gap-1.5">
+                                @foreach(['pt' => '🇵🇹', 'en' => '🇬🇧', 'es' => '🇪🇸'] as $code => $flag)
+                                    <a href="{{ route('locale.switch', $code) }}"
+                                       class="px-2 py-1 rounded-lg text-xs font-bold transition-colors {{ app()->getLocale() === $code ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100' }}">
+                                        {{ $flag }} {{ strtoupper($code) }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();" class="!text-rose-600 hover:!bg-rose-50 hover:!text-rose-800 transition-colors">

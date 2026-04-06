@@ -47,6 +47,7 @@ class User extends Authenticatable implements FilamentUser
         'two_factor_confirmed',
         'is_buddy',
         'is_buddy_available',
+        'preferred_locale',
     ];
 
     protected $hidden = [
