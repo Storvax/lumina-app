@@ -19,6 +19,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\WallController;
 use App\Http\Controllers\CommunityReportController;
+use App\Http\Controllers\HealthController;
 
 
 /*
@@ -144,6 +145,17 @@ Route::middleware(['auth', 'onboarding'])->group(function () {
     Route::controller(DailyLogController::class)->prefix('diario')->name('diary.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Saúde — Importação de Wearables (INOV-05)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('saude')->name('health.')->controller(HealthController::class)->group(function () {
+        Route::get('/importar', 'import')->name('import');
+        Route::post('/importar', 'process')->name('process');
+        Route::get('/grafico', 'chartData')->name('chart');
     });
 
     /*

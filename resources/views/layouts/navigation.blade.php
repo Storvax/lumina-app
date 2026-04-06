@@ -97,6 +97,12 @@
                         <x-dropdown-link :href="route('profile.edit')">
                             Definições
                         </x-dropdown-link>
+                        <x-dropdown-link :href="route('health.import')">
+                            <div class="flex items-center gap-2">
+                                <i class="ri-heart-pulse-line text-indigo-400"></i>
+                                <span>Dados de Saúde</span>
+                            </div>
+                        </x-dropdown-link>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();" class="!text-rose-600 hover:!bg-rose-50 hover:!text-rose-800 transition-colors">
