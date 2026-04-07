@@ -21,6 +21,8 @@ use App\Http\Controllers\WallController;
 use App\Http\Controllers\CommunityReportController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\TherapySessionController;
+use App\Http\Controllers\TherapistScheduleController;
 
 
 /*
@@ -208,6 +210,25 @@ Route::middleware(['auth', 'onboarding'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | INOV-08: Agendamento de Sessões Clínicas (lado do paciente)
+    |--------------------------------------------------------------------------
+    */
+    Route::controller(TherapySessionController::class)->prefix('sessoes')->name('sessions.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/agendar/{therapist}', 'create')->name('create');
+        Route::post('/agendar/{therapist}', 'store')->name('store');
+        Route::patch('/{session}/cancelar', 'cancel')->name('cancel');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | INOV-09: Videochamada Jitsi (acesso do paciente)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/sessoes/{session}/videochamada', [\App\Http\Controllers\TherapySessionController::class, 'videoCall'])->name('sessions.video');
+
+    /*
+    |--------------------------------------------------------------------------
     | Utilitários
     |--------------------------------------------------------------------------
     */
@@ -294,6 +315,15 @@ Route::middleware(['auth', \App\Http\Middleware\TherapistMiddleware::class])->gr
     Route::post('/terapeuta/somatico', [\App\Http\Controllers\TherapistController::class, 'triggerSomaticSync'])->name('therapist.somatic');
     Route::get('/terapeuta/pacientes/{patient}/relatorio', [\App\Http\Controllers\TherapistController::class, 'patientReport'])->name('therapist.patient-report');
 
+    // INOV-08: Agenda do terapeuta
+    Route::controller(TherapistScheduleController::class)->prefix('terapeuta/agenda')->name('therapist.schedule.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::patch('/{session}/confirmar', 'confirm')->name('confirm');
+        Route::patch('/{session}/cancelar', 'cancel')->name('cancel');
+        Route::patch('/{session}/concluir', 'complete')->name('complete');
+        Route::put('/disponibilidade', 'updateAvailability')->name('availability');
+    });
+
     // Notas clínicas encriptadas — acesso restrito ao terapeuta atribuído ao paciente.
     Route::controller(\App\Http\Controllers\ClinicalNoteController::class)
         ->prefix('terapeuta/pacientes/{patient}/notas')
@@ -323,7 +353,37 @@ Route::middleware(['auth', \App\Http\Middleware\CorporateMiddleware::class])->gr
             Route::get('/dashboard', 'dashboard')->name('dashboard');
             Route::post('/', 'store')->name('store');
         });
+
+    // INOV-11: Gestão de colaboradores (convites, lista, remoção)
+    Route::controller(\App\Http\Controllers\CompanyInvitationController::class)
+        ->prefix('empresa/colaboradores')
+        ->name('company.')
+        ->group(function () {
+            Route::get('/', 'index')->name('employees');
+            Route::post('/convidar', 'invite')->name('invite');
+            Route::post('/remover', 'removeEmployee')->name('employees.remove');
+        });
+
+    // INOV-12: Configuração de webhooks HR
+    Route::controller(\App\Http\Controllers\HrIntegrationController::class)
+        ->prefix('empresa/integracoes')
+        ->name('hr.integrations.')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::delete('/{config}', 'destroy')->name('destroy');
+        });
 });
+
+// INOV-11: Aceitar convite (sem middleware corporate — utilizador pode não ter empresa ainda)
+Route::get('/convite/{token}', [\App\Http\Controllers\CompanyInvitationController::class, 'accept'])
+    ->name('company.invite.accept');
+
+// INOV-12: Endpoint público para receção de webhooks HR (SAP/Workday/Genérico)
+// Autenticação por HMAC — não requer sessão Laravel
+Route::post('/api/hr-webhook/{companySlug}', [\App\Http\Controllers\HrWebhookController::class, 'receive'])
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
+    ->name('hr.webhook.receive');
 
 // Programas de bem-estar — vista do colaborador (apenas auth + onboarding).
 Route::middleware(['auth', 'onboarding'])->group(function () {
